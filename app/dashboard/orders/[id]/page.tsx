@@ -25,9 +25,9 @@ const EVENT_LABEL: Record<string, string> = {
  */
 export default async function OrderPage({ params, searchParams }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ status?: string }>;
+  searchParams: Promise<{ status?: string; pay?: string }>;
 }) {
-  const [{ id }, { status: returnStatus }] = await Promise.all([params, searchParams]);
+  const [{ id }, { status: returnStatus, pay }] = await Promise.all([params, searchParams]);
   const { supabase, user, profile } = await getSessionProfile();
   if (!user || !profile) redirect(`/login?redirectTo=/dashboard/orders/${id}`);
 
@@ -62,7 +62,7 @@ export default async function OrderPage({ params, searchParams }: {
 
         <div className="mt-6"><EscrowTracker orders={[view]} /></div>
 
-        <OrderActions orderId={order.id} status={view.escrow_status} returnStatus={returnStatus ?? null} />
+        <OrderActions orderId={order.id} status={view.escrow_status} returnStatus={returnStatus ?? null} payWith={pay ?? null} />
 
         {order.origin_port_coords && order.destination_coords && (
           <AnimatedShipmentMap

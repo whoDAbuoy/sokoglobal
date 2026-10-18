@@ -2,25 +2,31 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { AlertCircle, BadgeCheck, CheckCircle2, Film, Loader2, Lock, ShieldCheck, Timer } from 'lucide-react';
+import { AlertCircle, BadgeCheck, CheckCircle2, Film, Loader2, Lock, ShieldCheck, Smartphone, Timer } from 'lucide-react';
 import type { TrialProductView } from '@/lib/types';
 import { countryName, flag, formatUSD } from '@/lib/format';
 import ProductVisual from './ProductVisual';
 
+const MPESA_ENABLED = process.env.NEXT_PUBLIC_MPESA_ENABLED === 'true';
+
 export default function TrialBatchCard({ product }: { product: TrialProductView }) {
   const router = useRouter();
   const [state, setState] = useState<'idle' | 'loading' | 'done' | 'error'>('idle');
+  const [method, setMethod] = useState<'card' | 'mpesa'>('card');
   const [error, setError] = useState<string | null>(null);
 
-  async function startTrial() {
+  async function startTrial(pay: 'card' | 'mpesa') {
     setState('loading');
+    setMethod(pay);
     setError(null);
     try {
       const res = await fetch('/api/orders', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ productId: product.id }),
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ productId: product.id, method: pay }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error ?? 'Could not start trial');
+      // M-Pesa: the order page collects the phone number and sends the STK prompt.
+      if (pay === 'mpesa') { router.push(`/dashboard/orders/${json.order.id}?pay=mpesa`); return; }
       // Hosted Flutterwave checkout; funds land in escrow, not with the supplier.
       if (json.paymentLink) { window.location.assign(json.paymentLink); return; }
       // Order saved but no link (provider hiccup) → order page offers "Pay now".
@@ -92,11 +98,20 @@ export default function TrialBatchCard({ product }: { product: TrialProductView 
               <CheckCircle2 className="h-4 w-4" /> Redirecting to secure checkout…
             </p>
           ) : (
-            <button type="button" onClick={() => void startTrial()} disabled={state === 'loading' || product.is_demo}
-              className="btn-primary w-full" title={product.is_demo ? 'Sample listing — run supabase/seed.sql to enable' : undefined}>
-              {state === 'loading' ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />}
-              Start trial with escrow
-            </button>
+            <div className="space-y-2">
+              <button type="button" onClick={() => void startTrial('card')} disabled={state === 'loading' || product.is_demo}
+                className="btn-primary w-full" title={product.is_demo ? 'Sample listing — run supabase/seed.sql to enable' : undefined}>
+                {state === 'loading' && method === 'card' ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />}
+                Start trial with escrow
+              </button>
+              {MPESA_ENABLED && (
+                <button type="button" onClick={() => void startTrial('mpesa')} disabled={state === 'loading' || product.is_demo}
+                  className="btn-secondary w-full">
+                  {state === 'loading' && method === 'mpesa' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Smartphone className="h-4 w-4 text-emerald-600" />}
+                  Pay with M-Pesa
+                </button>
+              )}
+            </div>
           )}
           {error && <p className="mt-2 flex items-start gap-1.5 text-xs text-red-600"><AlertCircle className="mt-px h-3.5 w-3.5 shrink-0" />{error}</p>}
         </div>
