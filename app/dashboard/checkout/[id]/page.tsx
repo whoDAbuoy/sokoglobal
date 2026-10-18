@@ -8,6 +8,7 @@ import type { ProductCategory } from '@/lib/types';
 import DashboardHeader from '@/components/dashboard/DashboardHeader';
 import ProductVisual from '@/components/dashboard/ProductVisual';
 import CheckoutActions from './CheckoutActions';
+import { exceedsMpesaLimit } from '@/lib/payments/mpesa';
 
 export const metadata = { title: 'Checkout · SokoGlobal' };
 export const dynamic = 'force-dynamic';
@@ -20,7 +21,7 @@ type Row = {
 const one = <T,>(v: T | T[] | null | undefined): T | null => (Array.isArray(v) ? v[0] ?? null : v ?? null);
 
 /**
- * Cart checkout (also the Flutterwave return page for grp_ payments). Escrow
+ * Cart checkout (also the return page after a Bank Card payment). Escrow
  * state comes from the database: only the verified webhook / STK Query result
  * can fund the orders.
  */
@@ -92,7 +93,8 @@ export default async function CheckoutPage({ params, searchParams }: {
             </ul>
 
             {unpaid.length > 0 ? (
-              <CheckoutActions checkoutId={group.id} returnStatus={returnStatus ?? null} />
+              <CheckoutActions checkoutId={group.id} returnStatus={returnStatus ?? null}
+                amountLabel={formatUSD(due, true)} buyerName={profile.full_name} mpesaOverLimit={exceedsMpesaLimit(due)} />
             ) : (
               <p className="mt-6 flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">
                 <CheckCircle2 className="h-5 w-5" /> All {totalBatches} Trial Batches are paid and held in escrow. Track each one from its order page.

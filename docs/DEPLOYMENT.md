@@ -4,7 +4,7 @@
 
 1. Create the production project (pick the region closest to your Vercel function region).
 2. In the SQL editor, run in order:
-   `supabase/schema.sql` → `migrations/002_ops_payments_perf.sql` → `003_payouts_refunds_kyc_support.sql` → `004_tracking_and_vault.sql` → `005_admin_ops_reads.sql` → `006_admin_moderation.sql` → `007_mpesa_payments.sql` → `008_cart_checkout.sql` → `009_realtime_chat.sql` → `010_cart_quantities.sql`.
+   `supabase/schema.sql` → `migrations/002_ops_payments_perf.sql` → `003_payouts_refunds_kyc_support.sql` → `004_tracking_and_vault.sql` → `005_admin_ops_reads.sql` → `006_admin_moderation.sql` → `007_mpesa_payments.sql` → `008_cart_checkout.sql` → `009_realtime_chat.sql` → `010_cart_quantities.sql` → `011_paystack_cards.sql`.
    - 004 needs the **Vault** extension (enabled by default on Supabase; the migration also runs `create extension if not exists supabase_vault`).
    - 004 moves every existing payout account number into Vault and **drops the plaintext column**. Take a backup first (Database → Backups).
 3. Auth → URL configuration: Site URL `https://<your-domain>`, redirect `https://<your-domain>/auth/callback`.
@@ -36,10 +36,12 @@ Set in Vercel → Settings → Environment Variables. **Production** values must
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Prod, Preview | no | Supabase anon key (RLS protects data) |
 | `SUPABASE_SERVICE_ROLE_KEY` | Prod, Preview | **yes** | Server only; webhooks, cron, payouts |
 | `NEXT_PUBLIC_SITE_URL` | Prod, Preview | no | `https://<your-domain>` (checkout redirects, transfer callbacks, Slack links) |
-| `FLW_SECRET_KEY` | Prod, Preview | **yes** | `FLWSECK-…` live (Prod) / `FLWSECK_TEST-…` (Preview) |
+| `PAYSTACK_SECRET_KEY` | Prod, Preview | **yes** | `sk_live_…` (Prod) / `sk_test_…` (Preview). Also verifies webhook signatures |
+| `PAYSTACK_CURRENCY` | Prod, Preview | no | Settlement currency of the Paystack account (default `USD`) |
+| `PAYSTACK_USD_RATE` | Prod, Preview | no | Required if `PAYSTACK_CURRENCY` isn't USD (units per USD) |
+| `FLW_SECRET_KEY` | Prod, Preview | **yes** | `FLWSECK-…` live (Prod) / `FLWSECK_TEST-…` (Preview) — payouts only |
 | `FLW_SECRET_HASH` | Prod, Preview | **yes** | Same value as the webhook "secret hash" in the Flutterwave dashboard |
 | `FLW_API_BASE_URL` | Prod, Preview | no | `https://api.flutterwave.com/v3` |
-| `FLW_CHECKOUT_LOGO_URL` | Prod | no | Optional `https://…/logo.png` for hosted checkout |
 | `FLW_OUTBOUND_PROXY_URL` | Prod | **yes** | Optional static-IP proxy (see §4) |
 | `PLATFORM_FEE_BPS` | Prod, Preview | no | Commission on goods value in basis points, e.g. `500` = 5% |
 | `CRON_SECRET` | Prod, Preview | **yes** | ≥ 32 random chars: `openssl rand -hex 32` |
@@ -53,7 +55,7 @@ CLI equivalent (prompts for each value):
 
 ```bash
 for v in NEXT_PUBLIC_SUPABASE_URL NEXT_PUBLIC_SUPABASE_ANON_KEY SUPABASE_SERVICE_ROLE_KEY NEXT_PUBLIC_SITE_URL \
-         FLW_SECRET_KEY FLW_SECRET_HASH FLW_API_BASE_URL PLATFORM_FEE_BPS CRON_SECRET SLACK_WEBHOOK_URL \
+         PAYSTACK_SECRET_KEY PAYSTACK_CURRENCY FLW_SECRET_KEY FLW_SECRET_HASH FLW_API_BASE_URL PLATFORM_FEE_BPS CRON_SECRET SLACK_WEBHOOK_URL \
          NEXT_PUBLIC_MAP_TILE_URL NEXT_PUBLIC_MAP_TILE_ATTRIBUTION; do
   vercel env add "$v" production
 done
@@ -61,7 +63,26 @@ done
 
 `NEXT_PUBLIC_*` values are baked in at build time, so redeploy after changing them.
 
-## 4. Flutterwave
+## 4. Bank Cards — Paystack
+
+Buyers pay by **Bank Card (Visa / Mastercard)** through Paystack (migration `011_paystack_cards.sql`).
+Card number, expiry and CVC are entered in Paystack's secure form (iframe from `checkout.paystack.com`),
+so card data never touches SokoGlobal's servers.
+
+- Webhook URL: `https://<your-domain>/api/webhooks/card` (Paystack → Settings → API Keys & Webhooks).
+  Events are authenticated with `x-paystack-signature` (HMAC-SHA512 of the body with `PAYSTACK_SECRET_KEY`).
+- Every charge is re-verified with `GET /transaction/verify/:reference` before escrow is funded; the
+  buyer's browser also asks for that verification right after paying, so confirmation doesn't wait for the webhook.
+- `PAYSTACK_CURRENCY` must match what your Paystack account can charge. With a non-USD account set
+  `PAYSTACK_USD_RATE`; the charge amount is frozen per attempt in `card_payments`.
+- Short/wrong-currency charges and double payments are parked as `card_payments.status = 'review'` and
+  alerted to Slack (`card_review`). Trend Pool refunds for card pledges go back through Paystack.
+
+## 4a. Flutterwave — supplier payouts only
+
+Flutterwave no longer takes buyer payments. It remains the payout rail out of escrow (and refunds pledges
+paid before the switch). The webhook's `charge.completed` handling is kept only for checkouts started
+before migration 011.
 
 - Webhook URL: `https://<your-domain>/api/webhooks/flutterwave`, with the secret hash = `FLW_SECRET_HASH`.
 - Enable **Transfers**. Keep the **USD balance** funded; FX payouts debit USD (`debit_currency=USD`).

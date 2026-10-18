@@ -7,6 +7,7 @@ import { AlertCircle, ArrowRight, CheckCircle2, Clock, Loader2, Plane, ShieldChe
 import type { TrendPoolView } from '@/lib/types';
 import { countryName, daysLeft, flag, formatUSD } from '@/lib/format';
 import ProductVisual from './ProductVisual';
+import { confirmCardPayment, openCardForm, type CardSession } from '@/lib/payments/paystack-client';
 
 export default function TrendPoolCard({ pool }: { pool: TrendPoolView }) {
   const router = useRouter();
@@ -44,8 +45,15 @@ export default function TrendPoolCard({ pool }: { pool: TrendPoolView }) {
       if (!res.ok) throw new Error(json.error ?? 'Could not join pool');
       setJoined(true);
       setOpen(false);
-      // Pledge is held in escrow via Flutterwave hosted checkout.
-      if (json.paymentLink) { window.location.assign(json.paymentLink); return; }
+      // Pledge is paid by Bank Card in Paystack's secure form and held in escrow.
+      if (json.card) {
+        const session = json.card as CardSession;
+        const result = await openCardForm(session);
+        if (result === 'cancelled') setError('Card window closed — your pledge is saved; you were not charged.');
+        else await confirmCardPayment(session.reference);
+        router.refresh();
+        return;
+      }
       if (json.error) setError(json.error);
       router.refresh();
     } catch (err) {

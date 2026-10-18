@@ -237,3 +237,22 @@ export async function stkQuery(checkoutRequestId: string, cfg = mpesaConfig()): 
   }
   throw new MpesaError(errorText(json, status), status, json);
 }
+
+/**
+ * The Postgres limit error ("This order is KES 323,700 — above the M-Pesa limit
+ * of KES 250,000 per transaction…") rewritten to send buyers to Bank Card.
+ * Any other message is returned unchanged.
+ */
+export function mpesaLimitMessage(message: string): string {
+  const m = /KES ([\d,]+) — above the M-Pesa limit of KES ([\d,]+)/.exec(message);
+  if (!m) return message;
+  return `This total is KES ${m[1]}, above M-Pesa's limit of KES ${m[2]} per payment. Please pay by Bank Card (Visa / Mastercard) instead.`;
+}
+
+/** True when this USD amount would exceed the M-Pesa per-payment limit at the configured rate (false if M-Pesa is off). */
+export function exceedsMpesaLimit(usdCents: number): boolean {
+  try {
+    const cfg = mpesaConfig();
+    return Math.ceil((usdCents * cfg.kesPerUsd) / 100) > cfg.maxKes;
+  } catch { return false; }
+}

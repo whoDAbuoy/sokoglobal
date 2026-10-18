@@ -64,10 +64,8 @@ export default function TrialBatchCard({ product }: { product: TrialProductView 
       if (!res.ok) throw new Error(json.error ?? 'Could not start trial');
       // M-Pesa: the order page collects the phone number and sends the STK prompt.
       if (pay === 'mpesa') { router.push(`/dashboard/orders/${json.order.id}?pay=mpesa`); return; }
-      // Hosted Flutterwave checkout; funds land in escrow, not with the supplier.
-      if (json.paymentLink) { window.location.assign(json.paymentLink); return; }
-      // Order saved but no link (provider hiccup) → order page offers "Pay now".
-      router.push(`/dashboard/orders/${json.order.id}`);
+      // Bank Card: the order page opens Paystack's secure card form; funds land in escrow, not with the supplier.
+      router.push(`/dashboard/orders/${json.order.id}?pay=card`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not start trial');
       setState('error');
@@ -150,7 +148,7 @@ export default function TrialBatchCard({ product }: { product: TrialProductView 
             <button type="button" onClick={() => void startTrial('card')} disabled={state === 'loading' || product.is_demo}
               className={`${MPESA_ENABLED ? 'btn-secondary px-2' : 'btn-primary'} w-full`} title={product.is_demo ? 'Sample listing — run supabase/seed.sql to enable' : undefined}>
               {state === 'loading' && method === 'card' ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />}
-              {MPESA_ENABLED ? 'Card / bank' : 'Start trial with escrow'}
+              {MPESA_ENABLED ? 'Bank Card' : 'Pay by Bank Card'}
             </button>
             {cartButton}
           </div>

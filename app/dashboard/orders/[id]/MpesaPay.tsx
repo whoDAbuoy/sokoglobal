@@ -14,7 +14,12 @@ const kes = (n: number) => `KES ${n.toLocaleString('en-KE')}`;
  * Lipa na M-Pesa: send an STK prompt to the buyer's phone, then poll until Daraja confirms.
  * `endpoint` defaults to the order's M-Pesa route; cart checkouts pass /api/checkout/:id/mpesa.
  */
-export default function MpesaPay({ orderId, endpoint }: { orderId: string; endpoint?: string }) {
+export default function MpesaPay({ orderId, endpoint, onSwitchToCard }: {
+  orderId: string;
+  endpoint?: string;
+  /** Offered when the total is above the M-Pesa per-payment limit. */
+  onSwitchToCard?: () => void;
+}) {
   const url = endpoint ?? `/api/orders/${orderId}/mpesa`;
   const router = useRouter();
   const [phone, setPhone] = useState('');
@@ -111,6 +116,9 @@ export default function MpesaPay({ orderId, endpoint }: { orderId: string; endpo
       </div>
       <p className="text-xs text-slate-500">Charged in KES at today’s platform rate; the exact amount shows on the prompt before you enter your PIN.</p>
       {error && <p className="flex items-start gap-1.5 text-sm text-red-600"><AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />{error}</p>}
+      {error && onSwitchToCard && /M-Pesa limit|Bank Card/i.test(error) && (
+        <button type="button" onClick={onSwitchToCard} className="btn-secondary w-full">Pay by Bank Card (Visa / Mastercard) instead</button>
+      )}
     </form>
   );
 }

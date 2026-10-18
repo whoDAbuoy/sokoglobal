@@ -28,9 +28,12 @@ const KIND_META: Record<string, { title: string; emoji: string; action: string }
   payout_no_webhook:          { title: 'Payout sent, no completion webhook (48h)', emoji: ':hourglass:', action: 'Check transfer status in Flutterwave; replay the webhook if completed.' },
   payout_failed_final:        { title: 'Payout failed 5×', emoji: ':x:', action: 'Fix the beneficiary details or pay manually, then close.' },
   payout_on_hold_long:        { title: 'Payout on hold > 72h', emoji: ':pause_button:', action: 'Usually pending KYC or account re-verification.' },
-  refund_failed_final:        { title: 'Pool refund failed 5×', emoji: ':x:', action: 'Refund manually in Flutterwave; buyer is waiting.' },
-  refund_stuck:               { title: 'Pool refund stuck in processing', emoji: ':warning:', action: 'Check whether Flutterwave issued the refund before re-queuing.' },
+  refund_failed_final:        { title: 'Pool refund failed 5×', emoji: ':x:', action: 'Refund manually in the processor that took the pledge (Paystack, or Flutterwave for older pledges); buyer is waiting.' },
+  refund_stuck:               { title: 'Pool refund stuck in processing', emoji: ':warning:', action: 'Check whether Paystack/Flutterwave issued the refund before re-queuing.' },
   payment_mismatch:           { title: 'Payment needs manual matching', emoji: ':mag:', action: 'Amount/currency/reference mismatch — refund or match by hand.' },
+  card_review:                { title: 'Card payment needs review', emoji: ':credit_card:', action: 'Short/wrong-currency charge or paid twice — refund in Paystack or match by hand.' },
+  mpesa_review:               { title: 'M-Pesa payment needs review', emoji: ':iphone:', action: 'Paid twice or wrong amount — reverse in the M-Pesa portal or match by hand.' },
+  mpesa_unresolved:           { title: 'M-Pesa payment unresolved (1h)', emoji: ':hourglass:', action: 'Check the transaction in the Daraja portal / M-Pesa statement.' },
 };
 
 /** Slack mrkdwn escaping: only &, <, > are control characters. */

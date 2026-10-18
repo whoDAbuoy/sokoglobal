@@ -8,11 +8,12 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "test": "tsx --conditions=react-server --test lib/tracking/route.test.mts lib/tracking/validate.test.mts lib/payments/fx.test.mts lib/payments/reconcile.test.mts lib/payments/mpesa.test.mts lib/checkout-gate.test.mts lib/video.test.mts lib/countries.test.mts lib/chat.test.mts lib/cart.test.mts tests/csp.test.mts tests/csp-report.test.mts",
+    "test": "tsx --conditions=react-server --test lib/tracking/route.test.mts lib/tracking/validate.test.mts lib/payments/fx.test.mts lib/payments/reconcile.test.mts lib/payments/mpesa.test.mts lib/payments/paystack.test.mts lib/checkout-gate.test.mts lib/video.test.mts lib/countries.test.mts lib/chat.test.mts lib/cart.test.mts tests/csp.test.mts tests/csp-report.test.mts",
     "mpesa:check": "tsx --conditions=react-server --env-file=.env.local scripts/mpesa-check.mts",
     "dev:importer": "tsx --env-file=.env.local scripts/dev-importer.mts"
   },
   "dependencies": {
+    "@paystack/inline-js": "^2.26.0",
     "@supabase/ssr": "^0.5.2",
     "@supabase/supabase-js": "^2.47.10",
     "clsx": "^2.1.1",

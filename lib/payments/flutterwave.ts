@@ -3,9 +3,10 @@ import { createHmac, timingSafeEqual } from 'node:crypto';
 import { ProxyAgent, fetch as undiciFetch, type Dispatcher } from 'undici';
 
 /**
- * Flutterwave v3 client (secret-key auth). All money endpoints used by the
- * platform live here so request shapes, timeouts and error handling are
- * consistent: Standard checkout, transaction verify, transfers, refunds.
+ * Flutterwave v3 client (secret-key auth) — MONEY OUT only since migration 011:
+ * supplier payout transfers (+ FX rates), refunds of pledges that were paid
+ * through Flutterwave, and verifying legacy Flutterwave charges still in flight.
+ * Buyer card payments (money in) use Paystack: lib/payments/paystack.ts.
  */
 const API_BASE = (process.env.FLW_API_BASE_URL ?? 'https://api.flutterwave.com/v3').replace(/\/$/, '');
 
@@ -69,44 +70,7 @@ export function toCents(amount: unknown): number {
 }
 
 /* -------------------------------------------------------------------------- */
-/* 1. Standard checkout — POST /payments                                       */
-/* -------------------------------------------------------------------------- */
-export interface PaymentLinkInput {
-  txRef: string;
-  amountCents: number;
-  currency: string;
-  redirectUrl: string;
-  customer: { email: string; name: string; phone?: string | null };
-  meta: Record<string, string>;
-  title: string;
-  description: string;
-}
-
-export async function createPaymentLink(input: PaymentLinkInput): Promise<string> {
-  const data = await flw<{ link: string }>('/payments', {
-    method: 'POST',
-    body: {
-      tx_ref: input.txRef,
-      amount: centsToMajor(input.amountCents),
-      currency: input.currency,
-      redirect_url: input.redirectUrl,
-      customer: { email: input.customer.email, name: input.customer.name, phonenumber: input.customer.phone ?? undefined },
-      meta: input.meta,
-      customizations: {
-        title: input.title,
-        description: input.description,
-        logo: process.env.FLW_CHECKOUT_LOGO_URL || undefined,
-      },
-      session_duration: 60,   // minutes the hosted page stays usable
-      max_retry_attempt: 3,
-    },
-  });
-  if (!data?.link?.startsWith('https://')) throw new FlutterwaveError('Flutterwave returned no checkout link', 502, data);
-  return data.link;
-}
-
-/* -------------------------------------------------------------------------- */
-/* 2. Verify — GET /transactions/:id/verify (authoritative charge details)     */
+/* Verify — GET /transactions/:id/verify (legacy charges only)                 */
 /* -------------------------------------------------------------------------- */
 export interface VerifiedTransaction { id: string; txRef: string; status: string; amountCents: number; currency: string }
 

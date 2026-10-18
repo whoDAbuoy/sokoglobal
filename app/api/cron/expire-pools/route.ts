@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { deadline, isAuthorizedCron } from '@/lib/cron';
-import { FlutterwaveError, refundTransaction } from '@/lib/payments/flutterwave';
+import { FlutterwaveError, refundTransaction as refundFlutterwave } from '@/lib/payments/flutterwave';
+import { PaystackError, refundTransaction as refundPaystack } from '@/lib/payments/paystack';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -10,7 +11,7 @@ export const maxDuration = 60;
 const BATCH = 25;
 const MAX_REFUNDS_PER_RUN = 200;
 
-type Claimed = { pool_id: string; buyer_id: string; transaction_id: string; amount_cents: number; attempt: number };
+type Claimed = { pool_id: string; buyer_id: string; transaction_id: string; amount_cents: number; attempt: number; provider: string };
 
 /**
  * GET|POST /api/cron/expire-pools   (Authorization: Bearer CRON_SECRET)
@@ -19,11 +20,12 @@ type Claimed = { pool_id: string; buyer_id: string; transaction_id: string; amou
  *    (escrow-funded) total is below target → 'expired'. Unpaid pledges are
  *    cancelled; paid pledges are queued for refund.
  * 2. Drain the refund queue: claim_pool_refunds() (SKIP LOCKED, so overlapping
- *    runs never claim the same member) → Flutterwave full refund →
+ *    runs never claim the same member) → full refund through the processor
+ *    that took the pledge (Paystack, or Flutterwave for pre-011 pledges) →
  *    finish_pool_refund(). Failures go back to the queue; after 5 attempts
  *    they're parked as 'failed' for manual handling.
  *
- * Refunds are retried freely because Flutterwave rejects refunding a
+ * Refunds are retried freely because both processors reject refunding a
  * transaction that's already fully refunded — a retry can't pay out twice.
  */
 async function run(request: Request) {
@@ -50,14 +52,14 @@ async function run(request: Request) {
     for (const m of claimed) {
       processed += 1;
       try {
-        const refund = await refundTransaction(m.transaction_id);
+        const refund = m.provider === 'paystack' ? await refundPaystack(m.transaction_id) : await refundFlutterwave(m.transaction_id);
         await db.rpc('finish_pool_refund', {
           p_pool_id: m.pool_id, p_buyer_id: m.buyer_id, p_success: true, p_refund_ref: refund.id, p_error: null,
         });
         results.refunded += 1;
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
-        const permanent = err instanceof FlutterwaveError && !err.retryable;
+        const permanent = (err instanceof FlutterwaveError || err instanceof PaystackError) && !err.retryable;
         await db.rpc('finish_pool_refund', {
           p_pool_id: m.pool_id, p_buyer_id: m.buyer_id, p_success: false, p_refund_ref: null, p_error: message,
         });

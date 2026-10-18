@@ -12,10 +12,13 @@ const MAX_BODY_BYTES = 1_000_000;
 const PROVIDER = 'flutterwave';
 
 /**
- * POST /api/webhooks/flutterwave
+ * POST /api/webhooks/flutterwave — supplier payouts (+ legacy charges).
  *
- *   charge.completed   → re-verify transaction → apply_flutterwave_payment (pending_payment → funded)
  *   transfer.completed → re-verify transfer    → complete_payout (supplier payout settled/failed)
+ *   charge.completed   → DEPRECATED: buyer card payments moved to Paystack
+ *                        (/api/webhooks/card, migration 011). Still applied so
+ *                        Flutterwave checkouts started before the switch are not
+ *                        lost; remove once no legacy checkout can still complete.
  *
  * 200 = handled (incl. ignored/duplicate/mismatch) · 401 forged · 400 malformed
  * 500 = transient, Flutterwave should retry.

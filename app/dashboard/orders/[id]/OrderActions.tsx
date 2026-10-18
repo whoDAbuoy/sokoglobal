@@ -2,24 +2,31 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { AlertCircle, CheckCircle2, CreditCard, Loader2, PackageCheck, ShieldCheck } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Loader2, PackageCheck, ShieldCheck } from 'lucide-react';
 import type { EscrowStatus } from '@/lib/types';
+import BankCardPanel from '@/components/payments/BankCardPanel';
 import MpesaPay from './MpesaPay';
 
 const MPESA_ENABLED = process.env.NEXT_PUBLIC_MPESA_ENABLED === 'true';
 
-export default function OrderActions({ orderId, status, returnStatus, payWith }: {
+export default function OrderActions({ orderId, status, returnStatus, payWith, amountLabel = 'now', buyerName, mpesaOverLimit = false }: {
   orderId: string; status: EscrowStatus; returnStatus: string | null; payWith?: string | null;
+  /** Formatted order total, e.g. "$579.00". */
+  amountLabel?: string;
+  buyerName?: string;
+  /** Total is above the M-Pesa per-payment limit → Bank Card only. */
+  mpesaOverLimit?: boolean;
 }) {
-  // M-Pesa is the default when enabled, unless the buyer chose card or is returning from card checkout.
+  const mpesaAvailable = MPESA_ENABLED && !mpesaOverLimit;
+  // M-Pesa is the default when available, unless the buyer chose card or is returning from card checkout.
   const [method, setMethod] = useState<'card' | 'mpesa'>(
-    MPESA_ENABLED && payWith !== 'card' && !returnStatus ? 'mpesa' : 'card',
+    mpesaAvailable && payWith !== 'card' && !returnStatus ? 'mpesa' : 'card',
   );
   const router = useRouter();
-  const [busy, setBusy] = useState<'pay' | 'confirm' | null>(null);
+  const [busy, setBusy] = useState<'confirm' | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [confirmed, setConfirmed] = useState(false);
-  const awaitingWebhook = status === 'pending_payment' && returnStatus === 'successful';
+  const awaitingWebhook = status === 'pending_payment' && (returnStatus === 'processing' || returnStatus === 'successful');
 
   // Returning from checkout: poll briefly while the webhook confirms the payment.
   useEffect(() => {
@@ -29,15 +36,14 @@ export default function OrderActions({ orderId, status, returnStatus, payWith }:
     return () => clearInterval(t);
   }, [awaitingWebhook, router]);
 
-  async function call(kind: 'pay' | 'confirm') {
+  async function call(kind: 'confirm') {
     setBusy(kind);
     setError(null);
     try {
-      const res = await fetch(`/api/orders/${orderId}/${kind === 'pay' ? 'checkout' : 'confirm'}`, { method: 'POST' });
+      const res = await fetch(`/api/orders/${orderId}/confirm`, { method: 'POST' });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error ?? 'Something went wrong');
-      if (kind === 'pay' && json.paymentLink) { window.location.assign(json.paymentLink); return; }
-      if (kind === 'confirm') setConfirmed(true);
+      setConfirmed(true);
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong');
@@ -50,7 +56,7 @@ export default function OrderActions({ orderId, status, returnStatus, payWith }:
     return (
       <div role="status" className="mt-6 flex items-center gap-3 rounded-xl bg-brand-50 p-4 text-sm text-brand-900 ring-1 ring-neutral-200">
         <Loader2 className="h-5 w-5 animate-spin" />
-        Payment received by Flutterwave — we&apos;re confirming it with the escrow account. This usually takes under a minute.
+        Payment received — we&apos;re confirming it with the escrow account. This usually takes under a minute.
       </div>
     );
   }
@@ -63,26 +69,26 @@ export default function OrderActions({ orderId, status, returnStatus, payWith }:
             <p className="font-medium text-slate-900">{returnStatus === 'failed' || returnStatus === 'cancelled' ? 'Payment didn’t go through' : 'Awaiting payment'}</p>
             <p className="text-sm text-slate-500">Your money goes into escrow, not to the supplier.</p>
           </div>
-          {MPESA_ENABLED && (
+          {mpesaAvailable && (
             <div role="radiogroup" aria-label="Payment method" className="inline-flex rounded-lg bg-slate-100 p-1 text-sm font-medium">
               {(['mpesa', 'card'] as const).map((m) => (
                 <button key={m} type="button" role="radio" aria-checked={method === m} onClick={() => setMethod(m)}
                   className={method === m ? 'rounded-md bg-white px-3 py-1.5 text-slate-900 shadow-sm' : 'px-3 py-1.5 text-slate-500 hover:text-slate-800'}>
-                  {m === 'card' ? 'Card / bank' : 'M-Pesa'}
+                  {m === 'card' ? 'Bank Card (Visa / Mastercard)' : 'M-Pesa'}
                 </button>
               ))}
             </div>
           )}
         </div>
+        {MPESA_ENABLED && mpesaOverLimit && (
+          <p className="mt-4 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+            This total is above M-Pesa&apos;s KES 250,000 per-payment limit. Please pay by <strong>Bank Card (Visa / Mastercard)</strong>.
+          </p>
+        )}
         <div className="mt-4">
-          {method === 'mpesa' ? <MpesaPay orderId={orderId} /> : (
-            <>
-              <button type="button" onClick={() => void call('pay')} disabled={busy !== null} className="btn-primary">
-                {busy === 'pay' ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />} Pay securely
-              </button>
-              {error && <p className="mt-2 flex w-full items-center gap-1.5 text-sm text-red-600"><AlertCircle className="h-4 w-4" />{error}</p>}
-            </>
-          )}
+          {method === 'mpesa'
+            ? <MpesaPay orderId={orderId} onSwitchToCard={() => setMethod('card')} />
+            : <BankCardPanel endpoint={`/api/orders/${orderId}/checkout`} amountLabel={amountLabel} returnPath={`/dashboard/orders/${orderId}`} defaultName={buyerName} />}
         </div>
       </div>
     );

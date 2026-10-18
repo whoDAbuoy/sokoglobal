@@ -25,11 +25,13 @@ test('allows SokoGlobal third parties', () => {
   assert.match(directive(csp, 'img-src'), /https:\/\/\*\.tiles\.example-maps\.com/);                              // custom tiles, {s} → *
   assert.match(directive(csp, 'img-src'), /https:\/\/\*\.basemaps\.cartocdn\.com/);
   assert.match(directive(csp, 'connect-src'), /https:\/\/api\.mapbox\.com/);
-  assert.match(directive(csp, 'frame-src'), /https:\/\/checkout\.flutterwave\.com/);
+  assert.match(directive(csp, 'frame-src'), /https:\/\/checkout\.paystack\.com/);       // Paystack secure card form
+  assert.match(directive(csp, 'connect-src'), /https:\/\/api\.paystack\.co/);
+  assert.doesNotMatch(csp, /flutterwave/);                                               // payouts are server-side only
   assert.match(directive(csp, 'frame-src'), /https:\/\/www\.youtube-nocookie\.com/);   // product video embeds
   assert.match(directive(csp, 'frame-src'), /https:\/\/player\.vimeo\.com/);
   assert.match(directive(csp, 'img-src'), /https:\/\/i\.ytimg\.com/);                  // YouTube thumbnails
-  assert.match(directive(csp, 'form-action'), /https:\/\/checkout\.flutterwave\.com/);
+  assert.equal(directive(csp, 'form-action'), "form-action 'self'");
   assert.match(directive(csp, 'script-src'), /https:\/\/va\.vercel-scripts\.com/);
 });
 
