@@ -83,7 +83,10 @@ export function buildCsp({ nonce, isDev = false, isPreview = false, enforce = fa
   const supabaseWss = supabase ? `wss://${supabase.host}` : null;   // Realtime (support chat)
 
   // ── Third parties ────────────────────────────────────────────────────────
-  const FLUTTERWAVE = ['https://checkout.flutterwave.com', 'https://*.flutterwave.com'];
+  // Bank Card payments: Paystack's secure card form (iframe from checkout.paystack.com) and its API.
+  // Flutterwave is server-to-server only now (payouts), so it needs nothing in the browser.
+  const PAYSTACK = ['https://checkout.paystack.com'];
+  const PAYSTACK_API = ['https://api.paystack.co'];
   const MAP_TILES = [
     tileSource(),
     'https://*.basemaps.cartocdn.com',      // default CARTO tiles
@@ -104,21 +107,21 @@ export function buildCsp({ nonce, isDev = false, isPreview = false, enforce = fa
     'default-src': ["'self'"],
     'script-src': [
       "'self'", `'nonce-${nonce}'`, "'strict-dynamic'",
-      ...FLUTTERWAVE, ...VERCEL_ANALYTICS, ...(isPreview ? ['https://vercel.live'] : []),
+      ...PAYSTACK, ...VERCEL_ANALYTICS, ...(isPreview ? ['https://vercel.live'] : []),
       isDev && "'unsafe-eval'",   // React Refresh in `next dev` only
     ],
     'style-src': ["'self'", "'unsafe-inline'", ...(isPreview ? ['https://vercel.live'] : [])],
-    'img-src': ["'self'", 'data:', 'blob:', supabaseHttps, ...MAP_TILES, ...CLOUDINARY, ...VIDEO_THUMBS, 'https://*.flutterwave.com', ...(isPreview ? ['https://vercel.live', 'https://vercel.com'] : [])],
+    'img-src': ["'self'", 'data:', 'blob:', supabaseHttps, ...MAP_TILES, ...CLOUDINARY, ...VIDEO_THUMBS, ...(isPreview ? ['https://vercel.live', 'https://vercel.com'] : [])],
     'font-src': ["'self'", 'data:', ...(isPreview ? ['https://vercel.live', 'https://assets.vercel.com'] : [])],
     'media-src': ["'self'", 'blob:', supabaseHttps, ...CLOUDINARY],   // swatch videos
     'connect-src': [
-      "'self'", supabaseHttps, supabaseWss, ...MAPBOX_API, ...VERCEL_ANALYTICS, ...VERCEL_TOOLBAR,
+      "'self'", supabaseHttps, supabaseWss, ...MAPBOX_API, ...PAYSTACK_API, ...VERCEL_ANALYTICS, ...VERCEL_TOOLBAR,
       isDev && 'ws:',   // HMR
     ],
-    'frame-src': [...FLUTTERWAVE, ...VIDEO_EMBEDS, ...(isPreview ? ['https://vercel.live'] : [])],   // inline checkout modal, if adopted
+    'frame-src': [...PAYSTACK, ...VIDEO_EMBEDS, ...(isPreview ? ['https://vercel.live'] : [])],   // Paystack card form, video embeds
     'worker-src': ["'self'", 'blob:'],
     'manifest-src': ["'self'"],
-    'form-action': ["'self'", 'https://checkout.flutterwave.com'],
+    'form-action': ["'self'"],
     'frame-ancestors': ["'none'"],
     'base-uri': ["'self'"],
     'object-src': ["'none'"],

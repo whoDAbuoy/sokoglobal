@@ -1,7 +1,7 @@
 // Run: npx tsx --conditions=react-server --test lib/payments/mpesa.test.mts
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { darajaTimestamp, describeResult, normalizeKenyanPhone, parseStkCallback, stkPassword } from './mpesa.ts';
+import { darajaTimestamp, describeResult, mpesaLimitMessage, normalizeKenyanPhone, parseStkCallback, stkPassword } from './mpesa.ts';
 
 test('normalizeKenyanPhone accepts common Safaricom formats', () => {
   for (const input of ['0712345678', '0712 345 678', '+254712345678', '254712345678', '712345678', '(0712) 345-678']) {
@@ -73,4 +73,12 @@ test('parseStkCallback rejects junk and suspicious receipts', () => {
   const bad = structuredClone(success);
   bad.Body.stkCallback.CallbackMetadata.Item[1].Value = "x'; drop table--" as never;
   assert.equal(parseStkCallback(bad)?.receipt, null);
+});
+
+test('M-Pesa limit errors point buyers to Bank Card; other errors pass through', () => {
+  const order = 'This order is KES 323,700 — above the M-Pesa limit of KES 250,000 per transaction. Please pay by card.';
+  const cart = 'This checkout is KES 2,004,150 — above the M-Pesa limit of KES 250,000 per transaction. Remove some items or pay by card.';
+  assert.equal(mpesaLimitMessage(order), "This total is KES 323,700, above M-Pesa's limit of KES 250,000 per payment. Please pay by Bank Card (Visa / Mastercard) instead.");
+  assert.match(mpesaLimitMessage(cart), /KES 2,004,150.*Bank Card \(Visa \/ Mastercard\)/);
+  assert.equal(mpesaLimitMessage('Order is not awaiting payment'), 'Order is not awaiting payment');
 });

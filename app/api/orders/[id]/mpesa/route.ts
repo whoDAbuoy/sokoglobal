@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getSessionProfile } from '@/lib/supabase/server';
-import { MpesaError, isMpesaConfigured, normalizeKenyanPhone } from '@/lib/payments/mpesa';
+import { MpesaError, isMpesaConfigured, mpesaLimitMessage, normalizeKenyanPhone } from '@/lib/payments/mpesa';
 import { buyerPaymentView, latestPayment, startMpesaPayment } from '@/lib/payments/mpesa-checkout';
 import { friendlyError } from '@/lib/format';
 import { UUID_RE } from '@/lib/uploads';
@@ -43,7 +43,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     const message = err instanceof Error ? err.message : undefined;
     console.error('[mpesa] STK push failed', { id, message });
     const status = err instanceof MpesaError && err.httpStatus === 409 ? 409 : 502;
-    return NextResponse.json({ error: status === 409 ? friendlyError(message) : 'Could not reach M-Pesa. Please try again.' }, { status });
+    return NextResponse.json({ error: status === 409 ? mpesaLimitMessage(friendlyError(message)) : 'Could not reach M-Pesa. Please try again.' }, { status });
   }
 }
 

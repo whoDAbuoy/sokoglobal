@@ -6,7 +6,7 @@ import { UUID_RE } from '@/lib/uploads';
 
 /**
  * POST /api/pools/:id/join — pledge to a Trend Pool and open escrow checkout.
- * Body: { amountCents }   → 201 { membership, paymentLink }
+ * Body: { amountCents }   → 201 { membership, card } (open Paystack's card form with card.accessCode)
  *
  * If the buyer already pledged but never paid (abandoned checkout), this
  * returns a fresh payment link for the existing pledge instead of erroring.
@@ -43,12 +43,12 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   }
 
   try {
-    const paymentLink = await createCheckout({ kind: 'pool', poolId: id, poolTitle: pool.title }, user, profile);
-    return NextResponse.json({ membership, paymentLink }, { status: 201 });
+    const card = await createCheckout({ kind: 'pool', poolId: id, poolTitle: pool.title }, user, profile);
+    return NextResponse.json({ membership, card }, { status: 201 });
   } catch (err) {
     console.error('[pools] checkout link failed', { id, err });
     return NextResponse.json({
-      membership, paymentLink: null,
+      membership, card: null,
       error: 'Your pledge is saved, but we could not open the payment page. Click “Complete payment” to retry.',
     }, { status: 201 });
   }

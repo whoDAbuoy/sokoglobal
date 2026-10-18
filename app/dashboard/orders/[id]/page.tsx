@@ -8,6 +8,7 @@ import DashboardHeader from '@/components/dashboard/DashboardHeader';
 import EscrowTracker from '@/components/dashboard/EscrowTracker';
 import SupportWidget from '@/components/dashboard/SupportWidget';
 import OrderActions from './OrderActions';
+import { exceedsMpesaLimit } from '@/lib/payments/mpesa';
 import MessageSupplierButton from '@/components/chat/MessageSupplierButton';
 import AnimatedShipmentMap from '@/components/tracking/AnimatedShipmentMap';
 
@@ -20,7 +21,7 @@ const EVENT_LABEL: Record<string, string> = {
 };
 
 /**
- * Order detail + Flutterwave return page (redirect_url). Query params such as
+ * Order detail + return page after a Bank Card payment. Query params such as
  * ?status=successful are only used for messaging — escrow state comes from the
  * database, which only the verified webhook can change.
  */
@@ -82,7 +83,8 @@ export default async function OrderPage({ params, searchParams }: {
             <Link href={`/dashboard/checkout/${order.checkout_group_id}`} className="btn-primary">Go to checkout</Link>
           </div>
         ) : (
-          <OrderActions orderId={order.id} status={view.escrow_status} returnStatus={returnStatus ?? null} payWith={pay ?? null} />
+          <OrderActions orderId={order.id} status={view.escrow_status} returnStatus={returnStatus ?? null} payWith={pay ?? null}
+            amountLabel={formatUSD(order.total_cents, true)} buyerName={profile.full_name} mpesaOverLimit={exceedsMpesaLimit(order.total_cents)} />
         )}
 
         {order.origin_port_coords && order.destination_coords && (
