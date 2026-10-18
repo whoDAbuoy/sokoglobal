@@ -9,6 +9,7 @@ import { createClient } from '@/lib/supabase/client';
 import { formatUSD } from '@/lib/format';
 import { ROLE_LABEL, checkoutGate, gateFromStatus, importerLoginUrl, type CheckoutGate } from '@/lib/checkout-gate';
 import ProductVisual from '@/components/dashboard/ProductVisual';
+import QuantityStepper from '@/components/cart/QuantityStepper';
 
 /**
  * Cart drawer + floating cart bar (buyer pages only). Checkout turns the cart
@@ -53,7 +54,7 @@ export default function CartDrawer() {
     try {
       const res = await fetch('/api/checkout', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ productIds: cart.items.map((i) => i.productId) }),
+        body: JSON.stringify({ items: cart.items.map((i) => ({ productId: i.productId, quantity: i.quantity })) }),
       });
       const blocked = gateFromStatus(res.status, auth.profile?.role);
       if (blocked) { setServerGate(blocked); return; }
@@ -85,7 +86,7 @@ export default function CartDrawer() {
             className="pointer-events-auto flex w-full max-w-md items-center justify-between gap-4 rounded-full bg-neutral-900 py-3 pl-5 pr-3 text-sm text-white shadow-overlay transition hover:bg-neutral-800 motion-safe:animate-slide-up">
             <span className="flex items-center gap-2">
               <ShoppingBag className="h-4 w-4" />
-              {count} Trial Batch{count === 1 ? '' : 'es'} · <span className="font-semibold tabular-nums">{formatUSD(cart.subtotalCents, true)}</span>
+              {cart.batchCount} Trial Batch{cart.batchCount === 1 ? '' : 'es'} · <span className="font-semibold tabular-nums">{formatUSD(cart.subtotalCents, true)}</span>
             </span>
             <span className="flex items-center gap-1 rounded-full bg-white px-3 py-1.5 text-xs font-medium text-neutral-900">
               View cart <ArrowRight className="h-3.5 w-3.5" />
@@ -102,7 +103,7 @@ export default function CartDrawer() {
           <header className="flex items-center justify-between border-b border-neutral-200 px-6 py-5">
             <div>
               <h2 id="cart-title" className="text-lg font-semibold text-neutral-900">Your cart</h2>
-              <p className="text-xs text-neutral-500">{count} of {CART_MAX_ITEMS} Trial Batches · each held in its own escrow</p>
+              <p className="text-xs text-neutral-500">{cart.batchCount} Trial Batch{cart.batchCount === 1 ? '' : 'es'} · {count} of {CART_MAX_ITEMS} products · escrow per product</p>
             </div>
             <button type="button" onClick={() => cart.setOpen(false)} aria-label="Close cart"
               className="grid h-9 w-9 place-items-center rounded-full text-neutral-600 transition hover:bg-neutral-100 hover:text-neutral-900">
@@ -128,8 +129,12 @@ export default function CartDrawer() {
                     <div className="flex min-w-0 flex-1 flex-col">
                       <p className="text-xs text-neutral-500">{item.supplierName}</p>
                       <p className="line-clamp-2 text-sm font-medium text-neutral-900">{item.title}</p>
-                      <div className="mt-auto flex items-center justify-between pt-2">
-                        <span className="text-sm font-semibold tabular-nums text-neutral-900">{formatUSD(item.landedCostCents, true)}</span>
+                      <p className="text-xs tabular-nums text-neutral-500">{formatUSD(item.landedCostCents, true)} per batch</p>
+                      <div className="mt-auto flex items-center justify-between gap-2 pt-2">
+                        <QuantityStepper value={item.quantity} onChange={(q) => cart.setQuantity(item.productId, q)} label={`Trial Batches of ${item.title}`} size="sm" />
+                        <span className="text-sm font-semibold tabular-nums text-neutral-900">{formatUSD(item.landedCostCents * item.quantity, true)}</span>
+                      </div>
+                      <div className="flex justify-end pt-1">
                         <button type="button" onClick={() => cart.remove(item.productId)} aria-label={`Remove ${item.title}`}
                           className="inline-flex items-center gap-1 text-xs text-neutral-500 transition hover:text-red-700">
                           <Trash2 className="h-3.5 w-3.5" /> Remove

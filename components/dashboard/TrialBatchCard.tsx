@@ -10,6 +10,9 @@ import { useAuth } from '@/context/AuthContext';
 import { CART_MAX_ITEMS, useCart } from '@/context/CartContext';
 import { createClient } from '@/lib/supabase/client';
 import { ROLE_LABEL, checkoutGate, gateFromStatus, importerLoginUrl, type CheckoutGate } from '@/lib/checkout-gate';
+import { lineTotals } from '@/lib/cart';
+import QuantityStepper from '@/components/cart/QuantityStepper';
+import MessageSupplierButton from '@/components/chat/MessageSupplierButton';
 import ProductGallery from './ProductGallery';
 import ProductQuickView from './ProductQuickView';
 
@@ -25,6 +28,15 @@ export default function TrialBatchCard({ product }: { product: TrialProductView 
   const [method, setMethod] = useState<'card' | 'mpesa'>('card');
   const [error, setError] = useState<string | null>(null);
   const [quickView, setQuickView] = useState(false);
+  const [pickQty, setPickQty] = useState(1);   // quantity chosen before the product is in the cart
+  const inCart = cart.has(product.id);
+  // In the cart, the stepper edits the cart line; otherwise it sets the quantity for Add to cart / Pay now.
+  const quantity = inCart ? cart.quantityOf(product.id) : pickQty;
+  const setQuantity = (q: number) => (inCart ? cart.setQuantity(product.id, q) : setPickQty(q));
+  const totals = lineTotals({
+    goods_cents: product.goods_cents, freight_cents: product.freight_cents, customs_cents: product.customs_cents,
+    landed_cost_cents: product.landed_cost_cents, trial_units: product.trial_units,
+  }, quantity);
   // Only importers can buy (also enforced by the API and Postgres). A server 401/403 overrides the client view.
   const [serverGate, setServerGate] = useState<CheckoutGate | null>(null);
   const gate = serverGate ?? checkoutGate({ loading: auth.loading, signedIn: !!auth.user, role: auth.profile?.role });
@@ -44,7 +56,7 @@ export default function TrialBatchCard({ product }: { product: TrialProductView 
     setError(null);
     try {
       const res = await fetch('/api/orders', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ productId: product.id, method: pay }),
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ productId: product.id, method: pay, quantity }),
       });
       const blocked = gateFromStatus(res.status, auth.profile?.role);
       if (blocked) { setServerGate(blocked); setState('idle'); return; }
@@ -63,21 +75,20 @@ export default function TrialBatchCard({ product }: { product: TrialProductView 
   }
 
   const lines = [
-    { label: `Product · ${product.trial_units} units`, value: product.goods_cents },
-    { label: 'Consolidated air freight', value: product.freight_cents },
-    { label: 'Customs clearance & duties', value: product.customs_cents },
+    { label: `Product · ${totals.units} units`, value: totals.goods_cents },
+    { label: 'Consolidated air freight', value: totals.freight_cents },
+    { label: 'Customs clearance & duties', value: totals.customs_cents },
   ];
   const images = product.image_urls?.length ? product.image_urls : product.image_url ? [product.image_url] : [];
-  const inCart = cart.has(product.id);
 
   /** Keep browsing: the cart is paid once, from the cart drawer → checkout. */
   function addToCart() {
     const result = cart.add({
       productId: product.id, title: product.title, supplierName: product.supplier_name,
       imageUrl: images[0] ?? null, category: product.category, landedCostCents: product.landed_cost_cents,
-    });
+    }, pickQty);
     if (result === 'full') { setError(`Your cart holds up to ${CART_MAX_ITEMS} Trial Batches — check out or remove one first.`); return; }
-    toast.success('Added to cart', { description: product.title, action: { label: 'View cart', onClick: () => cart.setOpen(true) } });
+    toast.success('Added to cart', { description: `${pickQty} × ${product.title}`, action: { label: 'View cart', onClick: () => cart.setOpen(true) } });
   }
 
   const cartButton = inCart ? (
@@ -120,6 +131,13 @@ export default function TrialBatchCard({ product }: { product: TrialProductView 
         </p>
       ) : (
         <div className="space-y-2">
+          <div className="flex items-center justify-between gap-3 pb-1">
+            <QuantityStepper value={quantity} onChange={setQuantity} label="Trial Batches" size="sm" disabled={state === 'loading' || product.is_demo} />
+            <p className="text-right text-xs leading-tight text-neutral-500">
+              {quantity} × {formatUSD(product.landed_cost_cents, true)}
+              <span className="block text-sm font-semibold tabular-nums text-neutral-900">{formatUSD(totals.landed_cost_cents, true)}</span>
+            </p>
+          </div>
           {/* M-Pesa is the primary method when enabled; card checkout is the fallback. */}
           {MPESA_ENABLED && (
             <button type="button" onClick={() => void startTrial('mpesa')} disabled={state === 'loading' || product.is_demo}
@@ -136,6 +154,7 @@ export default function TrialBatchCard({ product }: { product: TrialProductView 
             </button>
             {cartButton}
           </div>
+          <MessageSupplierButton productId={product.id} productTitle={product.title} disabled={product.is_demo} variant="link" className="w-full justify-center pt-1" />
         </div>
       )}
       {error && <p className="mt-2 flex items-start gap-1.5 text-xs text-red-600"><AlertCircle className="mt-px h-3.5 w-3.5 shrink-0" />{error}</p>}
@@ -191,7 +210,10 @@ export default function TrialBatchCard({ product }: { product: TrialProductView 
               </p>
               <p className="text-xs text-neutral-500">Delivered to your door · no surprise fees</p>
             </div>
-            <p className="text-lg font-semibold tabular-nums text-neutral-900">{formatUSD(product.landed_cost_cents, true)}</p>
+            <p className="text-right text-lg font-semibold tabular-nums text-neutral-900">
+              {formatUSD(totals.landed_cost_cents, true)}
+              {quantity > 1 && <span className="block text-xs font-normal text-neutral-500">{quantity} batches</span>}
+            </p>
           </div>
         </div>
 
@@ -203,7 +225,7 @@ export default function TrialBatchCard({ product }: { product: TrialProductView 
         <div className="mt-auto pt-5">{actions}</div>
       </div>
 
-      {quickView && <ProductQuickView product={product} onClose={() => setQuickView(false)} actions={actions} />}
+      {quickView && <ProductQuickView product={product} quantity={quantity} onClose={() => setQuickView(false)} actions={actions} />}
     </article>
   );
 }
