@@ -28,7 +28,7 @@ export interface ShipmentTracking {
 
 const STATUS_META: Record<DisplayStatus, { label: string; icon: typeof Plane; cls: string }> = {
   AWAITING_DISPATCH: { label: 'Awaiting dispatch', icon: Clock, cls: 'bg-slate-100 text-slate-700' },
-  IN_TRANSIT: { label: 'In transit', icon: Plane, cls: 'bg-brand-50 text-brand-800 ring-1 ring-brand-100' },
+  IN_TRANSIT: { label: 'In transit', icon: Plane, cls: 'bg-brand-50 text-brand-800 ring-1 ring-neutral-200' },
   ARRIVED: { label: 'Arrived', icon: MapPin, cls: 'bg-emerald-50 text-emerald-800 ring-1 ring-emerald-600/20' },
   CUSTOMS_CLEARED: { label: 'Customs cleared', icon: ShieldCheck, cls: 'bg-emerald-50 text-emerald-800 ring-1 ring-emerald-600/20' },
   OUT_FOR_DELIVERY: { label: 'Out for delivery', icon: Truck, cls: 'bg-emerald-50 text-emerald-800 ring-1 ring-emerald-600/20' },

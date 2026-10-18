@@ -73,9 +73,9 @@ export default async function KycAdminPage() {
   return (
     <>
       <DashboardHeader profile={profile} />
-      <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
-        <p className="text-xs font-semibold uppercase tracking-wider text-brand-700">Internal · Compliance</p>
-        <h1 className="mt-1 text-2xl font-semibold tracking-tight">Supplier KYC review</h1>
+      <main className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
+        <p className="eyebrow">Internal · Compliance</p>
+        <h1 className="mt-2 text-3xl font-semibold text-neutral-900">Supplier KYC review</h1>
         <p className="mt-1 text-sm text-slate-500">Check the Tax ID, business registration and director ID against the details provided, then verify the payout account.</p>
 
         <dl className="mt-6 grid gap-4 sm:grid-cols-3">
@@ -85,7 +85,7 @@ export default async function KycAdminPage() {
             { label: 'Decided recently', value: (recentRes.data ?? []).length, icon: ShieldCheck },
           ].map(({ label, value, icon: Icon }) => (
             <div key={label} className="card flex items-center gap-4 p-5">
-              <span className="grid h-10 w-10 place-items-center rounded-lg bg-brand-50 ring-1 ring-brand-100"><Icon className="h-5 w-5 text-brand-700" /></span>
+              <span className="grid h-10 w-10 place-items-center rounded-lg bg-brand-50 ring-1 ring-neutral-200"><Icon className="h-5 w-5 text-brand-700" /></span>
               <div><dd className="text-2xl font-semibold tabular-nums">{value}</dd><dt className="text-sm text-slate-500">{label}</dt></div>
             </div>
           ))}

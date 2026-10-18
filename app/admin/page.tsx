@@ -65,11 +65,11 @@ export default async function AdminPage() {
   return (
     <>
       <DashboardHeader profile={profile} />
-      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+      <main className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-brand-700">Internal · Operations</p>
-            <h1 className="mt-1 text-2xl font-semibold tracking-tight">Product review queue</h1>
+            <p className="eyebrow">Internal · Operations</p>
+            <h1 className="mt-2 text-3xl font-semibold text-neutral-900">Product review queue</h1>
             <p className="mt-1 text-sm text-slate-500">
               Check the visual proof, enter the logistics quote, and publish the Guaranteed Landed Cost.
             </p>
@@ -79,7 +79,7 @@ export default async function AdminPage() {
         <dl className="mt-6 grid gap-4 sm:grid-cols-3">
           {stats.map(({ label, value, icon: Icon }) => (
             <div key={label} className="card flex items-center gap-4 p-5">
-              <span className="grid h-10 w-10 place-items-center rounded-lg bg-brand-50 ring-1 ring-brand-100"><Icon className="h-5 w-5 text-brand-700" /></span>
+              <span className="grid h-10 w-10 place-items-center rounded-lg bg-brand-50 ring-1 ring-neutral-200"><Icon className="h-5 w-5 text-brand-700" /></span>
               <div>
                 <dd className="text-2xl font-semibold tabular-nums text-slate-900">{value}</dd>
                 <dt className="text-sm text-slate-500">{label}</dt>

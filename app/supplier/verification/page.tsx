@@ -31,8 +31,8 @@ export default async function VerificationPage() {
   return (
     <>
       <DashboardHeader profile={profile} />
-      <main className="mx-auto max-w-3xl px-4 py-8 sm:px-6">
-        <h1 className="text-2xl font-semibold tracking-tight">Business verification</h1>
+      <main className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
+        <h1 className="text-3xl font-semibold text-neutral-900">Business verification</h1>
         <p className="mt-1 text-sm text-slate-500">
           Verified suppliers get the “KYC verified” badge and automated payouts when buyers confirm delivery.
         </p>

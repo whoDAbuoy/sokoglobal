@@ -53,14 +53,18 @@ export default async function OrderPage({ params, searchParams }: {
   return (
     <>
       <DashboardHeader profile={profile} />
-      <main className="mx-auto max-w-3xl px-4 py-8 sm:px-6">
-        <Link href="/dashboard#orders" className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-800">
+      <main className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
+        <Link href="/dashboard#orders" className="inline-flex items-center gap-1 text-sm text-neutral-500 transition-colors hover:text-neutral-900">
           <ArrowLeft className="h-4 w-4" /> Orders
         </Link>
-        <h1 className="mt-4 text-2xl font-semibold tracking-tight">{view.product_title}</h1>
-        <p className="mt-1 text-sm text-slate-500">Order #{order.id.slice(0, 8).toUpperCase()} · {order.quantity} units</p>
+        <div className="mt-6 border-b border-neutral-200 pb-6">
+          <p className="eyebrow">Order #{order.id.slice(0, 8).toUpperCase()} · {order.quantity} units</p>
+          <h1 className="mt-2 text-3xl font-semibold text-neutral-900">{view.product_title}</h1>
+        </div>
 
-        <div className="mt-6"><EscrowTracker orders={[view]} /></div>
+        <div className="mt-8 grid gap-10 lg:grid-cols-[minmax(0,1fr)_22rem]">
+        <div className="min-w-0">
+        <EscrowTracker orders={[view]} />
 
         <OrderActions orderId={order.id} status={view.escrow_status} returnStatus={returnStatus ?? null} payWith={pay ?? null} />
 
@@ -81,32 +85,37 @@ export default async function OrderPage({ params, searchParams }: {
           />
         )}
 
-        <section className="card mt-6 p-5">
-          <h2 className="text-sm font-semibold text-slate-900">Guaranteed Landed Cost</h2>
-          <dl className="mt-3 space-y-1.5 text-sm text-slate-600">
-            {[['Product', order.goods_cents], ['Consolidated air freight', order.freight_cents], ['Customs clearance & duties', order.customs_cents]].map(([l, v]) => (
-              <div key={l as string} className="flex justify-between"><dt>{l}</dt><dd className="tabular-nums">{formatUSD(v as number, true)}</dd></div>
-            ))}
-            <div className="flex justify-between border-t border-slate-100 pt-2 font-semibold text-slate-900">
-              <dt>Total held in escrow</dt><dd className="tabular-nums">{formatUSD(order.total_cents, true)}</dd>
-            </div>
-          </dl>
-        </section>
-
-        <section className="card mt-6 p-5">
-          <h2 className="text-sm font-semibold text-slate-900">Escrow audit trail</h2>
-          <ol className="mt-3 space-y-3 border-l border-slate-200 pl-4">
+        <section className="mt-10 border-t border-neutral-200 pt-8">
+          <h2 className="eyebrow">Escrow audit trail</h2>
+          <ol className="mt-5 space-y-4 border-l border-neutral-200 pl-5">
             {(events ?? []).map((e) => (
               <li key={e.id} className="relative text-sm">
-                <span className="absolute -left-[21px] top-1.5 h-2.5 w-2.5 rounded-full bg-brand-700 ring-4 ring-white" />
-                <p className="font-medium text-slate-800">
+                <span className="absolute -left-[25px] top-1.5 h-2 w-2 rounded-full bg-neutral-900 ring-4 ring-white" />
+                <p className="font-medium capitalize text-neutral-900">
                   {e.event_type === 'status_change' ? String(e.to_status).replace(/_/g, ' ') : EVENT_LABEL[e.event_type] ?? e.event_type}
                 </p>
-                <p className="text-xs text-slate-500">{new Date(e.created_at).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' })}</p>
+                <p className="text-xs text-neutral-500">{new Date(e.created_at).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' })}</p>
               </li>
             ))}
           </ol>
         </section>
+        </div>
+
+        {/* Order summary — checkout-style sidebar */}
+        <aside className="lg:sticky lg:top-24 lg:self-start">
+          <section className="rounded-lg border border-neutral-200 bg-neutral-50 p-6">
+            <h2 className="eyebrow">Guaranteed Landed Cost</h2>
+            <dl className="mt-5 space-y-3 text-sm text-neutral-600">
+              {[['Product', order.goods_cents], ['Consolidated air freight', order.freight_cents], ['Customs clearance & duties', order.customs_cents]].map(([l, v]) => (
+                <div key={l as string} className="flex justify-between"><dt>{l}</dt><dd className="tabular-nums text-neutral-900">{formatUSD(v as number, true)}</dd></div>
+              ))}
+              <div className="flex items-baseline justify-between border-t border-neutral-200 pt-4 text-neutral-900">
+                <dt className="font-medium">Total held in escrow</dt><dd className="text-xl font-semibold tabular-nums">{formatUSD(order.total_cents, true)}</dd>
+              </div>
+            </dl>
+          </section>
+        </aside>
+        </div>
       </main>
       <SupportWidget orders={[view]} />
     </>

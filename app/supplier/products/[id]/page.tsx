@@ -21,7 +21,7 @@ export default async function ProductMediaPage({ params }: { params: Promise<{ i
   return (
     <main className="mx-auto max-w-4xl px-4 py-10 sm:px-6">
       <Link href="/supplier" className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-800"><ArrowLeft className="h-4 w-4" /> Catalogue</Link>
-      <h1 className="mt-4 text-2xl font-semibold tracking-tight">{product.title}</h1>
+      <h1 className="mt-4 text-3xl font-semibold text-neutral-900">{product.title}</h1>
       <p className="mt-1 text-sm text-slate-500">Step 2 of 2 — visual proof</p>
       {product.status === 'draft' && product.review_notes && (
         <div className="mt-4 flex gap-3 rounded-xl bg-amber-50 p-4 text-sm text-amber-900 ring-1 ring-amber-600/20">

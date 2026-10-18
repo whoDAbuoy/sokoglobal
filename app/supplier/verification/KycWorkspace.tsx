@@ -105,7 +105,7 @@ function StatusBanner({ status, notes }: { status: Status; notes: string | null 
 function SectionTitle({ icon: Icon, title, subtitle }: { icon: typeof FileText; title: string; subtitle: string }) {
   return (
     <div className="flex gap-3">
-      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-brand-50 ring-1 ring-brand-100"><Icon className="h-4 w-4 text-brand-700" aria-hidden /></span>
+      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-brand-50 ring-1 ring-neutral-200"><Icon className="h-4 w-4 text-brand-700" aria-hidden /></span>
       <div><h2 className="font-semibold text-slate-900">{title}</h2><p className="text-sm text-slate-500">{subtitle}</p></div>
     </div>
   );

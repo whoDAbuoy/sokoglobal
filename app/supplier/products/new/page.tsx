@@ -64,7 +64,7 @@ export default function NewProductPage() {
   return (
     <main className="mx-auto max-w-2xl px-4 py-10 sm:px-6">
       <Link href="/supplier" className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-800"><ArrowLeft className="h-4 w-4" /> Catalogue</Link>
-      <h1 className="mt-4 text-2xl font-semibold tracking-tight">New Trial Batch listing</h1>
+      <h1 className="mt-4 text-3xl font-semibold text-neutral-900">New Trial Batch listing</h1>
       <p className="mt-1 text-sm text-slate-500">Step 1 of 2 — details. Next you&apos;ll upload real photos{category === 'beauty' && ' and a swatch video'}.</p>
 
       <form onSubmit={submit} className="card mt-6 space-y-5 p-6">
@@ -113,7 +113,7 @@ export default function NewProductPage() {
           </div>
         </div>
 
-        <div className="flex items-start gap-2.5 rounded-lg bg-brand-50 px-4 py-3 text-sm text-brand-900 ring-1 ring-brand-100">
+        <div className="flex items-start gap-2.5 rounded-lg bg-brand-50 px-4 py-3 text-sm text-brand-900 ring-1 ring-neutral-200">
           <Info className="mt-0.5 h-4 w-4 shrink-0" />
           <p>
             Goods value: <strong>{formatUSD(goodsCents, true)}</strong>. Our logistics team adds consolidated freight and customs to

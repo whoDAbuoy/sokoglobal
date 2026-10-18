@@ -80,7 +80,7 @@ export default function KycReviewCard({ kyc }: { kyc: KycCase }) {
         <div className="flex flex-wrap gap-2 text-xs">
           {reverify && <span className="rounded-md bg-amber-100 px-2 py-0.5 font-medium text-amber-800">Payout account changed — re-verify</span>}
           {kyc.heldPayouts.count > 0 && (
-            <span className="rounded-md bg-brand-50 px-2 py-0.5 font-medium text-brand-800 ring-1 ring-brand-100">
+            <span className="rounded-md bg-brand-50 px-2 py-0.5 font-medium text-brand-800 ring-1 ring-neutral-200">
               {kyc.heldPayouts.count} payout(s) · {formatUSD(kyc.heldPayouts.cents)} waiting
             </span>
           )}
@@ -93,7 +93,7 @@ export default function KycReviewCard({ kyc }: { kyc: KycCase }) {
       <div className="grid gap-6 p-6 lg:grid-cols-3">
         {/* Business declaration */}
         <section aria-label="Business details">
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">Declared details</h3>
+          <h3 className="eyebrow">Declared details</h3>
           <dl className="mt-3 space-y-2.5 text-sm">
             <Row label="Legal name" value={kyc.legalName} />
             <Row label="Tax ID" value={kyc.taxId} mono />
@@ -105,7 +105,7 @@ export default function KycReviewCard({ kyc }: { kyc: KycCase }) {
 
         {/* Documents */}
         <section aria-label="Documents">
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">Documents</h3>
+          <h3 className="eyebrow">Documents</h3>
           <ul className="mt-3 space-y-2">
             {kyc.documents.map((d) => {
               const meta = DOC_META[d.docType] ?? { label: d.docType, icon: FileText };
@@ -135,7 +135,7 @@ export default function KycReviewCard({ kyc }: { kyc: KycCase }) {
 
         {/* Payout account */}
         <section aria-label="Payout account">
-          <h3 className="flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-slate-500">
+          <h3 className="flex items-center justify-between eyebrow">
             Payout account
             {kyc.account && (
               <button type="button" onClick={() => void toggleReveal()} disabled={revealing} className="flex items-center gap-1 normal-case text-brand-700"
@@ -175,7 +175,7 @@ export default function KycReviewCard({ kyc }: { kyc: KycCase }) {
       <form className="border-t border-slate-100 bg-slate-50/60 px-6 py-5">
         <input type="hidden" name="supplierId" value={kyc.supplierId} />
         <fieldset>
-          <legend className="text-xs font-semibold uppercase tracking-wide text-slate-500">Reviewer checklist</legend>
+          <legend className="eyebrow">Reviewer checklist</legend>
           <div className="mt-2 flex flex-wrap gap-x-6 gap-y-2">
             {checklist.map((c) => (
               <label key={c} className="flex items-center gap-2 text-sm text-slate-700">

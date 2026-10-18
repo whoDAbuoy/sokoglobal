@@ -22,7 +22,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     <html lang="en" className={inter.variable}>
       <body className="min-h-screen font-sans">
         <AuthProvider>{children}</AuthProvider>
-        <Toaster richColors closeButton position="top-right" />
+        <Toaster closeButton position="top-right"
+          toastOptions={{ classNames: { toast: 'rounded-lg border border-neutral-200 shadow-overlay font-sans', description: 'text-neutral-500' } }} />
       </body>
     </html>
   );

@@ -9,17 +9,16 @@ export default function ProductVisual({ src, alt, category, className }: {
 }) {
   if (src) {
     return (
-      <div className={clsx('relative overflow-hidden bg-slate-100', className)}>
-        <Image src={src} alt={alt} fill sizes="(min-width: 1024px) 33vw, 100vw" className="object-cover" />
+      <div className={clsx('relative overflow-hidden bg-neutral-100', className)}>
+        <Image src={src} alt={alt} fill sizes="(min-width: 1024px) 33vw, 100vw"
+          className="object-cover transition-transform duration-500 ease-out group-hover:scale-[1.03]" />
       </div>
     );
   }
   const Icon = category === 'beauty' ? Sparkles : Shirt;
   return (
-    <div className={clsx('grid place-items-center',
-      category === 'beauty' ? 'bg-gradient-to-br from-rose-50 via-white to-brand-50' : 'bg-gradient-to-br from-brand-50 via-white to-slate-100',
-      className)}>
-      <Icon className={clsx('h-10 w-10', category === 'beauty' ? 'text-rose-300' : 'text-brand-300')} strokeWidth={1.5} />
+    <div className={clsx('grid place-items-center bg-neutral-100', className)}>
+      <Icon className="h-10 w-10 text-neutral-300" strokeWidth={1.25} />
     </div>
   );
 }
