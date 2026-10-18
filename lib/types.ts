@@ -45,6 +45,16 @@ export interface ProductRemovalResult {
   open_orders: number;
 }
 
+/**
+ * One gallery slide. Video URLs may be direct files (.mp4/.webm/.mov), HLS
+ * (.m3u8) or YouTube/Vimeo links — see lib/video.ts.
+ */
+export interface GalleryMedia {
+  type: 'image' | 'video';
+  url: string;
+  poster?: string | null;
+}
+
 /** Shape rendered by the Trial Batch card on the buyer dashboard. */
 export interface TrialProductView {
   id: string;
@@ -64,6 +74,8 @@ export interface TrialProductView {
   image_url: string | null;
   /** All product photos in display order (gallery / Quick View). Falls back to image_url when absent. */
   image_urls?: string[];
+  /** Photos and videos in gallery order. When present it takes precedence over image_urls. */
+  media?: GalleryMedia[];
   has_swatch_video: boolean;
   is_demo?: boolean;
 }

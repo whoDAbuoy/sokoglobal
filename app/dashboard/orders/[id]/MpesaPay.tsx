@@ -10,8 +10,12 @@ const POLL_MS = 4_000;
 const GIVE_UP_MS = 3 * 60_000;   // prompts expire after ~1 min; the server keeps checking after this
 const kes = (n: number) => `KES ${n.toLocaleString('en-KE')}`;
 
-/** Lipa na M-Pesa: send an STK prompt to the buyer's phone, then poll until Daraja confirms. */
-export default function MpesaPay({ orderId }: { orderId: string }) {
+/**
+ * Lipa na M-Pesa: send an STK prompt to the buyer's phone, then poll until Daraja confirms.
+ * `endpoint` defaults to the order's M-Pesa route; cart checkouts pass /api/checkout/:id/mpesa.
+ */
+export default function MpesaPay({ orderId, endpoint }: { orderId: string; endpoint?: string }) {
+  const url = endpoint ?? `/api/orders/${orderId}/mpesa`;
   const router = useRouter();
   const [phone, setPhone] = useState('');
   const [phase, setPhase] = useState<'form' | 'sending' | 'waiting' | 'done'>('form');
@@ -20,12 +24,12 @@ export default function MpesaPay({ orderId }: { orderId: string }) {
   const waitingSince = useRef(0);
 
   const check = useCallback(async () => {
-    const res = await fetch(`/api/orders/${orderId}/mpesa`, { cache: 'no-store' });
+    const res = await fetch(url, { cache: 'no-store' });
     if (!res.ok) return null;
     const { payment: p } = await res.json() as { payment: Payment | null };
     setPayment(p);
     return p;
-  }, [orderId]);
+  }, [url]);
 
   // Resume a prompt that's still open (e.g. after a page reload).
   useEffect(() => {
@@ -57,7 +61,7 @@ export default function MpesaPay({ orderId }: { orderId: string }) {
     setPhase('sending');
     setError(null);
     try {
-      const res = await fetch(`/api/orders/${orderId}/mpesa`, {
+      const res = await fetch(url, {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone }),
       });
       const json = await res.json();

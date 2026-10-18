@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getSessionProfile } from '@/lib/supabase/server';
-import { MpesaError, describeResult, isMpesaConfigured, normalizeKenyanPhone } from '@/lib/payments/mpesa';
-import { latestPayment, startMpesaPayment } from '@/lib/payments/mpesa-checkout';
+import { MpesaError, isMpesaConfigured, normalizeKenyanPhone } from '@/lib/payments/mpesa';
+import { buyerPaymentView, latestPayment, startMpesaPayment } from '@/lib/payments/mpesa-checkout';
 import { friendlyError } from '@/lib/format';
 import { UUID_RE } from '@/lib/uploads';
 
@@ -37,8 +37,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   if (!phone) return NextResponse.json({ error: 'Enter a Safaricom number, e.g. 0712 345 678' }, { status: 400 });
 
   try {
-    const product = (Array.isArray(ctx.order.product) ? ctx.order.product[0] : ctx.order.product) as { title: string } | null;
-    const result = await startMpesaPayment({ orderId: id, buyerId: ctx.user.id, phone, productTitle: product?.title ?? 'Trial Batch' });
+    const result = await startMpesaPayment({ target: { kind: 'order', id }, buyerId: ctx.user.id, phone });
     return NextResponse.json(result, { status: 201 });
   } catch (err) {
     const message = err instanceof Error ? err.message : undefined;
@@ -59,17 +58,6 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   const ctx = await loadOrder(id);
   if ('error' in ctx) return ctx.error;
 
-  const payment = await latestPayment(id);
-  if (!payment) return NextResponse.json({ payment: null });
-
-  const status = payment.status === 'initiating' ? 'pending' : payment.status;
-  return NextResponse.json({
-    payment: {
-      status,
-      amountKes: payment.amount_kes,
-      message: status === 'pending' ? null
-        : status === 'review' ? 'We received your M-Pesa payment and our team is reviewing it. No need to pay again.'
-        : describeResult(payment.result_code, payment.result_desc),
-    },
-  });
+  const payment = await latestPayment({ kind: 'order', id });
+  return NextResponse.json({ payment: payment ? buyerPaymentView(payment) : null });
 }

@@ -16,7 +16,8 @@ export function siteUrl(): string {
 
 type CheckoutTarget =
   | { kind: 'order'; orderId: string; productTitle: string }
-  | { kind: 'pool'; poolId: string; poolTitle: string };
+  | { kind: 'pool'; poolId: string; poolTitle: string }
+  | { kind: 'group'; groupId: string; itemCount: number };
 
 /**
  * Create a Flutterwave hosted-checkout link for an order or a Trend Pool pledge.
@@ -29,7 +30,7 @@ export async function createCheckout(target: CheckoutTarget, user: User, profile
   if (!user.email) throw new Error('Your account needs an email address to pay');
 
   const db = createAdminClient();
-  const refId = target.kind === 'order' ? target.orderId : target.poolId;
+  const refId = target.kind === 'order' ? target.orderId : target.kind === 'pool' ? target.poolId : target.groupId;
   const { data, error } = await db.rpc('begin_payment_attempt', { p_kind: target.kind, p_ref_id: refId, p_buyer_id: user.id });
   if (error) throw new Error(error.message);
   const attempt = (Array.isArray(data) ? data[0] : data) as { o_tx_ref: string; o_amount_cents: number; o_currency: string };
@@ -39,9 +40,9 @@ export async function createCheckout(target: CheckoutTarget, user: User, profile
     txRef: attempt.o_tx_ref,
     amountCents: attempt.o_amount_cents,
     currency: attempt.o_currency,
-    redirectUrl: target.kind === 'order'
-      ? `${base}/dashboard/orders/${target.orderId}`
-      : `${base}/dashboard?pool=${target.poolId}#pools`,
+    redirectUrl: target.kind === 'order' ? `${base}/dashboard/orders/${target.orderId}`
+      : target.kind === 'pool' ? `${base}/dashboard?pool=${target.poolId}#pools`
+      : `${base}/dashboard/checkout/${target.groupId}`,
     customer: { email: user.email, name: profile.full_name },
     meta: {
       kind: target.kind,
@@ -51,8 +52,8 @@ export async function createCheckout(target: CheckoutTarget, user: User, profile
       country: profile.country_code,
     },
     title: 'SokoGlobal Escrow',
-    description: target.kind === 'order'
-      ? `Trial Batch: ${target.productTitle}`.slice(0, 120)
-      : `Trend Pool pledge: ${target.poolTitle}`.slice(0, 120),
+    description: target.kind === 'order' ? `Trial Batch: ${target.productTitle}`.slice(0, 120)
+      : target.kind === 'pool' ? `Trend Pool pledge: ${target.poolTitle}`.slice(0, 120)
+      : `${target.itemCount} Trial Batches (escrow per order)`,
   });
 }

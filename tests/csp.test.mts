@@ -26,6 +26,9 @@ test('allows SokoGlobal third parties', () => {
   assert.match(directive(csp, 'img-src'), /https:\/\/\*\.basemaps\.cartocdn\.com/);
   assert.match(directive(csp, 'connect-src'), /https:\/\/api\.mapbox\.com/);
   assert.match(directive(csp, 'frame-src'), /https:\/\/checkout\.flutterwave\.com/);
+  assert.match(directive(csp, 'frame-src'), /https:\/\/www\.youtube-nocookie\.com/);   // product video embeds
+  assert.match(directive(csp, 'frame-src'), /https:\/\/player\.vimeo\.com/);
+  assert.match(directive(csp, 'img-src'), /https:\/\/i\.ytimg\.com/);                  // YouTube thumbnails
   assert.match(directive(csp, 'form-action'), /https:\/\/checkout\.flutterwave\.com/);
   assert.match(directive(csp, 'script-src'), /https:\/\/va\.vercel-scripts\.com/);
 });

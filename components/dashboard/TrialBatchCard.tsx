@@ -2,10 +2,12 @@
 
 import { useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { AlertCircle, BadgeCheck, CheckCircle2, Eye, Film, Loader2, Lock, LogIn, ShieldCheck, Smartphone, Timer } from 'lucide-react';
+import { toast } from 'sonner';
+import { AlertCircle, BadgeCheck, Check, CheckCircle2, Eye, Film, Loader2, Lock, LogIn, ShieldCheck, ShoppingBag, Smartphone, Timer } from 'lucide-react';
 import type { TrialProductView } from '@/lib/types';
 import { countryName, flag, formatUSD } from '@/lib/format';
 import { useAuth } from '@/context/AuthContext';
+import { CART_MAX_ITEMS, useCart } from '@/context/CartContext';
 import { createClient } from '@/lib/supabase/client';
 import { ROLE_LABEL, checkoutGate, gateFromStatus, importerLoginUrl, type CheckoutGate } from '@/lib/checkout-gate';
 import ProductGallery from './ProductGallery';
@@ -18,6 +20,7 @@ export default function TrialBatchCard({ product }: { product: TrialProductView 
   const router = useRouter();
   const pathname = usePathname();
   const auth = useAuth();
+  const cart = useCart();
   const [state, setState] = useState<'idle' | 'loading' | 'done' | 'error'>('idle');
   const [method, setMethod] = useState<'card' | 'mpesa'>('card');
   const [error, setError] = useState<string | null>(null);
@@ -65,6 +68,28 @@ export default function TrialBatchCard({ product }: { product: TrialProductView 
     { label: 'Customs clearance & duties', value: product.customs_cents },
   ];
   const images = product.image_urls?.length ? product.image_urls : product.image_url ? [product.image_url] : [];
+  const inCart = cart.has(product.id);
+
+  /** Keep browsing: the cart is paid once, from the cart drawer → checkout. */
+  function addToCart() {
+    const result = cart.add({
+      productId: product.id, title: product.title, supplierName: product.supplier_name,
+      imageUrl: images[0] ?? null, category: product.category, landedCostCents: product.landed_cost_cents,
+    });
+    if (result === 'full') { setError(`Your cart holds up to ${CART_MAX_ITEMS} Trial Batches — check out or remove one first.`); return; }
+    toast.success('Added to cart', { description: product.title, action: { label: 'View cart', onClick: () => cart.setOpen(true) } });
+  }
+
+  const cartButton = inCart ? (
+    <button type="button" onClick={() => cart.setOpen(true)} className="btn-secondary w-full">
+      <Check className="h-4 w-4 text-emerald-600" /> In cart
+    </button>
+  ) : (
+    <button type="button" onClick={addToCart} disabled={state === 'loading' || product.is_demo} className="btn-secondary w-full"
+      title={product.is_demo ? 'Sample listing — run supabase/seed.sql to enable' : undefined}>
+      <ShoppingBag className="h-4 w-4" /> Add to cart
+    </button>
+  );
 
   // Payment block — rendered in the card and in the Quick View, so both use the same checkout handlers and state.
   const actions = (
@@ -103,11 +128,14 @@ export default function TrialBatchCard({ product }: { product: TrialProductView 
               Pay with M-Pesa
             </button>
           )}
-          <button type="button" onClick={() => void startTrial('card')} disabled={state === 'loading' || product.is_demo}
-            className={`${MPESA_ENABLED ? 'btn-secondary' : 'btn-primary'} w-full`} title={product.is_demo ? 'Sample listing — run supabase/seed.sql to enable' : undefined}>
-            {state === 'loading' && method === 'card' ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />}
-            {MPESA_ENABLED ? 'Pay by card / bank' : 'Start trial with escrow'}
-          </button>
+          <div className={MPESA_ENABLED ? 'grid grid-cols-2 gap-2' : 'space-y-2'}>
+            <button type="button" onClick={() => void startTrial('card')} disabled={state === 'loading' || product.is_demo}
+              className={`${MPESA_ENABLED ? 'btn-secondary px-2' : 'btn-primary'} w-full`} title={product.is_demo ? 'Sample listing — run supabase/seed.sql to enable' : undefined}>
+              {state === 'loading' && method === 'card' ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />}
+              {MPESA_ENABLED ? 'Card / bank' : 'Start trial with escrow'}
+            </button>
+            {cartButton}
+          </div>
         </div>
       )}
       {error && <p className="mt-2 flex items-start gap-1.5 text-xs text-red-600"><AlertCircle className="mt-px h-3.5 w-3.5 shrink-0" />{error}</p>}
@@ -118,7 +146,7 @@ export default function TrialBatchCard({ product }: { product: TrialProductView 
     <article className="group flex flex-col">
       {/* Clicking the photos opens the Quick View; swiping scrolls the gallery (touch swipes don't produce clicks). */}
       <div className="relative cursor-pointer overflow-hidden rounded-lg" onClick={() => setQuickView(true)}>
-        <ProductGallery images={images} alt={product.title} category={product.category} className="aspect-square" arrows="hover" />
+        <ProductGallery images={images} media={product.media} alt={product.title} category={product.category} className="aspect-square" arrows="hover" />
         <div className="pointer-events-none absolute left-3 top-3 flex flex-wrap gap-1.5">
           <span className="pill border-transparent bg-white/95 text-neutral-900">$500 Trial Batch</span>
           {product.is_demo && <span className="pill border-amber-200 bg-amber-50 text-amber-800">Sample</span>}

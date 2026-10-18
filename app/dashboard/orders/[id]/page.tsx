@@ -33,7 +33,7 @@ export default async function OrderPage({ params, searchParams }: {
 
   const { data: order } = await supabase
     .from('orders')
-    .select(`id, order_type, escrow_status, quantity, goods_cents, freight_cents, customs_cents, total_cents,
+    .select(`id, order_type, escrow_status, quantity, checkout_group_id, goods_cents, freight_cents, customs_cents, total_cents,
              created_at, buyer_id, discharge_timestamp, eta_timestamp, origin_port_coords, destination_coords,
              route_waypoints, current_status, origin_label, destination_label, product:products ( title )`)
     .eq('id', id)
@@ -66,7 +66,18 @@ export default async function OrderPage({ params, searchParams }: {
         <div className="min-w-0">
         <EscrowTracker orders={[view]} />
 
-        <OrderActions orderId={order.id} status={view.escrow_status} returnStatus={returnStatus ?? null} payWith={pay ?? null} />
+        {order.checkout_group_id && view.escrow_status === 'pending_payment' ? (
+          // Cart orders are paid together, from their checkout (per-order payment is refused in Postgres).
+          <div className="card mt-6 flex flex-wrap items-center justify-between gap-4 p-5">
+            <div>
+              <p className="font-medium text-neutral-900">Part of a cart checkout</p>
+              <p className="text-sm text-neutral-500">This Trial Batch is paid together with the rest of your cart.</p>
+            </div>
+            <Link href={`/dashboard/checkout/${order.checkout_group_id}`} className="btn-primary">Go to checkout</Link>
+          </div>
+        ) : (
+          <OrderActions orderId={order.id} status={view.escrow_status} returnStatus={returnStatus ?? null} payWith={pay ?? null} />
+        )}
 
         {order.origin_port_coords && order.destination_coords && (
           <AnimatedShipmentMap
