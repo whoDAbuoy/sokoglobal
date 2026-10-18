@@ -4,6 +4,7 @@ import { getSessionProfile } from '@/lib/supabase/server';
 import { formatUSD } from '@/lib/format';
 import DashboardHeader from '@/components/dashboard/DashboardHeader';
 import ReviewCard, { type PendingProduct } from '@/components/admin/ReviewCard';
+import DeleteProductButton from '@/components/admin/DeleteProductButton';
 
 export const metadata = { title: 'Operations · SokoGlobal', robots: { index: false, follow: false } };
 export const dynamic = 'force-dynamic';
@@ -109,11 +110,14 @@ export default async function AdminPage() {
                   <p className="font-medium text-slate-900">{r.title}</p>
                   <p className="text-xs text-slate-500">{one(r.supplier as unknown as { company_name: string })?.company_name}</p>
                 </div>
-                <div className="text-right">
-                  <p className="font-semibold tabular-nums">{formatUSD(r.trial_landed_cost_cents, true)}</p>
-                  <p className="text-xs text-slate-500">
-                    {r.reviewed_at && new Date(r.reviewed_at).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
-                  </p>
+                <div className="flex items-center gap-4">
+                  <div className="text-right">
+                    <p className="font-semibold tabular-nums">{formatUSD(r.trial_landed_cost_cents, true)}</p>
+                    <p className="text-xs text-slate-500">
+                      {r.reviewed_at && new Date(r.reviewed_at).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                    </p>
+                  </div>
+                  <DeleteProductButton productId={r.id} title={r.title} />
                 </div>
               </div>
             ))}
