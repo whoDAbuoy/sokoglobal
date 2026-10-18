@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { headers } from 'next/headers';
 import { Inter } from 'next/font/google';
+import { Toaster } from 'sonner';
 import { AuthProvider } from '@/context/AuthContext';
 import './globals.css';
 
@@ -21,6 +22,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     <html lang="en" className={inter.variable}>
       <body className="min-h-screen font-sans">
         <AuthProvider>{children}</AuthProvider>
+        <Toaster richColors closeButton position="top-right" />
       </body>
     </html>
   );

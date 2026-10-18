@@ -3,7 +3,8 @@
 import { revalidatePath } from 'next/cache';
 import { getSessionProfile } from '@/lib/supabase/server';
 import { friendlyError, formatUSD } from '@/lib/format';
-import { UUID_RE } from '@/lib/uploads';
+import { MEDIA_BUCKET, UUID_RE } from '@/lib/uploads';
+import type { ProductRemovalResult } from '@/lib/types';
 
 export type ReviewState = { ok: boolean; message: string } | null;
 
@@ -62,4 +63,50 @@ export async function rejectProduct(_prev: ReviewState, form: FormData): Promise
 
   revalidatePath('/admin');
   return { ok: true, message: 'Sent back to the supplier with your notes.' };
+}
+
+const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
+
+/**
+ * Remove a product. admin_remove_product() re-checks the role and decides:
+ * never ordered/pooled → hard delete (media rows cascade, files removed here);
+ * otherwise → archived (soft delete) so escrow, payouts and disputes keep
+ * their product. Both paths are written to moderation_log.
+ */
+export async function removeProduct(productId: string, reason: string): Promise<{ ok: boolean; message: string }> {
+  const ctx = await requireAdmin();
+  if (!ctx) return { ok: false, message: 'Admin access required.' };
+  if (!UUID_RE.test(productId)) return { ok: false, message: 'Invalid product.' };
+
+  const { data, error } = await ctx.supabase.rpc('admin_remove_product', {
+    p_product_id: productId, p_reason: reason.slice(0, 2000),
+  });
+  if (error) return { ok: false, message: friendlyError(error.message) };
+  const result = data as ProductRemovalResult;
+
+  revalidatePath('/admin', 'layout');
+  revalidatePath('/dashboard');
+  revalidatePath('/supplier');
+
+  if (result.mode === 'archived') {
+    const notes = [
+      result.cancelled_pools > 0 && `${plural(result.cancelled_pools, 'Trend Pool')} cancelled — paid pledges will be refunded.`,
+      result.cancelled_orders > 0 && `${plural(result.cancelled_orders, 'unpaid order')} cancelled.`,
+      result.open_orders > 0 && `${plural(result.open_orders, 'open order')} unaffected — follow up in Shipments.`,
+    ].filter(Boolean);
+    return { ok: true, message: ['Removed from the catalogue and archived (it has order history).', ...notes].join(' ') };
+  }
+
+  // The DB row is already gone, so a storage failure only leaves orphaned
+  // files; their paths are kept in the moderation_log snapshot.
+  const paths = result.storage_paths;
+  if (paths.length > 0) {
+    const { data: removed, error: storageError } = await ctx.supabase.storage.from(MEDIA_BUCKET).remove(paths);
+    const orphaned = paths.length - (removed?.length ?? 0);
+    if (storageError || orphaned > 0) {
+      console.error('[moderation] product deleted but media cleanup incomplete', { productId, orphaned, storageError });
+      return { ok: true, message: `Deleted permanently, but ${plural(orphaned, 'media file')} could not be removed from storage.` };
+    }
+  }
+  return { ok: true, message: `Deleted permanently${paths.length ? ` with ${plural(paths.length, 'media file')}` : ''}.` };
 }

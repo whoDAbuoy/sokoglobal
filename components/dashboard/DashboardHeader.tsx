@@ -8,7 +8,7 @@ import type { Profile } from '@/lib/types';
 const NAV: Record<Profile['role'], [string, string][]> = {
   importer: [['Discover', '/dashboard'], ['Trend Pools', '/dashboard#pools'], ['Orders', '/dashboard#orders']],
   supplier: [['Catalogue', '/supplier'], ['New product', '/supplier/products/new'], ['Verification', '/supplier/verification']],
-  admin: [['Products', '/admin'], ['Shipments', '/admin/orders'], ['Supplier KYC', '/admin/kyc'], ['Support', '/admin/support']],
+  admin: [['Review queue', '/admin'], ['Catalogue', '/admin/products'], ['Shipments', '/admin/orders'], ['Supplier KYC', '/admin/kyc'], ['Support', '/admin/support']],
 };
 
 export default function DashboardHeader({ profile }: { profile: Profile }) {

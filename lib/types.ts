@@ -35,6 +35,16 @@ export interface ProductMedia {
   created_at: string;
 }
 
+/** Return value of admin_remove_product() (migration 006). */
+export interface ProductRemovalResult {
+  /** 'deleted' = row + media gone for good; 'archived' = soft-deleted because orders/pools reference it. */
+  mode: 'deleted' | 'archived';
+  storage_paths: string[];
+  cancelled_pools: number;
+  cancelled_orders: number;
+  open_orders: number;
+}
+
 /** Shape rendered by the Trial Batch card on the buyer dashboard. */
 export interface TrialProductView {
   id: string;

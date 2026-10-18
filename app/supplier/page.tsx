@@ -22,7 +22,7 @@ export default async function SupplierHome() {
 
   const { data: products } = await supabase
     .from('products')
-    .select('id, title, category, status, trial_goods_cents, trial_landed_cost_cents, product_media ( id )')
+    .select('id, title, category, status, trial_goods_cents, trial_landed_cost_cents, deleted_at, deletion_reason, product_media ( id )')
     .eq('supplier_id', user.id)
     .order('created_at', { ascending: false });
 
@@ -51,9 +51,12 @@ export default async function SupplierHome() {
                   <span className="flex items-center gap-1"><ImageIcon className="h-3.5 w-3.5" />{(p.product_media ?? []).length} media</span>
                   <span>Goods {formatUSD(p.trial_goods_cents)}</span>
                 </p>
+                {p.deleted_at && (
+                  <p className="mt-1 text-xs text-red-700">Removed by SokoGlobal: {p.deletion_reason}</p>
+                )}
               </div>
               <span className={clsx('rounded-full px-2.5 py-1 text-xs font-medium capitalize', STATUS_STYLE[p.status as ProductStatus])}>
-                {String(p.status).replace('_', ' ')}
+                {p.deleted_at ? 'removed' : String(p.status).replace('_', ' ')}
               </span>
             </Link>
           ))}
