@@ -7,6 +7,7 @@ import {
   AlertTriangle, BadgeCheck, CheckCircle2, Clock, Film, Loader2, Lock, Shirt, Sparkles, Undo2,
 } from 'lucide-react';
 import { approveProduct, rejectProduct, type ReviewState } from '@/app/admin/actions';
+import DeleteProductButton from '@/components/admin/DeleteProductButton';
 import { TRIAL_BATCH_MIN_CENTS, countryName, flag, formatUSD } from '@/lib/format';
 import type { MediaType, ProductCategory } from '@/lib/types';
 
@@ -107,6 +108,8 @@ export default function ReviewCard({ product }: { product: PendingProduct }) {
               waited >= 24 ? 'bg-red-50 text-red-700' : 'bg-slate-100 text-slate-600')}>
               <Clock className="h-3.5 w-3.5" /> Waiting {waited < 1 ? '<1' : waited}h
             </span>
+            {/* Outside the decision <form>: the dialog holds its own form. Pending products can't have orders yet. */}
+            <DeleteProductButton productId={product.id} title={product.title} hasHistory={false} className="ml-auto text-xs" />
           </div>
           <h3 className="mt-2 text-lg font-semibold text-slate-900">{product.title}</h3>
           {product.brand && <p className="text-sm text-slate-500">{product.brand}</p>}
