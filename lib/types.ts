@@ -62,6 +62,8 @@ export interface TrialProductView {
   landed_cost_cents: number;
   lead_time_days: number | null;
   image_url: string | null;
+  /** All product photos in display order (gallery / Quick View). Falls back to image_url when absent. */
+  image_urls?: string[];
   has_swatch_video: boolean;
   is_demo?: boolean;
 }
