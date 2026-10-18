@@ -36,3 +36,9 @@
   /* Status / metadata pill. Combine with a color, e.g. "pill border-emerald-200 bg-emerald-50 text-emerald-700". */
   .pill { @apply inline-flex items-center gap-1 rounded-full border border-neutral-200 bg-white px-2.5 py-0.5 text-xs font-medium text-neutral-700; }
 }
+
+@layer utilities {
+  /* Scrollable but without a visible scrollbar (swipe galleries). */
+  .no-scrollbar { scrollbar-width: none; }
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+}

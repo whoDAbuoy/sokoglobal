@@ -40,6 +40,19 @@ const config: Config = {
       letterSpacing: {
         eyebrow: '0.12em',
       },
+      // Quick View modal entry/exit.
+      keyframes: {
+        'fade-in': { from: { opacity: '0' }, to: { opacity: '1' } },
+        'fade-out': { from: { opacity: '1' }, to: { opacity: '0' } },
+        'scale-in': { from: { opacity: '0', transform: 'translateY(8px) scale(0.97)' }, to: { opacity: '1', transform: 'none' } },
+        'scale-out': { from: { opacity: '1', transform: 'none' }, to: { opacity: '0', transform: 'translateY(8px) scale(0.97)' } },
+      },
+      animation: {
+        'fade-in': 'fade-in 200ms ease-out both',
+        'fade-out': 'fade-out 160ms ease-in both',
+        'scale-in': 'scale-in 260ms cubic-bezier(0.16, 1, 0.3, 1) both',
+        'scale-out': 'scale-out 160ms ease-in both',
+      },
     },
   },
   plugins: [],
