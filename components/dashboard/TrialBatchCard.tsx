@@ -1,21 +1,39 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { AlertCircle, BadgeCheck, CheckCircle2, Eye, Film, Loader2, Lock, ShieldCheck, Smartphone, Timer } from 'lucide-react';
+import { usePathname, useRouter } from 'next/navigation';
+import { AlertCircle, BadgeCheck, CheckCircle2, Eye, Film, Loader2, Lock, LogIn, ShieldCheck, Smartphone, Timer } from 'lucide-react';
 import type { TrialProductView } from '@/lib/types';
 import { countryName, flag, formatUSD } from '@/lib/format';
+import { useAuth } from '@/context/AuthContext';
+import { createClient } from '@/lib/supabase/client';
+import { ROLE_LABEL, checkoutGate, gateFromStatus, importerLoginUrl, type CheckoutGate } from '@/lib/checkout-gate';
 import ProductGallery from './ProductGallery';
 import ProductQuickView from './ProductQuickView';
 
 const MPESA_ENABLED = process.env.NEXT_PUBLIC_MPESA_ENABLED === 'true';
+const IS_DEV = process.env.NODE_ENV === 'development';
 
 export default function TrialBatchCard({ product }: { product: TrialProductView }) {
   const router = useRouter();
+  const pathname = usePathname();
+  const auth = useAuth();
   const [state, setState] = useState<'idle' | 'loading' | 'done' | 'error'>('idle');
   const [method, setMethod] = useState<'card' | 'mpesa'>('card');
   const [error, setError] = useState<string | null>(null);
   const [quickView, setQuickView] = useState(false);
+  // Only importers can buy (also enforced by the API and Postgres). A server 401/403 overrides the client view.
+  const [serverGate, setServerGate] = useState<CheckoutGate | null>(null);
+  const gate = serverGate ?? checkoutGate({ loading: auth.loading, signedIn: !!auth.user, role: auth.profile?.role });
+  const [switching, setSwitching] = useState(false);
+
+  /** Signed out → login; wrong role → sign out first, then login. Either way the buyer returns here afterwards. */
+  async function signInAsImporter() {
+    setSwitching(true);
+    if (gate.kind === 'wrong_role') await createClient().auth.signOut();
+    router.replace(importerLoginUrl(pathname));
+    router.refresh();
+  }
 
   async function startTrial(pay: 'card' | 'mpesa') {
     setState('loading');
@@ -25,6 +43,8 @@ export default function TrialBatchCard({ product }: { product: TrialProductView 
       const res = await fetch('/api/orders', {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ productId: product.id, method: pay }),
       });
+      const blocked = gateFromStatus(res.status, auth.profile?.role);
+      if (blocked) { setServerGate(blocked); setState('idle'); return; }
       const json = await res.json();
       if (!res.ok) throw new Error(json.error ?? 'Could not start trial');
       // M-Pesa: the order page collects the phone number and sends the STK prompt.
@@ -49,7 +69,27 @@ export default function TrialBatchCard({ product }: { product: TrialProductView 
   // Payment block — rendered in the card and in the Quick View, so both use the same checkout handlers and state.
   const actions = (
     <>
-      {state === 'done' ? (
+      {gate.kind === 'signed_out' || gate.kind === 'wrong_role' ? (
+        <div role="status" className="rounded-md border border-neutral-200 bg-neutral-50 p-4 text-sm">
+          <p className="font-medium text-neutral-900">
+            {gate.kind === 'signed_out' ? 'Sign in to buy' : 'Purchases need an Importer account'}
+          </p>
+          <p className="mt-1 text-neutral-600">
+            {gate.kind === 'signed_out'
+              ? 'Sign in with your importer account to pay with M-Pesa or card.'
+              : `You're signed in as ${ROLE_LABEL[gate.role]}. Trial Batches can only be bought from an importer account.`}
+          </p>
+          {IS_DEV && (
+            <p className="mt-2 text-xs text-neutral-500">
+              Local testing: run <code className="font-mono">npm run dev:importer</code> to create a test importer login.
+            </p>
+          )}
+          <button type="button" onClick={() => void signInAsImporter()} disabled={switching} className="btn-primary mt-3 w-full">
+            {switching ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogIn className="h-4 w-4" />}
+            {gate.kind === 'signed_out' ? 'Sign in to buy' : 'Sign in as an importer'}
+          </button>
+        </div>
+      ) : state === 'done' ? (
         <p className="flex items-center justify-center gap-2 rounded-md border border-emerald-200 bg-emerald-50 py-2.5 text-sm font-medium text-emerald-700">
           <CheckCircle2 className="h-4 w-4" /> Redirecting to secure checkout…
         </p>
