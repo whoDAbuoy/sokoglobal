@@ -6,6 +6,7 @@ import clsx from 'clsx';
 import { BadgeCheck, Film, Lock, ShieldCheck, Timer, X } from 'lucide-react';
 import type { TrialProductView } from '@/lib/types';
 import { countryName, flag, formatUSD } from '@/lib/format';
+import { lineTotals } from '@/lib/cart';
 import ProductGallery from './ProductGallery';
 
 const EXIT_MS = 160;   // matches the fade-out / scale-out animations
@@ -19,8 +20,10 @@ const EXIT_MS = 160;   // matches the fade-out / scale-out animations
  * `actions` is the card's own payment block, so the modal triggers exactly the
  * same M-Pesa / card checkout handlers as the card.
  */
-export default function ProductQuickView({ product, onClose, actions }: {
+export default function ProductQuickView({ product, quantity = 1, onClose, actions }: {
   product: TrialProductView;
+  /** Trial Batches selected on the card; the breakdown is shown for this many. */
+  quantity?: number;
   onClose: () => void;
   actions: ReactNode;
 }) {
@@ -51,10 +54,14 @@ export default function ProductQuickView({ product, onClose, actions }: {
     return () => { html.style.overflow = prev.overflow; html.style.paddingRight = prev.paddingRight; };
   }, []);
 
+  const totals = lineTotals({
+    goods_cents: product.goods_cents, freight_cents: product.freight_cents, customs_cents: product.customs_cents,
+    landed_cost_cents: product.landed_cost_cents, trial_units: product.trial_units,
+  }, quantity);
   const lines = [
-    { label: `Product · ${product.trial_units} units`, value: product.goods_cents },
-    { label: 'Consolidated air freight', value: product.freight_cents },
-    { label: 'Customs clearance & duties', value: product.customs_cents },
+    { label: `Product · ${totals.units} units`, value: totals.goods_cents },
+    { label: 'Consolidated air freight', value: totals.freight_cents },
+    { label: 'Customs clearance & duties', value: totals.customs_cents },
   ];
 
   return createPortal(
@@ -133,7 +140,10 @@ export default function ProductQuickView({ product, onClose, actions }: {
                 </p>
                 <p className="text-xs text-neutral-500">Delivered to your door · no surprise fees</p>
               </div>
-              <p className="text-2xl font-semibold tabular-nums text-neutral-900">{formatUSD(product.landed_cost_cents, true)}</p>
+              <p className="text-right text-2xl font-semibold tabular-nums text-neutral-900">
+                {formatUSD(totals.landed_cost_cents, true)}
+                {totals.quantity > 1 && <span className="block text-xs font-normal text-neutral-500">{totals.quantity} × {formatUSD(product.landed_cost_cents, true)}</span>}
+              </p>
             </div>
           </section>
 

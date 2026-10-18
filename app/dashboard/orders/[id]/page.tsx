@@ -8,6 +8,7 @@ import DashboardHeader from '@/components/dashboard/DashboardHeader';
 import EscrowTracker from '@/components/dashboard/EscrowTracker';
 import SupportWidget from '@/components/dashboard/SupportWidget';
 import OrderActions from './OrderActions';
+import MessageSupplierButton from '@/components/chat/MessageSupplierButton';
 import AnimatedShipmentMap from '@/components/tracking/AnimatedShipmentMap';
 
 const EVENT_LABEL: Record<string, string> = {
@@ -33,9 +34,9 @@ export default async function OrderPage({ params, searchParams }: {
 
   const { data: order } = await supabase
     .from('orders')
-    .select(`id, order_type, escrow_status, quantity, checkout_group_id, goods_cents, freight_cents, customs_cents, total_cents,
+    .select(`id, order_type, escrow_status, quantity, checkout_group_id, product_id, goods_cents, freight_cents, customs_cents, total_cents,
              created_at, buyer_id, discharge_timestamp, eta_timestamp, origin_port_coords, destination_coords,
-             route_waypoints, current_status, origin_label, destination_label, product:products ( title )`)
+             route_waypoints, current_status, origin_label, destination_label, product:products ( title, trial_units )`)
     .eq('id', id)
     .maybeSingle();
   if (!order || order.buyer_id !== user.id) notFound();
@@ -44,7 +45,9 @@ export default async function OrderPage({ params, searchParams }: {
     .from('escrow_events').select('id, from_status, to_status, event_type, note, created_at')
     .eq('order_id', id).order('created_at', { ascending: true });
 
-  const product = (Array.isArray(order.product) ? order.product[0] : order.product) as { title: string } | null;
+  const product = (Array.isArray(order.product) ? order.product[0] : order.product) as { title: string; trial_units: number } | null;
+  // Trial Batches in this order (quantity is stored in units; migration 010 also records it as orders.batches).
+  const batches = product?.trial_units ? Math.max(1, Math.round(order.quantity / product.trial_units)) : 1;
   const view: OrderView = {
     id: order.id, order_type: order.order_type, escrow_status: order.escrow_status as EscrowStatus,
     total_cents: order.total_cents, created_at: order.created_at, product_title: product?.title ?? 'Order',
@@ -58,8 +61,11 @@ export default async function OrderPage({ params, searchParams }: {
           <ArrowLeft className="h-4 w-4" /> Orders
         </Link>
         <div className="mt-6 border-b border-neutral-200 pb-6">
-          <p className="eyebrow">Order #{order.id.slice(0, 8).toUpperCase()} · {order.quantity} units</p>
-          <h1 className="mt-2 text-3xl font-semibold text-neutral-900">{view.product_title}</h1>
+          <p className="eyebrow">Order #{order.id.slice(0, 8).toUpperCase()} · {batches > 1 ? `${batches} Trial Batches · ` : ''}{order.quantity} units</p>
+          <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
+            <h1 className="text-3xl font-semibold text-neutral-900">{view.product_title}</h1>
+            <MessageSupplierButton productId={order.product_id} productTitle={view.product_title} />
+          </div>
         </div>
 
         <div className="mt-8 grid gap-10 lg:grid-cols-[minmax(0,1fr)_22rem]">

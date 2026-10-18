@@ -4,21 +4,30 @@ import Link from 'next/link';
 import { BadgeCheck, Bell, LogOut, ShieldCheck, ShoppingBag } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useCart } from '@/context/CartContext';
+import { useChat } from '@/context/ChatContext';
 import type { Profile } from '@/lib/types';
 
 const NAV: Record<Profile['role'], [string, string][]> = {
-  importer: [['Discover', '/dashboard'], ['Trend Pools', '/dashboard#pools'], ['Orders', '/dashboard#orders']],
-  supplier: [['Catalogue', '/supplier'], ['New product', '/supplier/products/new'], ['Verification', '/supplier/verification']],
+  importer: [['Discover', '/dashboard'], ['Trend Pools', '/dashboard#pools'], ['Orders', '/dashboard#orders'], ['Messages', '/dashboard/messages']],
+  supplier: [['Catalogue', '/supplier'], ['Messages', '/supplier/messages'], ['New product', '/supplier/products/new'], ['Verification', '/supplier/verification']],
   admin: [['Review queue', '/admin'], ['Catalogue', '/admin/products'], ['Shipments', '/admin/orders'], ['Supplier KYC', '/admin/kyc'], ['Support', '/admin/support']],
 };
 
 export default function DashboardHeader({ profile }: { profile: Profile }) {
   const { signOut } = useAuth();
   const cart = useCart();
+  const { unreadCount } = useChat();
   const initials = profile.full_name.split(/\s+/).map((p) => p[0]).slice(0, 2).join('').toUpperCase();
   const links = NAV[profile.role].map(([label, href]) => (
     <Link key={label} href={href}
-      className="whitespace-nowrap text-sm text-neutral-600 transition-colors hover:text-neutral-900">{label}</Link>
+      className="inline-flex items-center gap-1.5 whitespace-nowrap text-sm text-neutral-600 transition-colors hover:text-neutral-900">
+      {label}
+      {label === 'Messages' && unreadCount > 0 && (
+        <span aria-label={`${unreadCount} unread`} className="grid h-4 min-w-4 place-items-center rounded-full bg-neutral-900 px-1 text-[10px] font-semibold tabular-nums text-white">
+          {unreadCount > 99 ? '99+' : unreadCount}
+        </span>
+      )}
+    </Link>
   ));
 
   return (

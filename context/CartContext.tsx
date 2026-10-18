@@ -3,25 +3,33 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { ProductCategory } from '@/lib/types';
 import { useAuth } from '@/context/AuthContext';
+import { MAX_CART_LINES, clampQuantity, normalizeStoredCart } from '@/lib/cart';
 
-export const CART_MAX_ITEMS = 10;   // mirrors create_cart_checkout()
+export const CART_MAX_ITEMS = MAX_CART_LINES;   // lines; mirrors create_cart_checkout()
 
-/** A Trial Batch in the cart. Display snapshot only — prices are re-read server-side at checkout. */
+/** A cart line. Display snapshot only — prices are re-read server-side at checkout. */
 export interface CartItem {
   productId: string;
   title: string;
   supplierName: string;
   imageUrl: string | null;
   category: ProductCategory;
+  /** Guaranteed Landed Cost of ONE Trial Batch. */
   landedCostCents: number;
+  /** Number of Trial Batches (1–20). */
+  quantity: number;
 }
 
 interface CartState {
   items: CartItem[];
+  /** Total Trial Batches across all lines. */
+  batchCount: number;
   subtotalCents: number;
   has: (productId: string) => boolean;
-  /** 'full' when the cart already holds CART_MAX_ITEMS. */
-  add: (item: CartItem) => 'added' | 'exists' | 'full';
+  quantityOf: (productId: string) => number;
+  /** 'full' when the cart already holds CART_MAX_ITEMS lines. Adding an existing line adds to its quantity. */
+  add: (item: Omit<CartItem, 'quantity'>, quantity?: number) => 'added' | 'updated' | 'full';
+  setQuantity: (productId: string, quantity: number) => void;
   remove: (productId: string) => void;
   clear: () => void;
   open: boolean;
@@ -32,18 +40,13 @@ const CartContext = createContext<CartState | undefined>(undefined);
 const storageKey = (userId: string | undefined) => `sokoglobal.cart.v1:${userId ?? 'guest'}`;
 
 function read(key: string): CartItem[] {
-  try {
-    const parsed = JSON.parse(localStorage.getItem(key) ?? '[]') as unknown;
-    return Array.isArray(parsed)
-      ? (parsed as CartItem[]).filter((i) => i && typeof i.productId === 'string').slice(0, CART_MAX_ITEMS)
-      : [];
-  } catch { return []; }
+  try { return normalizeStoredCart<CartItem>(JSON.parse(localStorage.getItem(key) ?? '[]')); } catch { return []; }
 }
 
 /**
  * Per-user cart persisted in localStorage (survives reloads, syncs across
- * tabs). Only a browsing convenience: checkout sends product ids and Postgres
- * prices them, so a tampered cart can't change what anyone pays.
+ * tabs). Only a browsing convenience: checkout sends product ids + quantities
+ * and Postgres prices them, so a tampered cart can't change what anyone pays.
  */
 export function CartProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
@@ -66,14 +69,21 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo<CartState>(() => ({
     items,
-    subtotalCents: items.reduce((sum, i) => sum + i.landedCostCents, 0),
+    batchCount: items.reduce((n, i) => n + i.quantity, 0),
+    subtotalCents: items.reduce((sum, i) => sum + i.landedCostCents * i.quantity, 0),
     has: (id) => items.some((i) => i.productId === id),
-    add: (item) => {
-      if (items.some((i) => i.productId === item.productId)) return 'exists';
+    quantityOf: (id) => items.find((i) => i.productId === id)?.quantity ?? 0,
+    add: (item, quantity = 1) => {
+      const existing = items.find((i) => i.productId === item.productId);
+      if (existing) {
+        persist(items.map((i) => (i.productId === item.productId ? { ...i, quantity: clampQuantity(i.quantity + quantity) } : i)));
+        return 'updated';
+      }
       if (items.length >= CART_MAX_ITEMS) return 'full';
-      persist([...items, item]);
+      persist([...items, { ...item, quantity: clampQuantity(quantity) }]);
       return 'added';
     },
+    setQuantity: (id, quantity) => persist(items.map((i) => (i.productId === id ? { ...i, quantity: clampQuantity(quantity) } : i))),
     remove: (id) => persist(items.filter((i) => i.productId !== id)),
     clear: () => persist([]),
     open,

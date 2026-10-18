@@ -14,7 +14,8 @@ export const dynamic = 'force-dynamic';
 
 type Row = {
   id: string; escrow_status: string; total_cents: number; goods_cents: number; freight_cents: number; customs_cents: number;
-  product: { title: string; category: ProductCategory; product_media: { public_url: string; media_type: string; sort_order: number }[] } | null;
+  quantity: number;
+  product: { title: string; category: ProductCategory; trial_units: number; product_media: { public_url: string; media_type: string; sort_order: number }[] } | null;
 };
 const one = <T,>(v: T | T[] | null | undefined): T | null => (Array.isArray(v) ? v[0] ?? null : v ?? null);
 
@@ -35,8 +36,8 @@ export default async function CheckoutPage({ params, searchParams }: {
   const { data: group } = await supabase
     .from('checkout_groups')
     .select(`id, buyer_id, created_at, funded_at, payment_provider,
-             orders ( id, escrow_status, total_cents, goods_cents, freight_cents, customs_cents,
-                      product:products ( title, category, product_media ( public_url, media_type, sort_order ) ) )`)
+             orders ( id, escrow_status, quantity, total_cents, goods_cents, freight_cents, customs_cents,
+                      product:products ( title, category, trial_units, product_media ( public_url, media_type, sort_order ) ) )`)
     .eq('id', id)
     .maybeSingle();
   if (!group || group.buyer_id !== user.id) notFound();
@@ -46,6 +47,8 @@ export default async function CheckoutPage({ params, searchParams }: {
   const due = unpaid.reduce((s, o) => s + o.total_cents, 0);
   const total = orders.reduce((s, o) => s + o.total_cents, 0);
   const sum = (k: 'goods_cents' | 'freight_cents' | 'customs_cents') => orders.reduce((s, o) => s + o[k], 0);
+  const batchesOf = (o: Row) => (o.product?.trial_units ? Math.max(1, Math.round(o.quantity / o.product.trial_units)) : 1);
+  const totalBatches = orders.reduce((n, o) => n + batchesOf(o), 0);
   const image = (o: Row) => [...(o.product?.product_media ?? [])].filter((m) => m.media_type === 'image').sort((a, b) => a.sort_order - b.sort_order)[0]?.public_url ?? null;
 
   return (
@@ -56,7 +59,7 @@ export default async function CheckoutPage({ params, searchParams }: {
           <ArrowLeft className="h-4 w-4" /> Continue browsing
         </Link>
         <div className="mt-6 border-b border-neutral-200 pb-6">
-          <p className="eyebrow">Checkout #{group.id.slice(0, 8).toUpperCase()} · {orders.length} Trial Batch{orders.length === 1 ? '' : 'es'}</p>
+          <p className="eyebrow">Checkout #{group.id.slice(0, 8).toUpperCase()} · {totalBatches} Trial Batch{totalBatches === 1 ? '' : 'es'}</p>
           <h1 className="mt-2 text-3xl font-semibold text-neutral-900">{unpaid.length ? 'Review & pay' : 'Paid into escrow'}</h1>
         </div>
 
@@ -70,9 +73,12 @@ export default async function CheckoutPage({ params, searchParams }: {
                       <ProductVisual src={image(o)} alt={o.product?.title ?? 'Trial Batch'} category={o.product?.category ?? 'beauty'} className="h-full w-full" />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="truncate font-medium text-neutral-900 group-hover:underline">{o.product?.title ?? 'Trial Batch'}</p>
+                      <p className="truncate font-medium text-neutral-900 group-hover:underline">
+                        {batchesOf(o) > 1 && <span className="mr-1.5 tabular-nums text-neutral-500">{batchesOf(o)} ×</span>}
+                        {o.product?.title ?? 'Trial Batch'}
+                      </p>
                       <p className="text-xs text-neutral-500">
-                        Order #{o.id.slice(0, 8).toUpperCase()} ·{' '}
+                        Order #{o.id.slice(0, 8).toUpperCase()} · {o.quantity} units ·{' '}
                         <span className={o.escrow_status === 'pending_payment' ? 'text-amber-700' : 'text-emerald-700'}>
                           {o.escrow_status === 'pending_payment' ? 'Awaiting payment' : o.escrow_status.replace(/_/g, ' ')}
                         </span>
@@ -89,7 +95,7 @@ export default async function CheckoutPage({ params, searchParams }: {
               <CheckoutActions checkoutId={group.id} returnStatus={returnStatus ?? null} />
             ) : (
               <p className="mt-6 flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">
-                <CheckCircle2 className="h-5 w-5" /> All {orders.length} Trial Batches are paid and held in escrow. Track each one from its order page.
+                <CheckCircle2 className="h-5 w-5" /> All {totalBatches} Trial Batches are paid and held in escrow. Track each one from its order page.
               </p>
             )}
           </div>
