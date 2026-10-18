@@ -72,7 +72,7 @@ done
 
 ### 4b. M-Pesa (Safaricom Daraja STK Push)
 
-Buyers can pay **Trial Batch orders** with Lipa na M-Pesa. Trend Pool pledges stay on Flutterwave, because
+Lipa na M-Pesa is the **default payment method for Trial Batch orders** when `NEXT_PUBLIC_MPESA_ENABLED=true`; card/bank checkout (Flutterwave) remains the fallback, and is used for orders above `MPESA_MAX_KES`. Trend Pool pledges stay on Flutterwave, because
 their automatic refunds run through Flutterwave and refunding M-Pesa needs Safaricom's Reversal API.
 
 1. **Sandbox:** create an app at https://developer.safaricom.co.ke (enable *M-Pesa Express*), copy the consumer
