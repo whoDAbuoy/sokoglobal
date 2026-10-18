@@ -4,10 +4,14 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AlertCircle, CheckCircle2, CreditCard, Loader2, PackageCheck, ShieldCheck } from 'lucide-react';
 import type { EscrowStatus } from '@/lib/types';
+import MpesaPay from './MpesaPay';
 
-export default function OrderActions({ orderId, status, returnStatus }: {
-  orderId: string; status: EscrowStatus; returnStatus: string | null;
+const MPESA_ENABLED = process.env.NEXT_PUBLIC_MPESA_ENABLED === 'true';
+
+export default function OrderActions({ orderId, status, returnStatus, payWith }: {
+  orderId: string; status: EscrowStatus; returnStatus: string | null; payWith?: string | null;
 }) {
+  const [method, setMethod] = useState<'card' | 'mpesa'>(MPESA_ENABLED && payWith === 'mpesa' ? 'mpesa' : 'card');
   const router = useRouter();
   const [busy, setBusy] = useState<'pay' | 'confirm' | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -50,15 +54,33 @@ export default function OrderActions({ orderId, status, returnStatus }: {
 
   if (status === 'pending_payment') {
     return (
-      <div className="card mt-6 flex flex-wrap items-center justify-between gap-4 p-5">
-        <div>
-          <p className="font-medium text-slate-900">{returnStatus === 'failed' || returnStatus === 'cancelled' ? 'Payment didn’t go through' : 'Awaiting payment'}</p>
-          <p className="text-sm text-slate-500">Your money goes into escrow, not to the supplier.</p>
+      <div className="card mt-6 p-5">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <p className="font-medium text-slate-900">{returnStatus === 'failed' || returnStatus === 'cancelled' ? 'Payment didn’t go through' : 'Awaiting payment'}</p>
+            <p className="text-sm text-slate-500">Your money goes into escrow, not to the supplier.</p>
+          </div>
+          {MPESA_ENABLED && (
+            <div role="radiogroup" aria-label="Payment method" className="inline-flex rounded-lg bg-slate-100 p-1 text-sm font-medium">
+              {(['card', 'mpesa'] as const).map((m) => (
+                <button key={m} type="button" role="radio" aria-checked={method === m} onClick={() => setMethod(m)}
+                  className={method === m ? 'rounded-md bg-white px-3 py-1.5 text-slate-900 shadow-sm' : 'px-3 py-1.5 text-slate-500 hover:text-slate-800'}>
+                  {m === 'card' ? 'Card / bank' : 'M-Pesa'}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
-        <button type="button" onClick={() => void call('pay')} disabled={busy !== null} className="btn-primary">
-          {busy === 'pay' ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />} Pay securely
-        </button>
-        {error && <p className="flex w-full items-center gap-1.5 text-sm text-red-600"><AlertCircle className="h-4 w-4" />{error}</p>}
+        <div className="mt-4">
+          {method === 'mpesa' ? <MpesaPay orderId={orderId} /> : (
+            <>
+              <button type="button" onClick={() => void call('pay')} disabled={busy !== null} className="btn-primary">
+                {busy === 'pay' ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />} Pay securely
+              </button>
+              {error && <p className="mt-2 flex w-full items-center gap-1.5 text-sm text-red-600"><AlertCircle className="h-4 w-4" />{error}</p>}
+            </>
+          )}
+        </div>
       </div>
     );
   }

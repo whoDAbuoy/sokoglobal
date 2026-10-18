@@ -4,7 +4,7 @@
 
 1. Create the production project (pick the region closest to your Vercel function region).
 2. In the SQL editor, run in order:
-   `supabase/schema.sql` → `migrations/002_ops_payments_perf.sql` → `003_payouts_refunds_kyc_support.sql` → `004_tracking_and_vault.sql` → `005_admin_ops_reads.sql`.
+   `supabase/schema.sql` → `migrations/002_ops_payments_perf.sql` → `003_payouts_refunds_kyc_support.sql` → `004_tracking_and_vault.sql` → `005_admin_ops_reads.sql` → `006_admin_moderation.sql` → `007_mpesa_payments.sql`.
    - 004 needs the **Vault** extension (enabled by default on Supabase; the migration also runs `create extension if not exists supabase_vault`).
    - 004 moves every existing payout account number into Vault and **drops the plaintext column**. Take a backup first (Database → Backups).
 3. Auth → URL configuration: Site URL `https://<your-domain>`, redirect `https://<your-domain>/auth/callback`.
@@ -69,6 +69,35 @@ done
   IP whitelisting for transfers, either use Vercel Secure Compute (static IPs) or set
   `FLW_OUTBOUND_PROXY_URL` to a static-IP HTTPS proxy and whitelist the proxy's IPs. Confirm with
   your Flutterwave account manager before go-live.
+
+### 4b. M-Pesa (Safaricom Daraja STK Push)
+
+Buyers can pay **Trial Batch orders** with Lipa na M-Pesa. Trend Pool pledges stay on Flutterwave, because
+their automatic refunds run through Flutterwave and refunding M-Pesa needs Safaricom's Reversal API.
+
+1. **Sandbox:** create an app at https://developer.safaricom.co.ke (enable *M-Pesa Express*), copy the consumer
+   key/secret, and take the test shortcode (`174379`) and passkey from *APIs → M-Pesa Express → Simulate*.
+   Put them in `.env.local` and run `npm run mpesa:check` (OAuth only) or
+   `npm run mpesa:check -- 07XXXXXXXX` (sends a KES 1 prompt and reports the result).
+2. **Env vars** (Vercel, Production + Preview): `NEXT_PUBLIC_MPESA_ENABLED=true`, `MPESA_ENV`, `MPESA_CONSUMER_KEY`,
+   `MPESA_CONSUMER_SECRET`, `MPESA_SHORTCODE`, `MPESA_PASSKEY`, `MPESA_CALLBACK_TOKEN` (`openssl rand -hex 24`),
+   `MPESA_KES_PER_USD`, optionally `MPESA_TRANSACTION_TYPE`/`MPESA_PARTY_B` (Till) and `MPESA_MAX_KES`.
+   `NEXT_PUBLIC_MPESA_ENABLED` is baked in at build time, so redeploy after changing it.
+3. **Callback:** `https://<your-domain>/api/webhooks/daraja/<MPESA_CALLBACK_TOKEN>` — sent with every STK Push, so
+   nothing to register. It must be public HTTPS: Preview deployments behind Vercel Deployment Protection
+   will reject Safaricom (the order page still settles payments via STK Query polling).
+4. **Go live:** apply for M-Pesa Express production access on the Daraja portal with your Paybill/Till, then switch
+   `MPESA_ENV=production` and the production key/secret/shortcode/passkey.
+
+How it works: `begin_mpesa_payment()` freezes the KES amount (order total × `MPESA_KES_PER_USD`, rounded up) before
+the prompt is sent and allows one open prompt per order. Callbacks are unsigned, so an order is only funded after
+Daraja's **STK Query** confirms the result (`apply_mpesa_payment()`). Double payments and amount mismatches are
+parked as `mpesa_payments.status = 'review'` and alerted to Slack (`mpesa_review`), as are prompts unresolved
+after 1h (`mpesa_unresolved`).
+
+**Treasury:** M-Pesa collections settle into your Paybill/Till, not Flutterwave. Supplier payouts are Flutterwave
+transfers from the USD balance, so sweep M-Pesa collections into that balance regularly. Keep `MPESA_KES_PER_USD`
+current: it is the rate buyers pay at.
 
 ## 5. Content-Security-Policy rollout
 
