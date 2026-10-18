@@ -99,18 +99,19 @@ export default function TrialBatchCard({ product }: { product: TrialProductView 
             </p>
           ) : (
             <div className="space-y-2">
-              <button type="button" onClick={() => void startTrial('card')} disabled={state === 'loading' || product.is_demo}
-                className="btn-primary w-full" title={product.is_demo ? 'Sample listing — run supabase/seed.sql to enable' : undefined}>
-                {state === 'loading' && method === 'card' ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />}
-                Start trial with escrow
-              </button>
+              {/* M-Pesa is the primary method when enabled; card checkout is the fallback. */}
               {MPESA_ENABLED && (
                 <button type="button" onClick={() => void startTrial('mpesa')} disabled={state === 'loading' || product.is_demo}
-                  className="btn-secondary w-full">
-                  {state === 'loading' && method === 'mpesa' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Smartphone className="h-4 w-4 text-emerald-600" />}
+                  className="btn-primary w-full bg-emerald-600 hover:bg-emerald-700" title={product.is_demo ? 'Sample listing — run supabase/seed.sql to enable' : undefined}>
+                  {state === 'loading' && method === 'mpesa' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Smartphone className="h-4 w-4" />}
                   Pay with M-Pesa
                 </button>
               )}
+              <button type="button" onClick={() => void startTrial('card')} disabled={state === 'loading' || product.is_demo}
+                className={`${MPESA_ENABLED ? 'btn-secondary' : 'btn-primary'} w-full`} title={product.is_demo ? 'Sample listing — run supabase/seed.sql to enable' : undefined}>
+                {state === 'loading' && method === 'card' ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />}
+                {MPESA_ENABLED ? 'Pay by card / bank' : 'Start trial with escrow'}
+              </button>
             </div>
           )}
           {error && <p className="mt-2 flex items-start gap-1.5 text-xs text-red-600"><AlertCircle className="mt-px h-3.5 w-3.5 shrink-0" />{error}</p>}
