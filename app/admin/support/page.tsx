@@ -36,7 +36,7 @@ export default async function SupportInbox({ searchParams }: { searchParams: Pro
   return (
     <>
       <DashboardHeader profile={profile} />
-      <main className="mx-auto grid max-w-7xl gap-6 px-4 py-8 sm:px-6 lg:grid-cols-[22rem_1fr] lg:px-8">
+      <main className="mx-auto grid max-w-7xl gap-6 px-4 py-10 sm:px-6 lg:grid-cols-[22rem_1fr] lg:px-8">
         <aside className="card h-fit overflow-hidden">
           <h1 className="border-b border-slate-100 px-4 py-3 text-sm font-semibold">Open conversations ({sorted.length})</h1>
           <ul className="max-h-[70vh] divide-y divide-slate-100 overflow-y-auto">

@@ -48,7 +48,7 @@ export default function OrderActions({ orderId, status, returnStatus, payWith }:
 
   if (awaitingWebhook) {
     return (
-      <div role="status" className="mt-6 flex items-center gap-3 rounded-xl bg-brand-50 p-4 text-sm text-brand-900 ring-1 ring-brand-100">
+      <div role="status" className="mt-6 flex items-center gap-3 rounded-xl bg-brand-50 p-4 text-sm text-brand-900 ring-1 ring-neutral-200">
         <Loader2 className="h-5 w-5 animate-spin" />
         Payment received by Flutterwave — we&apos;re confirming it with the escrow account. This usually takes under a minute.
       </div>

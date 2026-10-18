@@ -48,26 +48,26 @@ export default function DeleteProductButton({ productId, title, hasHistory, onOp
   return (
     <>
       <button type="button" onClick={() => dialogRef.current?.showModal()}
-        className={clsx('inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium text-red-700 hover:bg-red-50', className)}>
+        className={clsx('inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm font-medium text-neutral-600 transition-colors hover:bg-red-50 hover:text-red-700', className)}>
         <Trash2 className="h-4 w-4" aria-hidden /> Delete
       </button>
 
       <dialog ref={dialogRef} aria-labelledby={`del-title-${productId}`}
         onCancel={(e) => { if (pending) e.preventDefault(); }}
-        className="w-[calc(100%-2rem)] max-w-md rounded-2xl p-0 shadow-xl backdrop:bg-slate-900/50">
-        <form onSubmit={confirm} className="p-6">
-          <div className="flex items-start gap-3">
-            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-red-50">
-              <AlertTriangle className="h-5 w-5 text-red-600" aria-hidden />
+        className="w-[calc(100%-2rem)] max-w-md rounded-lg border border-neutral-200 p-0 shadow-overlay backdrop:bg-neutral-950/40 backdrop:backdrop-blur-[2px]">
+        <form onSubmit={confirm}>
+          <div className="flex items-start gap-3 px-6 pb-5 pt-6">
+            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-red-200 bg-red-50">
+              <AlertTriangle className="h-4 w-4 text-red-600" aria-hidden />
             </span>
             <div className="min-w-0">
-              <h2 id={`del-title-${productId}`} className="text-base font-semibold text-slate-900">
+              <h2 id={`del-title-${productId}`} className="text-base font-semibold text-neutral-900">
                 Delete <span className="break-words">“{title}”</span>?
               </h2>
-              <p className="mt-1 text-sm text-slate-600">
+              <p className="mt-1 text-sm text-neutral-600">
                 Are you sure you want to permanently delete this object? This action cannot be undone.
               </p>
-              <p className="mt-2 text-xs text-slate-500">
+              <p className="mt-2 text-xs leading-relaxed text-neutral-500">
                 {hasHistory === true && 'This product has order history, so it will be archived instead: hidden everywhere, open Trend Pools cancelled and refunded, escrow records kept.'}
                 {hasHistory === false && 'The product, its photos and videos will be permanently erased.'}
                 {hasHistory === undefined && 'Products with order history are archived instead, so escrow and payout records stay intact.'}
@@ -75,15 +75,17 @@ export default function DeleteProductButton({ productId, title, hasHistory, onOp
             </div>
           </div>
 
-          <label htmlFor={`del-reason-${productId}`} className="label mt-5 text-xs">Reason (audit log, shown to the supplier)</label>
-          <textarea id={`del-reason-${productId}`} rows={3} maxLength={2000} required value={reason}
-            onChange={(e) => setReason(e.target.value)} className="input text-sm"
-            placeholder="e.g. Counterfeit branding reported by buyers — listing removed." />
+          <div className="border-t border-neutral-200 px-6 py-5">
+            <label htmlFor={`del-reason-${productId}`} className="label">Reason (audit log, shown to the supplier)</label>
+            <textarea id={`del-reason-${productId}`} rows={3} maxLength={2000} required value={reason}
+              onChange={(e) => setReason(e.target.value)} className="input text-sm"
+              placeholder="e.g. Counterfeit branding reported by buyers — listing removed." />
+          </div>
 
-          <div className="mt-5 flex justify-end gap-3">
+          <div className="flex justify-end gap-3 border-t border-neutral-200 bg-neutral-50 px-6 py-4">
             <button type="button" onClick={() => dialogRef.current?.close()} disabled={pending} className="btn-secondary">Cancel</button>
             <button type="submit" disabled={!valid || pending}
-              className="btn-primary bg-red-600 hover:bg-red-700 focus-visible:ring-red-600/30">
+              className="btn-primary bg-red-600 hover:bg-red-700 focus-visible:ring-red-600">
               {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />} Delete
             </button>
           </div>

@@ -14,43 +14,43 @@ const NAV: Record<Profile['role'], [string, string][]> = {
 export default function DashboardHeader({ profile }: { profile: Profile }) {
   const { signOut } = useAuth();
   const initials = profile.full_name.split(/\s+/).map((p) => p[0]).slice(0, 2).join('').toUpperCase();
+  const links = NAV[profile.role].map(([label, href]) => (
+    <Link key={label} href={href}
+      className="whitespace-nowrap text-sm text-neutral-600 transition-colors hover:text-neutral-900">{label}</Link>
+  ));
 
   return (
-    <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/90 backdrop-blur">
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center gap-8">
+    <header className="sticky top-0 z-30 border-b border-neutral-200 bg-white/95 backdrop-blur">
+      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-6 px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center gap-10">
           <Link href="/" className="flex items-center gap-2">
-            <span className="grid h-8 w-8 place-items-center rounded-lg bg-brand-900">
-              <ShieldCheck className="h-4 w-4 text-emerald-300" />
-            </span>
-            <span className="font-semibold tracking-tight text-slate-900">SokoGlobal</span>
+            <ShieldCheck className="h-5 w-5 text-neutral-900" strokeWidth={2.25} />
+            <span className="text-base font-semibold tracking-tight text-neutral-900">SokoGlobal</span>
           </Link>
-          <nav className="hidden gap-1 text-sm font-medium md:flex">
-            {NAV[profile.role].map(([label, href]) => (
-              <Link key={label} href={href} className="rounded-md px-3 py-1.5 text-slate-600 hover:bg-slate-100 hover:text-slate-900">{label}</Link>
-            ))}
-          </nav>
+          <nav className="hidden items-center gap-7 md:flex">{links}</nav>
         </div>
 
-        <div className="flex items-center gap-2">
-          <button type="button" aria-label="Notifications" className="rounded-lg p-2 text-slate-500 hover:bg-slate-100">
-            <Bell className="h-5 w-5" />
+        <div className="flex items-center gap-1">
+          <button type="button" aria-label="Notifications" className="rounded-md p-2 text-neutral-600 transition-colors hover:text-neutral-900">
+            <Bell className="h-5 w-5" strokeWidth={1.75} />
           </button>
-          <div className="flex items-center gap-3 rounded-lg py-1 pl-2 pr-1">
+          <div className="ml-2 flex items-center gap-3 border-l border-neutral-200 py-1 pl-4 pr-1">
             <div className="hidden text-right sm:block">
-              <p className="flex items-center justify-end gap-1 text-sm font-medium text-slate-900">
+              <p className="flex items-center justify-end gap-1 text-sm font-medium text-neutral-900">
                 {profile.company_name}
-                {profile.kyc_verified && <BadgeCheck className="h-4 w-4 text-brand-600" aria-label="Verified business" />}
+                {profile.kyc_verified && <BadgeCheck className="h-4 w-4 text-emerald-600" aria-label="Verified business" />}
               </p>
-              <p className="text-xs text-slate-500">{profile.full_name}</p>
+              <p className="text-xs text-neutral-500">{profile.full_name}</p>
             </div>
-            <span className="grid h-9 w-9 place-items-center rounded-full bg-brand-100 text-sm font-semibold text-brand-800">{initials}</span>
+            <span className="grid h-8 w-8 place-items-center rounded-full bg-neutral-900 text-xs font-medium text-white">{initials}</span>
           </div>
-          <button type="button" onClick={() => void signOut()} aria-label="Sign out" className="rounded-lg p-2 text-slate-500 hover:bg-slate-100">
-            <LogOut className="h-5 w-5" />
+          <button type="button" onClick={() => void signOut()} aria-label="Sign out" className="rounded-md p-2 text-neutral-600 transition-colors hover:text-neutral-900">
+            <LogOut className="h-5 w-5" strokeWidth={1.75} />
           </button>
         </div>
       </div>
+      {/* Small screens: the same links as a scrollable row. */}
+      <nav className="flex gap-6 overflow-x-auto border-t border-neutral-100 px-4 py-2.5 sm:px-6 md:hidden">{links}</nav>
     </header>
   );
 }

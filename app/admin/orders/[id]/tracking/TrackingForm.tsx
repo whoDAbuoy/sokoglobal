@@ -276,7 +276,7 @@ export default function TrackingForm({ order }: { order: TrackingFormOrder }) {
 function SectionTitle({ icon: Icon, title, hint }: { icon: typeof Plane; title: string; hint?: string }) {
   return (
     <div className="flex gap-3">
-      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-brand-50 ring-1 ring-brand-100"><Icon className="h-4 w-4 text-brand-700" aria-hidden /></span>
+      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-brand-50 ring-1 ring-neutral-200"><Icon className="h-4 w-4 text-brand-700" aria-hidden /></span>
       <div><h2 className="font-semibold text-slate-900">{title}</h2>{hint && <p className="text-xs text-slate-500">{hint}</p>}</div>
     </div>
   );

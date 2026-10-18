@@ -133,37 +133,33 @@ export default function Auth({ mode }: { mode: Mode }) {
     <div className="grid min-h-screen lg:grid-cols-[1fr_1.1fr]">
       {/* Brand / trust panel */}
       <aside className="relative hidden overflow-hidden bg-brand-950 px-12 py-14 text-white lg:flex lg:flex-col">
-        <div className="pointer-events-none absolute -right-32 -top-32 h-96 w-96 rounded-full bg-brand-600/20 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-40 -left-20 h-96 w-96 rounded-full bg-emerald-500/10 blur-3xl" />
 
         <Link href="/" className="relative flex items-center gap-2.5">
-          <span className="grid h-9 w-9 place-items-center rounded-lg bg-white/10 ring-1 ring-white/20">
-            <ShieldCheck className="h-5 w-5 text-emerald-300" />
-          </span>
+          <ShieldCheck className="h-5 w-5 text-white" strokeWidth={2.25} />
           <span className="text-lg font-semibold tracking-tight">SokoGlobal</span>
         </Link>
 
         <div className="relative mt-auto max-w-md">
-          <p className="text-sm font-medium uppercase tracking-wider text-brand-300">B2B imports, de-risked</p>
-          <h1 className="mt-3 text-4xl font-semibold leading-tight tracking-tight">
+          <p className="text-xs font-medium uppercase tracking-eyebrow text-neutral-400">B2B imports, de-risked</p>
+          <h1 className="mt-4 text-5xl font-semibold leading-[1.05]">
             Source from the West.<br />Pay only when it lands.
           </h1>
           <ul className="mt-10 space-y-6">
             {TRUST_POINTS.map(({ icon: Icon, title, body }) => (
               <li key={title} className="flex gap-4">
-                <span className="mt-0.5 grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-white/5 ring-1 ring-white/10">
-                  <Icon className="h-5 w-5 text-emerald-300" />
+                <span className="mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-full border border-white/15">
+                  <Icon className="h-4 w-4 text-white" strokeWidth={1.75} />
                 </span>
                 <div>
                   <p className="font-medium">{title}</p>
-                  <p className="mt-1 text-sm leading-relaxed text-slate-300">{body}</p>
+                  <p className="mt-1 text-sm leading-relaxed text-neutral-400">{body}</p>
                 </div>
               </li>
             ))}
           </ul>
         </div>
 
-        <p className="relative mt-auto pt-12 text-xs text-slate-400">
+        <p className="relative mt-auto border-t border-white/10 pt-6 text-xs text-neutral-500">
           Bank-grade encryption · Funds held by a licensed escrow partner · 24/7 trade support
         </p>
       </aside>
@@ -172,7 +168,7 @@ export default function Auth({ mode }: { mode: Mode }) {
       <main className="flex items-center justify-center px-5 py-12 sm:px-10">
         <div className="w-full max-w-md">
           {confirmationSentTo ? (
-            <div className="card p-8 text-center">
+            <div className="card p-10 text-center">
               <span className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-emerald-50">
                 <CheckCircle2 className="h-6 w-6 text-emerald-600" />
               </span>
@@ -185,14 +181,14 @@ export default function Auth({ mode }: { mode: Mode }) {
             </div>
           ) : (
             <>
-              <h2 className="text-2xl font-semibold tracking-tight">
+              <h2 className="text-3xl font-semibold text-neutral-900">
                 {mode === 'login' ? 'Welcome back' : 'Create your trade account'}
               </h2>
               <p className="mt-1.5 text-sm text-slate-600">
                 {mode === 'login' ? (
-                  <>New to SokoGlobal? <Link href="/signup" className="font-medium text-brand-700 hover:underline">Create an account</Link></>
+                  <>New to SokoGlobal? <Link href="/signup" className="font-medium text-neutral-900 underline underline-offset-4 hover:text-neutral-600">Create an account</Link></>
                 ) : (
-                  <>Already registered? <Link href="/login" className="font-medium text-brand-700 hover:underline">Sign in</Link></>
+                  <>Already registered? <Link href="/login" className="font-medium text-neutral-900 underline underline-offset-4 hover:text-neutral-600">Sign in</Link></>
                 )}
               </p>
 
@@ -211,12 +207,12 @@ export default function Auth({ mode }: { mode: Mode }) {
                             aria-checked={active}
                             onClick={() => { setRole(value); setCountry(''); }}
                             className={clsx(
-                              'relative rounded-xl border p-4 text-left transition focus:outline-none focus-visible:ring-4 focus-visible:ring-brand-600/20',
-                              active ? 'border-brand-700 bg-brand-50 ring-1 ring-brand-700' : 'border-slate-200 bg-white hover:border-slate-300',
+                              'relative rounded-lg border p-4 text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900 focus-visible:ring-offset-2',
+                              active ? 'border-neutral-900 bg-white ring-1 ring-neutral-900' : 'border-neutral-200 bg-white hover:border-neutral-400',
                             )}
                           >
-                            {active && <CheckCircle2 className="absolute right-3 top-3 h-4 w-4 text-brand-700" />}
-                            <Icon className={clsx('h-5 w-5', active ? 'text-brand-700' : 'text-slate-500')} />
+                            {active && <CheckCircle2 className="absolute right-3 top-3 h-4 w-4 text-neutral-900" />}
+                            <Icon className={clsx('h-5 w-5', active ? 'text-neutral-900' : 'text-neutral-400')} strokeWidth={1.75} />
                             <p className="mt-3 text-sm font-semibold text-slate-900">{title}</p>
                             <p className="mt-0.5 text-xs leading-snug text-slate-500">{subtitle}</p>
                           </button>
@@ -258,7 +254,7 @@ export default function Auth({ mode }: { mode: Mode }) {
                     <label htmlFor="password" className="label">Password</label>
                     {mode === 'login' && (
                       <button type="button" onClick={handleResetPassword}
-                        className="mb-1.5 text-xs font-medium text-brand-700 hover:underline">Forgot password?</button>
+                        className="mb-1.5 text-xs font-medium text-neutral-900 underline underline-offset-4 hover:text-neutral-600">Forgot password?</button>
                     )}
                   </div>
                   <div className="relative">
@@ -288,14 +284,14 @@ export default function Auth({ mode }: { mode: Mode }) {
                 {mode === 'signup' && (
                   <label className="flex items-start gap-2.5 text-sm text-slate-600">
                     <input type="checkbox" checked={acceptTerms} onChange={(e) => setAcceptTerms(e.target.checked)}
-                      className="mt-0.5 h-4 w-4 rounded border-slate-300 text-brand-700 focus:ring-brand-600" />
-                    <span>I agree to the <a href="#" className="font-medium text-brand-700 hover:underline">Terms of Trade</a> and{' '}
-                      <a href="#" className="font-medium text-brand-700 hover:underline">Escrow Agreement</a>.</span>
+                      className="mt-0.5 h-4 w-4 rounded border-neutral-300 text-neutral-900 focus:ring-neutral-900" />
+                    <span>I agree to the <a href="#" className="font-medium text-neutral-900 underline underline-offset-4 hover:text-neutral-600">Terms of Trade</a> and{' '}
+                      <a href="#" className="font-medium text-neutral-900 underline underline-offset-4 hover:text-neutral-600">Escrow Agreement</a>.</span>
                   </label>
                 )}
 
                 {error && (
-                  <div role="alert" className="flex items-start gap-2.5 rounded-lg border border-red-200 bg-red-50 px-3.5 py-3 text-sm text-red-700">
+                  <div role="alert" className="flex items-start gap-2.5 rounded-md border border-red-200 bg-red-50 px-3.5 py-3 text-sm text-red-700">
                     <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />{error}
                   </div>
                 )}

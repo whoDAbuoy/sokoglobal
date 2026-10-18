@@ -144,12 +144,12 @@ export default function ReviewCard({ product }: { product: PendingProduct }) {
         {/* Quote & decision */}
         <form className="flex flex-col border-t border-slate-100 bg-white p-5 lg:border-l lg:border-t-0">
           <input type="hidden" name="productId" value={product.id} />
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Logistics quote</p>
+          <p className="eyebrow">Logistics quote</p>
 
           <MoneyInput id={`freight-${product.id}`} name="freight" label="Consolidated air freight" value={freight} onChange={setFreight} />
           <MoneyInput id={`customs-${product.id}`} name="customs" label="Customs clearance & duties" value={customs} onChange={setCustoms} />
 
-          <div className={clsx('mt-4 rounded-xl p-3 ring-1', meetsMinimum ? 'bg-brand-50/60 ring-brand-100' : 'bg-red-50 ring-red-200')}>
+          <div className={clsx('mt-4 rounded-xl p-3 ring-1', meetsMinimum ? 'bg-brand-50/60 ring-neutral-200' : 'bg-red-50 ring-red-200')}>
             <dl className="space-y-1 text-xs text-slate-600">
               <div className="flex justify-between"><dt>Goods</dt><dd className="tabular-nums">{formatUSD(product.trial_goods_cents, true)}</dd></div>
               <div className="flex justify-between"><dt>Freight</dt><dd className="tabular-nums">{formatUSD(toCents(freight), true)}</dd></div>

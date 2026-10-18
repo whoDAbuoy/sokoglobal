@@ -29,10 +29,10 @@ export default async function SupplierHome() {
   return (
     <>
       <DashboardHeader profile={profile} />
-      <main className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
+      <main className="mx-auto max-w-5xl px-4 py-10 sm:px-6">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight">Your catalogue</h1>
+            <h1 className="text-3xl font-semibold text-neutral-900">Your catalogue</h1>
             <p className="mt-1 text-sm text-slate-500">Products go live after logistics quoting and photo review.</p>
           </div>
           <Link href="/supplier/products/new" className="btn-primary"><Plus className="h-4 w-4" /> New product</Link>

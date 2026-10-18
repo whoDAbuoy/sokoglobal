@@ -3,27 +3,36 @@
 @tailwind utilities;
 
 @layer base {
-  html { -webkit-font-smoothing: antialiased; }
-  body { @apply bg-slate-50 text-slate-900; }
+  html { -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+  body { @apply bg-white text-neutral-900; }
+  h1, h2, h3 { @apply tracking-tight; }
+  ::selection { @apply bg-neutral-900 text-white; }
 }
 
 @layer components {
   .input {
-    @apply block w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900
-      placeholder:text-slate-400 shadow-sm transition
-      focus:border-brand-600 focus:outline-none focus:ring-4 focus:ring-brand-600/10
-      disabled:cursor-not-allowed disabled:bg-slate-50;
+    @apply block w-full rounded-md border border-neutral-300 bg-white px-3.5 py-2.5 text-sm text-neutral-900
+      placeholder:text-neutral-400 transition-colors
+      hover:border-neutral-400
+      focus:border-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900
+      disabled:cursor-not-allowed disabled:bg-neutral-50 disabled:text-neutral-500;
   }
-  .label { @apply mb-1.5 block text-sm font-medium text-slate-700; }
+  .label { @apply mb-1.5 block text-xs font-medium uppercase tracking-wider text-neutral-600; }
   .btn-primary {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg bg-brand-800 px-4 py-2.5 text-sm font-semibold
-      text-white shadow-sm transition hover:bg-brand-900 focus:outline-none focus-visible:ring-4
-      focus-visible:ring-brand-600/30 disabled:cursor-not-allowed disabled:opacity-60;
+    @apply inline-flex items-center justify-center gap-2 rounded-md bg-neutral-900 px-4 py-2.5 text-sm font-medium
+      text-white transition-colors hover:bg-neutral-700 focus:outline-none focus-visible:ring-2
+      focus-visible:ring-neutral-900 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50;
   }
   .btn-secondary {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2.5
-      text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 focus:outline-none
-      focus-visible:ring-4 focus-visible:ring-slate-400/30 disabled:cursor-not-allowed disabled:opacity-60;
+    @apply inline-flex items-center justify-center gap-2 rounded-md border border-neutral-300 bg-white px-4 py-2.5
+      text-sm font-medium text-neutral-900 transition-colors hover:border-neutral-900 focus:outline-none
+      focus-visible:ring-2 focus-visible:ring-neutral-900 focus-visible:ring-offset-2
+      disabled:cursor-not-allowed disabled:opacity-50;
   }
-  .card { @apply rounded-2xl border border-slate-200 bg-white shadow-card; }
+  .card { @apply rounded-lg border border-neutral-200 bg-white; }
+
+  /* Small uppercase metadata line above titles. */
+  .eyebrow { @apply text-xs font-medium uppercase tracking-eyebrow text-neutral-500; }
+  /* Status / metadata pill. Combine with a color, e.g. "pill border-emerald-200 bg-emerald-50 text-emerald-700". */
+  .pill { @apply inline-flex items-center gap-1 rounded-full border border-neutral-200 bg-white px-2.5 py-0.5 text-xs font-medium text-neutral-700; }
 }

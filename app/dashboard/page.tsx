@@ -93,17 +93,38 @@ export default async function DashboardPage() {
     <>
       <DashboardHeader profile={profile} />
 
-      <main className="mx-auto max-w-7xl space-y-12 px-4 py-8 sm:px-6 lg:px-8">
-        {usingDemo && (
-          <p className="flex items-center gap-2 rounded-lg bg-amber-50 px-4 py-2.5 text-sm text-amber-800 ring-1 ring-amber-600/20">
-            <Info className="h-4 w-4 shrink-0" /> Showing sample listings. Run <code className="font-mono text-xs">supabase/seed.sql</code> to load live data.
-          </p>
-        )}
+      {usingDemo && (
+        <p className="flex items-center justify-center gap-2 border-b border-amber-200 bg-amber-50 px-4 py-2 text-center text-xs text-amber-800">
+          <Info className="h-3.5 w-3.5 shrink-0" /> Showing sample listings. Run <code className="font-mono">supabase/seed.sql</code> to load live data.
+        </p>
+      )}
 
-        <div>
-          <p className="text-sm text-slate-500">Welcome back, {profile.full_name.split(' ')[0]}</p>
+      {/* Hero */}
+      <div className="border-b border-neutral-200 bg-neutral-50">
+        <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8 lg:py-16">
+          <p className="eyebrow">Welcome back, {profile.full_name.split(' ')[0]}</p>
           <div className="mt-4"><EscrowProtectionBanner /></div>
         </div>
+      </div>
+
+      <main className="mx-auto max-w-7xl space-y-20 px-4 py-14 sm:px-6 lg:px-8">
+        {/* $500 Trial Batch listings — the product grid */}
+        <section>
+          <SectionHeader
+            icon={Plane}
+            title="Test a supplier with a $500 Trial Batch"
+            subtitle="One fixed price covering the product, consolidated air freight and customs clearance — delivered to your door."
+            aside={
+              <div className="hidden items-center gap-2 md:flex">
+                <span className="pill"><Lock className="h-3.5 w-3.5 text-emerald-600" /> Escrow on every order</span>
+                <span className="pill"><BadgeCheck className="h-3.5 w-3.5 text-emerald-600" /> KYC-verified sellers</span>
+              </div>
+            }
+          />
+          <div className="mt-8 grid gap-x-6 gap-y-12 sm:grid-cols-2 lg:grid-cols-3">
+            {viewProducts.map((p) => <TrialBatchCard key={p.id} product={p} />)}
+          </div>
+        </section>
 
         {/* Trend Pools */}
         <section id="pools" className="scroll-mt-24">
@@ -112,33 +133,15 @@ export default async function DashboardPage() {
             title="Trend Pools"
             subtitle="Team up with other boutiques to buy in bulk and split volumetric shipping costs."
           />
-          <div className="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="mt-8 grid gap-x-6 gap-y-12 sm:grid-cols-2 lg:grid-cols-3">
             {viewPools.map((p) => <TrendPoolCard key={p.id} pool={p} />)}
-          </div>
-        </section>
-
-        {/* $500 Trial Batch listings */}
-        <section>
-          <SectionHeader
-            icon={Plane}
-            title="Test a supplier with a $500 Trial Batch"
-            subtitle="One fixed price covering the product, consolidated air freight and customs clearance — delivered to your door."
-            aside={
-              <div className="hidden items-center gap-4 text-xs text-slate-600 md:flex">
-                <span className="flex items-center gap-1"><Lock className="h-3.5 w-3.5 text-emerald-600" /> Escrow on every order</span>
-                <span className="flex items-center gap-1"><BadgeCheck className="h-3.5 w-3.5 text-brand-600" /> KYC-verified sellers</span>
-              </div>
-            }
-          />
-          <div className="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {viewProducts.map((p) => <TrialBatchCard key={p.id} product={p} />)}
           </div>
         </section>
 
         {/* Escrow tracker */}
         <section id="orders" className="scroll-mt-24">
           <SectionHeader icon={Lock} title="Your orders in escrow" subtitle="Track every shipment from payment to doorstep verification." />
-          <div className="mt-5 max-w-3xl"><EscrowTracker orders={viewOrders} /></div>
+          <div className="mt-8 max-w-3xl"><EscrowTracker orders={viewOrders} /></div>
         </section>
       </main>
 
@@ -151,15 +154,11 @@ function SectionHeader({ icon: Icon, title, subtitle, aside }: {
   icon: typeof Users; title: string; subtitle: string; aside?: React.ReactNode;
 }) {
   return (
-    <div className="flex flex-wrap items-end justify-between gap-4">
-      <div className="flex gap-3">
-        <span className="mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-brand-50 ring-1 ring-brand-100">
-          <Icon className="h-4 w-4 text-brand-700" />
-        </span>
-        <div>
-          <h2 className="text-lg font-semibold tracking-tight text-slate-900">{title}</h2>
-          <p className="mt-0.5 text-sm text-slate-500">{subtitle}</p>
-        </div>
+    <div className="flex flex-wrap items-end justify-between gap-4 border-b border-neutral-200 pb-5">
+      <div className="max-w-2xl">
+        <Icon className="h-5 w-5 text-neutral-400" strokeWidth={1.5} aria-hidden />
+        <h2 className="mt-3 text-2xl font-semibold text-neutral-900">{title}</h2>
+        <p className="mt-1.5 text-sm leading-relaxed text-neutral-500">{subtitle}</p>
       </div>
       {aside}
     </div>
