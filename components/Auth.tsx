@@ -10,12 +10,11 @@ import {
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import type { UserRole } from '@/lib/types';
+import { IMPORTER_COUNTRIES, SUPPLIER_COUNTRIES, dialCode } from '@/lib/countries';
 
 type Mode = 'login' | 'signup';
 type SignupRole = Exclude<UserRole, 'admin'>;
 
-const SUPPLIER_COUNTRIES = ['US', 'GB', 'CA', 'FR', 'DE', 'IT', 'ES', 'NL', 'BE', 'SE', 'KR', 'JP', 'AE', 'TR'];
-const IMPORTER_COUNTRIES = ['NG', 'KE', 'GH', 'ZA', 'CI', 'SN', 'TZ', 'UG', 'RW', 'ET', 'CM', 'EG', 'MA', 'ZM', 'BW'];
 
 const regionNames = new Intl.DisplayNames(['en'], { type: 'region' });
 
@@ -237,7 +236,7 @@ export default function Auth({ mode }: { mode: Mode }) {
                         <select id="country" required className="input appearance-none pl-10" value={country}
                           onChange={(e) => setCountry(e.target.value)}>
                           <option value="">Select a country</option>
-                          {countries.map((c) => <option key={c} value={c}>{regionNames.of(c)}</option>)}
+                          {countries.map((c) => <option key={c} value={c}>{regionNames.of(c)} ({dialCode(c)})</option>)}
                         </select>
                       </Field>
                     </div>

@@ -3,17 +3,21 @@
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent, type MouseEvent } from 'react';
 import clsx from 'clsx';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import type { ProductCategory } from '@/lib/types';
+import type { GalleryMedia, ProductCategory } from '@/lib/types';
 import ProductVisual from './ProductVisual';
+import VideoSlide from './VideoSlide';
 
 /**
  * Horizontal swipe gallery built on CSS scroll-snap: native touch swipe and
  * trackpad scrolling, while vertical page scrolling stays with the browser
  * (no touch handlers, no `touch-action` override). Dots/arrows follow the
  * scroll position, so every way of moving the gallery keeps them in sync.
+ * Video slides (files, HLS, YouTube/Vimeo) play inline and pause when swiped away.
  */
-export default function ProductGallery({ images, alt, category, className, arrows = false }: {
+export default function ProductGallery({ images, media, alt, category, className, arrows = false }: {
   images: string[];
+  /** Photos and videos; takes precedence over `images` when non-empty. */
+  media?: GalleryMedia[];
   alt: string;
   category: ProductCategory;
   /** Sizing for each slide, e.g. "aspect-square". */
@@ -23,7 +27,8 @@ export default function ProductGallery({ images, alt, category, className, arrow
 }) {
   const trackRef = useRef<HTMLDivElement>(null);
   const [active, setActive] = useState(0);
-  const slides: (string | null)[] = images.length ? images : [null];
+  const items: GalleryMedia[] = media?.length ? media : images.map((url) => ({ type: 'image' as const, url }));
+  const slides: (GalleryMedia | null)[] = items.length ? items : [null];
   const multi = slides.length > 1;
 
   useEffect(() => {
@@ -58,11 +63,15 @@ export default function ProductGallery({ images, alt, category, className, arrow
     <div className="group/gallery relative h-full" aria-roledescription={multi ? 'carousel' : undefined} aria-label={multi ? `${alt} photos` : undefined}>
       <div ref={trackRef} tabIndex={multi ? 0 : undefined} onKeyDown={multi ? onKeyDown : undefined}
         className="no-scrollbar flex h-full snap-x snap-mandatory overflow-x-auto overscroll-x-contain focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-neutral-900">
-        {slides.map((src, i) => (
-          <div key={src ?? i} className="h-full w-full shrink-0 snap-center snap-always"
+        {slides.map((slide, i) => (
+          <div key={slide?.url ?? i} className="h-full w-full shrink-0 snap-center snap-always"
             role={multi ? 'group' : undefined} aria-roledescription={multi ? 'slide' : undefined}
             aria-label={multi ? `${i + 1} of ${slides.length}` : undefined}>
-            <ProductVisual src={src} alt={i === 0 ? alt : `${alt} — photo ${i + 1}`} category={category} className={className} />
+            {slide?.type === 'video' ? (
+              <VideoSlide url={slide.url} poster={slide.poster} title={`${alt} — video`} active={i === active} className={className} />
+            ) : (
+              <ProductVisual src={slide?.url ?? null} alt={i === 0 ? alt : `${alt} — photo ${i + 1}`} category={category} className={className} />
+            )}
           </div>
         ))}
       </div>
@@ -84,7 +93,7 @@ export default function ProductGallery({ images, alt, category, className, arrow
         <div className="pointer-events-none absolute inset-x-0 bottom-3 flex justify-center">
           <div className="pointer-events-auto flex items-center gap-1.5 rounded-full bg-neutral-900/30 px-2 py-1.5 backdrop-blur-sm">
             {slides.map((_, i) => (
-              <button key={i} type="button" onClick={control(() => go(i))} aria-label={`Show photo ${i + 1}`} aria-current={i === active}
+              <button key={i} type="button" onClick={control(() => go(i))} aria-label={`Show ${slides[i]?.type === 'video' ? 'video' : 'photo'} ${i + 1}`} aria-current={i === active}
                 className={clsx('h-1.5 rounded-full transition-all duration-300 ease-out',
                   i === active ? 'w-5 bg-white' : 'w-1.5 bg-white/60 hover:bg-white/90')} />
             ))}

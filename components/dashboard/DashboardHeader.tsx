@@ -1,8 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import { BadgeCheck, Bell, LogOut, ShieldCheck } from 'lucide-react';
+import { BadgeCheck, Bell, LogOut, ShieldCheck, ShoppingBag } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import { useCart } from '@/context/CartContext';
 import type { Profile } from '@/lib/types';
 
 const NAV: Record<Profile['role'], [string, string][]> = {
@@ -13,6 +14,7 @@ const NAV: Record<Profile['role'], [string, string][]> = {
 
 export default function DashboardHeader({ profile }: { profile: Profile }) {
   const { signOut } = useAuth();
+  const cart = useCart();
   const initials = profile.full_name.split(/\s+/).map((p) => p[0]).slice(0, 2).join('').toUpperCase();
   const links = NAV[profile.role].map(([label, href]) => (
     <Link key={label} href={href}
@@ -31,6 +33,17 @@ export default function DashboardHeader({ profile }: { profile: Profile }) {
         </div>
 
         <div className="flex items-center gap-1">
+          {profile.role === 'importer' && (
+            <button type="button" onClick={() => cart.setOpen(true)} aria-label={`Cart, ${cart.items.length} item${cart.items.length === 1 ? '' : 's'}`}
+              className="relative rounded-md p-2 text-neutral-600 transition-colors hover:text-neutral-900">
+              <ShoppingBag className="h-5 w-5" strokeWidth={1.75} />
+              {cart.items.length > 0 && (
+                <span className="absolute right-0.5 top-0.5 grid h-4 min-w-4 place-items-center rounded-full bg-neutral-900 px-1 text-[10px] font-semibold tabular-nums text-white">
+                  {cart.items.length}
+                </span>
+              )}
+            </button>
+          )}
           <button type="button" aria-label="Notifications" className="rounded-md p-2 text-neutral-600 transition-colors hover:text-neutral-900">
             <Bell className="h-5 w-5" strokeWidth={1.75} />
           </button>

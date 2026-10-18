@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation';
 import { BadgeCheck, Info, Lock, Plane, Users } from 'lucide-react';
 import { getSessionProfile } from '@/lib/supabase/server';
-import type { EscrowStatus, OrderView, ProductCategory, TrendPoolView, TrialProductView } from '@/lib/types';
+import type { EscrowStatus, GalleryMedia, OrderView, ProductCategory, TrendPoolView, TrialProductView } from '@/lib/types';
 import { DEMO_ORDERS, DEMO_POOLS, DEMO_PRODUCTS } from '@/lib/demo-data';
 import DashboardHeader from '@/components/dashboard/DashboardHeader';
 import EscrowProtectionBanner from '@/components/dashboard/EscrowProtectionBanner';
@@ -16,6 +16,14 @@ type MediaRow = { public_url: string; media_type: 'image' | 'swatch_video'; sort
 const allImages = (media: MediaRow[] | null | undefined) =>
   [...(media ?? [])].filter((m) => m.media_type === 'image').sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0)).map((m) => m.public_url);
 const firstImage = (media: MediaRow[] | null | undefined) => allImages(media)[0] ?? null;
+/** Gallery slides: photos first (the card thumbnail stays a photo), then videos. */
+const galleryMedia = (media: MediaRow[] | null | undefined): GalleryMedia[] => {
+  const sorted = [...(media ?? [])].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
+  return [
+    ...sorted.filter((m) => m.media_type === 'image').map((m) => ({ type: 'image' as const, url: m.public_url })),
+    ...sorted.filter((m) => m.media_type === 'swatch_video').map((m) => ({ type: 'video' as const, url: m.public_url })),
+  ];
+};
 const one = <T,>(v: T | T[] | null | undefined): T | null => (Array.isArray(v) ? v[0] ?? null : v ?? null);
 
 /** Buyer (African Importer) dashboard — server-rendered; all reads go through RLS. */
@@ -75,7 +83,7 @@ export default async function DashboardPage() {
       trial_units: p.trial_units, unit_price_cents: p.unit_price_cents, goods_cents: p.trial_goods_cents,
       freight_cents: p.trial_freight_cents, customs_cents: p.trial_customs_cents,
       landed_cost_cents: p.trial_landed_cost_cents, lead_time_days: p.lead_time_days,
-      image_url: firstImage(media), image_urls: allImages(media),
+      image_url: firstImage(media), image_urls: allImages(media), media: galleryMedia(media),
       has_swatch_video: media.some((m) => m.media_type === 'swatch_video'),
     };
   });

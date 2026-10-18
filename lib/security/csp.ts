@@ -96,6 +96,9 @@ export function buildCsp({ nonce, isDev = false, isPreview = false, enforce = fa
   // Same-origin /_vercel/insights and /_vercel/speed-insights are covered by 'self'.
   const VERCEL_TOOLBAR = isPreview ? ['https://vercel.live', 'https://*.pusher.com', 'wss://*.pusher.com'] : [];
   const CLOUDINARY = ['https://res.cloudinary.com'];
+  // Product video embeds (lib/video.ts): privacy-enhanced YouTube + Vimeo players, YouTube thumbnails.
+  const VIDEO_EMBEDS = ['https://www.youtube-nocookie.com', 'https://player.vimeo.com'];
+  const VIDEO_THUMBS = ['https://i.ytimg.com'];
 
   const directives: Record<string, (string | null | false)[]> = {
     'default-src': ["'self'"],
@@ -105,14 +108,14 @@ export function buildCsp({ nonce, isDev = false, isPreview = false, enforce = fa
       isDev && "'unsafe-eval'",   // React Refresh in `next dev` only
     ],
     'style-src': ["'self'", "'unsafe-inline'", ...(isPreview ? ['https://vercel.live'] : [])],
-    'img-src': ["'self'", 'data:', 'blob:', supabaseHttps, ...MAP_TILES, ...CLOUDINARY, 'https://*.flutterwave.com', ...(isPreview ? ['https://vercel.live', 'https://vercel.com'] : [])],
+    'img-src': ["'self'", 'data:', 'blob:', supabaseHttps, ...MAP_TILES, ...CLOUDINARY, ...VIDEO_THUMBS, 'https://*.flutterwave.com', ...(isPreview ? ['https://vercel.live', 'https://vercel.com'] : [])],
     'font-src': ["'self'", 'data:', ...(isPreview ? ['https://vercel.live', 'https://assets.vercel.com'] : [])],
     'media-src': ["'self'", 'blob:', supabaseHttps, ...CLOUDINARY],   // swatch videos
     'connect-src': [
       "'self'", supabaseHttps, supabaseWss, ...MAPBOX_API, ...VERCEL_ANALYTICS, ...VERCEL_TOOLBAR,
       isDev && 'ws:',   // HMR
     ],
-    'frame-src': [...FLUTTERWAVE, ...(isPreview ? ['https://vercel.live'] : [])],   // inline checkout modal, if adopted
+    'frame-src': [...FLUTTERWAVE, ...VIDEO_EMBEDS, ...(isPreview ? ['https://vercel.live'] : [])],   // inline checkout modal, if adopted
     'worker-src': ["'self'", 'blob:'],
     'manifest-src': ["'self'"],
     'form-action': ["'self'", 'https://checkout.flutterwave.com'],

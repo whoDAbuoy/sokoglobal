@@ -3,6 +3,8 @@ import { headers } from 'next/headers';
 import { Inter } from 'next/font/google';
 import { Toaster } from 'sonner';
 import { AuthProvider } from '@/context/AuthContext';
+import { CartProvider } from '@/context/CartContext';
+import CartDrawer from '@/components/cart/CartDrawer';
 import './globals.css';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
@@ -21,7 +23,12 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang="en" className={inter.variable}>
       <body className="min-h-screen font-sans">
-        <AuthProvider>{children}</AuthProvider>
+        <AuthProvider>
+          <CartProvider>
+            {children}
+            <CartDrawer />
+          </CartProvider>
+        </AuthProvider>
         <Toaster closeButton position="top-right"
           toastOptions={{ classNames: { toast: 'rounded-lg border border-neutral-200 shadow-overlay font-sans', description: 'text-neutral-500' } }} />
       </body>

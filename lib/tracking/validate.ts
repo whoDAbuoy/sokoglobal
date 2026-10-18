@@ -168,6 +168,8 @@ export const HUBS: { code: string; name: string; lat: number; lng: number; side:
   { code: 'JFK', name: 'New York JFK', lat: 40.6413, lng: -73.7781, side: 'origin' },
   { code: 'ATL', name: 'Atlanta', lat: 33.6407, lng: -84.4277, side: 'origin' },
   { code: 'ICN', name: 'Seoul Incheon', lat: 37.4602, lng: 126.4407, side: 'origin' },
+  { code: 'CAN', name: 'Guangzhou Baiyun', lat: 23.3924, lng: 113.2988, side: 'origin' },
+  { code: 'PVG', name: 'Shanghai Pudong', lat: 31.1443, lng: 121.8083, side: 'origin' },
   { code: 'DXB', name: 'Dubai', lat: 25.2532, lng: 55.3657, side: 'transit' },
   { code: 'DOH', name: 'Doha', lat: 25.2731, lng: 51.6081, side: 'transit' },
   { code: 'IST', name: 'Istanbul', lat: 41.2753, lng: 28.7519, side: 'transit' },
