@@ -36,7 +36,7 @@ export default function RowActions({ orderId, productTitle, canTrack }: {
         <MoreVertical className="h-4 w-4" aria-hidden />
       </button>
       {open && (
-        <div role="menu" className="absolute right-0 z-20 mt-1 w-52 animate-fade-in overflow-hidden rounded-lg border border-neutral-200 bg-white py-1 shadow-overlay">
+        <div role="menu" className="absolute right-0 z-20 mt-1 w-52 animate-fade-in overflow-hidden rounded-lg py-1 frost-pop">
           {canTrack && (
             <Link role="menuitem" href={`/admin/orders/${orderId}/tracking`} className={item} onClick={() => setOpen(false)}>
               <Plane className="h-4 w-4" aria-hidden /> Update shipment

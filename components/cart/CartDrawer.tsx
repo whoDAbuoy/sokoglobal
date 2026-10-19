@@ -98,7 +98,7 @@ export default function CartDrawer() {
       <dialog ref={dialogRef} aria-labelledby="cart-title"
         onClose={() => cart.setOpen(false)}
         onClick={(e) => { if (e.target === e.currentTarget) cart.setOpen(false); }}
-        className="m-0 ml-auto h-dvh max-h-dvh w-full max-w-md border-l border-neutral-200 bg-white p-0 shadow-overlay backdrop:bg-neutral-950/40 motion-safe:animate-slide-in-right backdrop:motion-safe:animate-fade-in">
+        className="m-0 ml-auto h-dvh max-h-dvh w-full max-w-md border-l border-neutral-200 p-0 text-neutral-900 shadow-overlay frost-panel frost-backdrop dark:border-snow/10 motion-safe:animate-slide-in-right backdrop:motion-safe:animate-fade-in">
         <div className="flex h-full flex-col">
           <header className="flex items-center justify-between border-b border-neutral-200 px-6 py-5">
             <div>

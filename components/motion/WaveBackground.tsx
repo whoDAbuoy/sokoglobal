@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef } from 'react';
 import clsx from 'clsx';
-import { useMotionLoop, useReducedMotion } from './useMotionLoop';
+import { useLowPowerScreen, useMotionLoop, useReducedMotion } from './useMotionLoop';
 
 /** Ribbon definitions: amplitude/frequency/speed per wave, as fractions of the canvas size. */
 const RIBBONS = [
@@ -41,6 +41,7 @@ export default function WaveBackground({ className, band = 0.55, intensity = 1, 
   const lastMs = useRef(4000);
   const drawRef = useRef<((ms: number) => void) | null>(null);
   const reduced = useReducedMotion();
+  const lowPower = useLowPowerScreen();
 
   useEffect(() => {
     const wrap = wrapRef.current;
@@ -113,7 +114,7 @@ export default function WaveBackground({ className, band = 0.55, intensity = 1, 
   }, [band, intensity, speed]);
   drawRef.current = draw;
 
-  useMotionLoop(wrapRef, draw, reduced);
+  useMotionLoop(wrapRef, draw, reduced, lowPower ? 30 : 60);
 
   return (
     <div ref={wrapRef} aria-hidden className={clsx('pointer-events-none absolute inset-0 overflow-hidden', className)}

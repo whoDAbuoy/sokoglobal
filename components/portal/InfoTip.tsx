@@ -17,7 +17,7 @@ export default function InfoTip({ text, label = 'More info' }: { text: string; l
       </button>
       {open && (
         <span role="tooltip" id={id}
-          className="absolute bottom-full left-1/2 z-30 mb-2 w-56 -translate-x-1/2 animate-fade-in rounded-lg border border-neutral-200 bg-white px-3 py-2 text-left text-xs font-normal normal-case leading-relaxed tracking-normal text-neutral-700 shadow-overlay">
+          className="absolute bottom-full left-1/2 z-30 mb-2 w-56 -translate-x-1/2 animate-fade-in frost-pop rounded-lg px-3 py-2 text-left text-xs font-normal normal-case leading-relaxed tracking-normal text-neutral-700">
           {text}
         </span>
       )}

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import clsx from 'clsx';
 import { arcPoints, facing, HUBS, isVisible, landDots, rotate, ROUTES, toVec, type Vec3 } from '@/lib/geo/globe-math';
-import { useMotionLoop, useReducedMotion } from './useMotionLoop';
+import { useLowPowerScreen, useMotionLoop, useReducedMotion } from './useMotionLoop';
 
 const AUTO_SPIN = 0.00012; // rad per ms
 const DRAG_SPEED = 0.006;  // rad per px
@@ -28,6 +28,7 @@ export default function Globe({ className, focus = { lat: 12, lon: 30 }, labels 
   const size = useRef({ w: 0, h: 0, dpr: 1 });
   const drawRef = useRef<((ms: number) => void) | null>(null);
   const reduced = useReducedMotion();
+  const lowPower = useLowPowerScreen();
   const reducedRef = useRef(reduced);
   reducedRef.current = reduced;
 
@@ -144,7 +145,7 @@ export default function Globe({ className, focus = { lat: 12, lon: 30 }, labels 
   }, [arcs, dots, hubs, labels]);
   drawRef.current = draw;
 
-  useMotionLoop(wrapRef, draw, reduced);
+  useMotionLoop(wrapRef, draw, reduced, lowPower ? 30 : 60);
 
   // When paused (reduced motion) interactions still need a repaint.
   const repaint = () => { if (reducedRef.current) drawRef.current?.(view.current.lastMs + 16); };

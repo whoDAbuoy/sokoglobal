@@ -63,6 +63,22 @@
   /* Translucent glass panel over the wave / globe backgrounds. */
   .glass { @apply border border-neutral-200/70 bg-white/70 shadow-overlay backdrop-blur-xl; }
 
+  /* Frosted surfaces. Light mode: milky white. Dark mode: midnight tint (#0B0F17) with a hairline white border.
+     Opacity stays high enough that body text keeps WCAG AA contrast over the brightest wave glow;
+     mobile gets a lighter blur radius (backdrop blur re-samples every frame over the animated canvas). */
+  .frost-card {
+    @apply border border-neutral-200 bg-white/80 shadow-2xl backdrop-blur-md sm:backdrop-blur-xl
+      dark:border-snow/10 dark:bg-midnight/70 dark:shadow-black/40;
+  }
+  .frost-bar { @apply border-neutral-200 bg-white/80 backdrop-blur-md dark:border-snow/10 dark:bg-midnight/80; }
+  /* Dropdowns, tooltips, floating toolbars. */
+  .frost-pop {
+    @apply border border-neutral-200 bg-white/85 shadow-overlay backdrop-blur-md dark:border-snow/10 dark:bg-midnight/80;
+  }
+  /* Modal / drawer panels (opaque enough for long reading) and their <dialog> backdrops. */
+  .frost-panel { @apply bg-white/90 backdrop-blur-xl dark:bg-midnight/90; }
+  .frost-backdrop { @apply backdrop:bg-midnight/50 backdrop:backdrop-blur-md; }
+
   /* Small uppercase metadata line above titles. */
   .eyebrow { @apply text-xs font-medium uppercase tracking-eyebrow text-neutral-500; }
   /* Status / metadata pill. Combine with a color, e.g. "pill border-emerald-200 bg-emerald-50 text-emerald-700". */
@@ -110,4 +126,9 @@
     transition-duration: 0.01ms !important; scroll-behavior: auto !important;
   }
   .card-lift:hover, .card-lift:focus-within { transform: none !important; }
+}
+
+/* Users who ask for less transparency get solid surfaces instead of frosted ones. */
+@media (prefers-reduced-transparency: reduce) {
+  .frost-card, .frost-bar, .frost-pop, .frost-panel, .glass { backdrop-filter: none !important; background-color: rgb(var(--sg-white)) !important; }
 }

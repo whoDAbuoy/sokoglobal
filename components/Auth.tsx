@@ -132,43 +132,45 @@ export default function Auth({ mode }: { mode: Mode }) {
   }
 
   return (
-    // Always midnight: globe + live waves on the left, a glass form card on the right.
+    // Always midnight: large globe + live waves on the left, a frosted form card on the right.
     <div className="dark relative isolate min-h-screen overflow-hidden bg-midnight text-neutral-900">
       <WaveBackground band={0.78} intensity={0.85} className="-z-10" />
       <div className="grid min-h-screen lg:grid-cols-[1.05fr_1fr]">
-      {/* Globe / trust panel */}
-      <aside className="relative hidden flex-col justify-between gap-6 px-10 py-10 lg:flex xl:px-14">
-        <Link href="/" className="relative flex w-fit items-center gap-2.5 rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400">
-          <ShieldCheck className="h-5 w-5 text-cyan-400" strokeWidth={2.25} aria-hidden />
-          <span className="text-lg font-semibold tracking-tight">SokoGlobal</span>
-        </Link>
-
-        <div className="relative mx-auto aspect-square w-full max-w-[min(26rem,42vh)]">
-          <Globe className="h-full w-full" focus={{ lat: 18, lon: 30 }} />
+      {/* Left: large left-aligned globe that bleeds off the edge, with the value proposition on a frosted panel */}
+      <aside className="relative hidden min-h-screen overflow-hidden lg:block">
+        <div className="absolute left-[-14%] top-[46%] aspect-square w-[min(112%,88vh)] -translate-y-1/2">
+          <Globe className="h-full w-full" focus={{ lat: 16, lon: 26 }} />
         </div>
 
-        <div className="relative max-w-lg">
-          <p className="text-xs font-medium uppercase tracking-eyebrow text-cyan-400">B2B imports, de-risked</p>
-          <h1 className="mt-3 text-4xl font-semibold leading-[1.08] xl:text-5xl">
-            Source from the West.<br />
-            <span className="bg-gradient-to-r from-blue-400 via-cyan-300 to-indigo-400 bg-clip-text text-transparent">Pay only when it lands.</span>
-          </h1>
-          <ul className="mt-6 grid gap-2.5">
-            {TRUST_POINTS.map(({ icon: Icon, title, body }) => (
-              <li key={title} className="glow-hover flex gap-3 rounded-lg border border-neutral-200 bg-neutral-50/50 p-3 backdrop-blur">
-                <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-cyan-500/25 bg-cyan-500/10">
-                  <Icon className="h-4 w-4 text-cyan-400" strokeWidth={1.75} aria-hidden />
-                </span>
-                <div>
-                  <p className="text-sm font-medium">{title}</p>
-                  <p className="mt-0.5 text-xs leading-relaxed text-neutral-500">{body}</p>
-                </div>
-              </li>
-            ))}
-          </ul>
-          <p className="mt-6 border-t border-neutral-200 pt-4 text-xs text-neutral-500">
-            Bank-grade encryption · Funds held by a licensed escrow partner · 24/7 trade support
-          </p>
+        <div className="pointer-events-none relative z-10 flex min-h-screen flex-col justify-between gap-8 px-10 py-10 xl:px-14">
+          <Link href="/" className="pointer-events-auto frost-bar flex w-fit items-center gap-2.5 rounded-full border px-3.5 py-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400">
+            <ShieldCheck className="h-5 w-5 text-cyan-400" strokeWidth={2.25} aria-hidden />
+            <span className="text-lg font-semibold tracking-tight">SokoGlobal</span>
+          </Link>
+
+          <div className="pointer-events-auto frost-card max-w-xl rounded-2xl p-6 xl:p-7">
+            <p className="text-xs font-medium uppercase tracking-eyebrow text-cyan-400">B2B imports, de-risked</p>
+            <h1 className="mt-3 text-4xl font-semibold leading-[1.06] xl:text-5xl">
+              Source from the West.<br />
+              <span className="bg-gradient-to-r from-blue-400 via-cyan-300 to-indigo-400 bg-clip-text text-transparent">Pay only when it lands.</span>
+            </h1>
+            <ul className="mt-6 grid gap-3 xl:grid-cols-3">
+              {TRUST_POINTS.map(({ icon: Icon, title, body }) => (
+                <li key={title} className="flex gap-3 xl:flex-col xl:gap-2">
+                  <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-cyan-500/25 bg-cyan-500/10">
+                    <Icon className="h-4 w-4 text-cyan-400" strokeWidth={1.75} aria-hidden />
+                  </span>
+                  <div>
+                    <p className="text-sm font-medium">{title}</p>
+                    <p className="mt-0.5 text-xs leading-relaxed text-neutral-600">{body}</p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+            <p className="mt-6 border-t border-snow/10 pt-4 text-xs text-neutral-600">
+              Bank-grade encryption · Funds held by a licensed escrow partner · 24/7 trade support
+            </p>
+          </div>
         </div>
       </aside>
 
@@ -179,7 +181,7 @@ export default function Auth({ mode }: { mode: Mode }) {
             <ShieldCheck className="h-5 w-5 text-cyan-400" strokeWidth={2.25} aria-hidden />
             <span className="text-base font-semibold tracking-tight">SokoGlobal</span>
           </Link>
-          <div className="glass rounded-2xl p-6 motion-safe:animate-scale-in sm:p-8">
+          <div className="frost-card rounded-2xl p-6 motion-safe:animate-scale-in sm:p-8">
           {confirmationSentTo ? (
             <div className="py-4 text-center">
               <span className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-emerald-50">
@@ -289,7 +291,7 @@ export default function Auth({ mode }: { mode: Mode }) {
                             strength.score >= i ? ['bg-red-500', 'bg-amber-500', 'bg-emerald-500'][strength.score - 1] : 'bg-slate-200')} />
                         ))}
                       </div>
-                      <span className="text-xs text-slate-500">{strength.label}</span>
+                      <span className="text-xs text-neutral-600">{strength.label}</span>
                     </div>
                   )}
                 </div>
@@ -316,7 +318,7 @@ export default function Auth({ mode }: { mode: Mode }) {
                 </button>
               </form>
 
-              <p className="mt-6 flex items-center justify-center gap-1.5 text-xs text-slate-500">
+              <p className="mt-6 flex items-center justify-center gap-1.5 text-xs text-neutral-600">
                 <Lock className="h-3.5 w-3.5" /> Protected by 256-bit TLS encryption
               </p>
             </>

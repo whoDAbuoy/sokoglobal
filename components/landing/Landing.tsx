@@ -26,7 +26,8 @@ const STEPS = [
 export default function Landing() {
   return (
     <div className="dark min-h-screen bg-midnight text-neutral-900">
-      <header className="relative z-20 mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+      <header className="frost-bar sticky top-0 z-30 border-b">
+        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         <Link href="/" className="flex items-center gap-2 rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400">
           <ShieldCheck className="h-5 w-5 text-cyan-400" strokeWidth={2.25} aria-hidden />
           <span className="text-base font-semibold tracking-tight">SokoGlobal</span>
@@ -36,6 +37,7 @@ export default function Landing() {
           <Link href="/login" className="rounded-md px-3 py-2 text-sm font-medium text-neutral-700 transition-colors hover:text-neutral-900">Sign in</Link>
           <Link href="/signup" className="btn-primary px-3.5 py-2">Get started</Link>
         </nav>
+        </div>
       </header>
 
       <main>
