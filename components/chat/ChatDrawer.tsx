@@ -39,7 +39,7 @@ export default function ChatDrawer({ open, threadId, title, counterpartName, inb
     <dialog ref={dialogRef} aria-labelledby="chat-title"
       onClose={onClose}
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
-      className="m-0 ml-auto h-dvh max-h-dvh w-full max-w-md border-l border-neutral-200 bg-white p-0 shadow-overlay backdrop:bg-neutral-950/40 motion-safe:animate-slide-in-right backdrop:motion-safe:animate-fade-in">
+      className="m-0 ml-auto h-dvh max-h-dvh w-full max-w-md border-l border-neutral-200 p-0 text-neutral-900 shadow-overlay frost-panel frost-backdrop dark:border-snow/10 motion-safe:animate-slide-in-right backdrop:motion-safe:animate-fade-in">
       <div className="flex h-full flex-col">
         <header className="flex items-start justify-between gap-4 border-b border-neutral-200 px-6 py-5">
           <div className="min-w-0">

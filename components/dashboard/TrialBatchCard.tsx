@@ -194,7 +194,7 @@ export default function TrialBatchCard({ product }: { product: TrialProductView 
 
         {/* Hover action bar: slides up from the bottom of the image (always visible on touch screens). */}
         <div role="toolbar" aria-label={`Actions for ${product.title}`} onClick={(e) => e.stopPropagation()}
-          className="absolute inset-x-3 bottom-3 flex items-center gap-1 rounded-lg bg-white/95 p-1 shadow-overlay ring-1 ring-black/5 backdrop-blur
+          className="absolute inset-x-3 bottom-3 frost-pop flex items-center gap-1 rounded-lg p-1
             translate-y-[calc(100%+1rem)] opacity-0 transition duration-300 ease-out
             group-hover:translate-y-0 group-hover:opacity-100 focus-within:translate-y-0 focus-within:opacity-100
             [@media(hover:none)]:translate-y-0 [@media(hover:none)]:opacity-100 motion-reduce:transition-none">

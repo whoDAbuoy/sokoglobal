@@ -69,8 +69,8 @@ export default function ProductQuickView({ product, quantity = 1, onClose, actio
       onCancel={(e) => { e.preventDefault(); requestClose(); }}
       onClick={(e) => { if (e.target === e.currentTarget) requestClose(); }}
       className={clsx(
-        'm-auto max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-4xl overflow-hidden rounded-lg border border-neutral-200 bg-white p-0 shadow-overlay',
-        'backdrop:bg-neutral-950/50 backdrop:backdrop-blur-[2px]',
+        'm-auto max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-4xl overflow-hidden rounded-lg border border-neutral-200 p-0 text-neutral-900 shadow-overlay frost-panel dark:border-snow/10',
+        'frost-backdrop',
         closing ? 'motion-safe:animate-scale-out backdrop:motion-safe:animate-fade-out'
           : 'motion-safe:animate-scale-in backdrop:motion-safe:animate-fade-in',
       )}>

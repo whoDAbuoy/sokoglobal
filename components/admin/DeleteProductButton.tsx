@@ -54,7 +54,7 @@ export default function DeleteProductButton({ productId, title, hasHistory, onOp
 
       <dialog ref={dialogRef} aria-labelledby={`del-title-${productId}`}
         onCancel={(e) => { if (pending) e.preventDefault(); }}
-        className="w-[calc(100%-2rem)] max-w-md rounded-lg border border-neutral-200 p-0 shadow-overlay backdrop:bg-neutral-950/40 backdrop:backdrop-blur-[2px]">
+        className="w-[calc(100%-2rem)] max-w-md rounded-lg border border-neutral-200 p-0 text-neutral-900 shadow-overlay frost-panel frost-backdrop dark:border-snow/10">
         <form onSubmit={confirm}>
           <div className="flex items-start gap-3 px-6 pb-5 pt-6">
             <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-red-200 bg-red-50">
