@@ -1,9 +1,7 @@
-import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { ArrowLeft } from 'lucide-react';
 import { getSessionProfile } from '@/lib/supabase/server';
 import type { EscrowStatus, OrderView } from '@/lib/types';
-import { orderGroup, type OrderGroup } from '@/lib/order-status';
+import { orderGroup, PAID_ORDER_STATUSES, type OrderGroup } from '@/lib/order-status';
 import DashboardHeader from '@/components/dashboard/DashboardHeader';
 import EscrowTracker from '@/components/dashboard/EscrowTracker';
 import SupportWidget from '@/components/dashboard/SupportWidget';
@@ -14,13 +12,17 @@ export const dynamic = 'force-dynamic';
 const one = <T,>(v: T | T[] | null | undefined): T | null => (Array.isArray(v) ? v[0] ?? null : v ?? null);
 
 const GROUPS: { key: OrderGroup; title: string; empty: string }[] = [
-  { key: 'action', title: 'Needs your action', empty: 'Nothing to pay or verify right now.' },
+  { key: 'action', title: 'Needs your action', empty: 'Nothing to verify right now.' },
   { key: 'escrow', title: 'In escrow', empty: 'No shipments in progress.' },
   { key: 'completed', title: 'Completed', empty: 'No completed orders yet.' },
   { key: 'closed', title: 'Closed', empty: '' },
 ];
 
-/** All of a buyer's orders, grouped by what happens next. Read-only; RLS limits it to the buyer's own orders. */
+/**
+ * The buyer's orders and escrow tracking, reached only from the header's "My orders" button.
+ * Lists only real orders the signed-in buyer has paid into escrow (no sample data):
+ * `buyer_id = auth.uid()` here, and RLS enforces the same on the database side.
+ */
 export default async function OrdersPage() {
   const { supabase, user, profile } = await getSessionProfile();
   if (!user || !profile) redirect('/login?redirectTo=/dashboard/orders');
@@ -30,6 +32,7 @@ export default async function OrdersPage() {
     .from('orders')
     .select('id, order_type, escrow_status, total_cents, created_at, product:products ( title )')
     .eq('buyer_id', user.id)
+    .in('escrow_status', PAID_ORDER_STATUSES)
     .order('created_at', { ascending: false })
     .limit(200);
   if (error) throw new Error(`Could not load orders: ${error.message}`);
@@ -44,10 +47,7 @@ export default async function OrdersPage() {
     <>
       <DashboardHeader profile={profile} />
       <main className="mx-auto max-w-4xl px-4 py-10 sm:px-6 lg:px-8">
-        <Link href="/dashboard" className="inline-flex items-center gap-1 text-sm text-neutral-500 transition-colors hover:text-neutral-900">
-          <ArrowLeft className="h-4 w-4" /> Dashboard
-        </Link>
-        <div className="mt-6 flex flex-wrap items-end justify-between gap-4 border-b border-neutral-200 pb-6">
+        <div className="flex flex-wrap items-end justify-between gap-4 border-b border-neutral-200 pb-6">
           <div>
             <p className="eyebrow">Escrow</p>
             <h1 className="mt-2 text-3xl font-semibold text-neutral-900">My orders</h1>

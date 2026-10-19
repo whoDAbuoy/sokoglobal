@@ -1,8 +1,9 @@
-import type { OrderView, TrendPoolView, TrialProductView } from '@/lib/types';
+import type { TrendPoolView, TrialProductView } from '@/lib/types';
 
 /**
  * Shown on the dashboard only when the database has no live pools/products yet
  * (fresh project). Run supabase/seed.sql to replace with real rows.
+ * There are deliberately no sample orders: orders only ever come from a buyer's own checkout.
  */
 const inDays = (d: number) => new Date(Date.now() + d * 86_400_000).toISOString();
 
@@ -49,9 +50,4 @@ export const DEMO_PRODUCTS: TrialProductView[] = [
     unit_price_cents: 420, goods_cents: 40_320, freight_cents: 6_400, customs_cents: 5_280, landed_cost_cents: 52_000,
     lead_time_days: 12, image_url: null, has_swatch_video: true, is_demo: true,
   },
-];
-
-export const DEMO_ORDERS: OrderView[] = [
-  { id: 'demo-order-1', order_type: 'trial', escrow_status: 'in_transit', total_cents: 52_000,
-    created_at: inDays(-4), product_title: 'Matte Lip Colour — Deep Tones Collection' },
 ];

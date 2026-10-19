@@ -1,7 +1,7 @@
 // Run: npx tsx --test lib/order-status.test.mts
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { orderAction, orderGroup, statusMeta } from './order-status.ts';
+import { orderAction, orderGroup, PAID_ORDER_STATUSES, statusMeta } from './order-status.ts';
 
 const ID = '44444444-4444-4444-8444-000000000001';
 
@@ -41,4 +41,11 @@ test('orders page groups', () => {
   assert.equal(orderGroup('released'), 'completed');
   assert.equal(orderGroup('cancelled'), 'closed');
   assert.equal(orderGroup('refunded'), 'closed');
+});
+
+test('buyer order list only includes orders paid into escrow', () => {
+  assert.ok(!PAID_ORDER_STATUSES.includes('pending_payment'));
+  for (const s of ['funded', 'in_transit', 'customs_cleared', 'delivered_pending_verification', 'released', 'disputed', 'refunded', 'cancelled'] as const) {
+    assert.ok(PAID_ORDER_STATUSES.includes(s), s);
+  }
 });

@@ -47,6 +47,15 @@ export function orderAction(order: { id: string; escrow_status: EscrowStatus }):
   }
 }
 
+/**
+ * Statuses shown in a buyer's order list: only orders that have actually been
+ * paid into escrow. Unpaid (pending_payment) checkouts stay off the list.
+ */
+export const PAID_ORDER_STATUSES: EscrowStatus[] = [
+  'funded', 'in_transit', 'customs_cleared', 'delivered_pending_verification',
+  'released', 'disputed', 'refunded', 'cancelled',
+];
+
 /** Grouping for the orders page. */
 export type OrderGroup = 'action' | 'escrow' | 'completed' | 'closed';
 export function orderGroup(status: EscrowStatus): OrderGroup {
