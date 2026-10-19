@@ -9,6 +9,9 @@ import TrendPoolCard from '@/components/dashboard/TrendPoolCard';
 import TrialBatchCard from '@/components/dashboard/TrialBatchCard';
 import EscrowTracker from '@/components/dashboard/EscrowTracker';
 import SupportWidget from '@/components/dashboard/SupportWidget';
+import FeaturedCarousel, { type FeaturedSlide } from '@/components/dashboard/FeaturedCarousel';
+import CategoryTiles, { type CategoryTile } from '@/components/dashboard/CategoryTiles';
+import Link from 'next/link';
 
 export const metadata = { title: 'Buyer dashboard · SokoGlobal' };
 
@@ -27,7 +30,7 @@ const galleryMedia = (media: MediaRow[] | null | undefined): GalleryMedia[] => {
 const one = <T,>(v: T | T[] | null | undefined): T | null => (Array.isArray(v) ? v[0] ?? null : v ?? null);
 
 /** Buyer (African Importer) dashboard — server-rendered; all reads go through RLS. */
-export default async function DashboardPage() {
+export default async function DashboardPage({ searchParams }: { searchParams: Promise<{ category?: string }> }) {
   const { supabase, user, profile } = await getSessionProfile();
   if (!user || !profile) redirect('/login?redirectTo=/dashboard');
   if (profile.role === 'supplier') redirect('/supplier');
@@ -99,6 +102,45 @@ export default async function DashboardPage() {
   const viewProducts = usingDemo ? DEMO_PRODUCTS : products;
   const viewOrders = usingDemo && orders.length === 0 ? DEMO_ORDERS : orders;
 
+  // Category browsing filters the products already loaded above (no extra query).
+  const { category } = await searchParams;
+  const activeCategory: ProductCategory | null = category === 'beauty' || category === 'clothing' ? category : null;
+  const shownProducts = activeCategory ? viewProducts.filter((p) => p.category === activeCategory) : viewProducts;
+  const inCategory = (c: ProductCategory) => viewProducts.filter((p) => p.category === c);
+  const imageOf = (c: ProductCategory) => inCategory(c).find((p) => p.image_url)?.image_url ?? null;
+  const origins = (c: ProductCategory) => [...new Set(inCategory(c).map((p) => p.origin_country))].length;
+  const CATEGORY_LABEL: Record<ProductCategory, string> = { beauty: 'Beauty', clothing: 'Clothing' };
+
+  const categoryTiles: CategoryTile[] = (['beauty', 'clothing'] as const)
+    .filter((c) => inCategory(c).length > 0)
+    .map((c) => ({
+      key: c, label: CATEGORY_LABEL[c], category: c, image: imageOf(c), active: activeCategory === c,
+      caption: `${inCategory(c).length} Trial Batch${inCategory(c).length === 1 ? '' : 'es'} · ${origins(c)} origin${origins(c) === 1 ? '' : 's'}`,
+      href: `/dashboard?category=${c}#batches`,
+    }));
+  if (viewPools.length) {
+    categoryTiles.push({
+      key: 'pools', label: 'Trend Pools', category: viewPools[0].category, image: viewPools.find((p) => p.image_url)?.image_url ?? null,
+      caption: `${viewPools.length} open · split freight with other boutiques`, href: '/dashboard#pools',
+    });
+  }
+
+  const featuredSlides: FeaturedSlide[] = [
+    ...(['beauty', 'clothing'] as const).filter((c) => inCategory(c).length > 0).map((c) => ({
+      id: c, category: c, image: imageOf(c),
+      eyebrow: `${CATEGORY_LABEL[c]} · Guaranteed Landed Cost`,
+      title: c === 'beauty' ? 'Verified beauty lines, landed at your door' : 'Apparel trial batches, freight and customs included',
+      body: `${inCategory(c).length} live Trial Batch${inCategory(c).length === 1 ? '' : 'es'} from ${origins(c)} origin countr${origins(c) === 1 ? 'y' : 'ies'}, each held in escrow until you verify the goods.`,
+      href: `/dashboard?category=${c}#batches`, cta: `Shop ${CATEGORY_LABEL[c].toLowerCase()}`,
+    })),
+    ...(viewPools.length ? [{
+      id: 'pools', category: viewPools[0].category, image: viewPools.find((p) => p.image_url)?.image_url ?? imageOf(viewPools[0].category),
+      eyebrow: 'Trend Pools', title: 'Buy in bulk with other boutiques',
+      body: `${viewPools.length} pool${viewPools.length === 1 ? '' : 's'} open now: pledge your share and split volumetric air freight.`,
+      href: '/dashboard#pools', cta: 'See Trend Pools',
+    }] : []),
+  ];
+
   return (
     <>
       <DashboardHeader profile={profile} />
@@ -118,21 +160,35 @@ export default async function DashboardPage() {
       </div>
 
       <main className="mx-auto max-w-7xl space-y-20 px-4 py-14 sm:px-6 lg:px-8">
+        {featuredSlides.length > 0 && <FeaturedCarousel slides={featuredSlides} />}
+
+        {categoryTiles.length > 1 && (
+          <section aria-labelledby="shop-by-category">
+            <h2 id="shop-by-category" className="eyebrow mb-4">Shop by category</h2>
+            <CategoryTiles tiles={categoryTiles} />
+          </section>
+        )}
+
         {/* $500 Trial Batch listings — the product grid */}
-        <section>
+        <section id="batches" className="scroll-mt-24">
           <SectionHeader
             icon={Plane}
             title="Test a supplier with a $500 Trial Batch"
             subtitle="One fixed price covering the product, consolidated air freight and customs clearance — delivered to your door."
             aside={
-              <div className="hidden items-center gap-2 md:flex">
-                <span className="pill"><Lock className="h-3.5 w-3.5 text-emerald-600" /> Escrow on every order</span>
-                <span className="pill"><BadgeCheck className="h-3.5 w-3.5 text-emerald-600" /> KYC-verified sellers</span>
+              <div className="flex flex-wrap items-center gap-2">
+                {activeCategory && (
+                  <Link href="/dashboard#batches" scroll={false} className="pill border-neutral-900 bg-neutral-900 text-white hover:bg-neutral-700">
+                    {CATEGORY_LABEL[activeCategory]} · Clear ×
+                  </Link>
+                )}
+                <span className="pill hidden md:inline-flex"><Lock className="h-3.5 w-3.5 text-emerald-600" /> Escrow on every order</span>
+                <span className="pill hidden md:inline-flex"><BadgeCheck className="h-3.5 w-3.5 text-emerald-600" /> KYC-verified sellers</span>
               </div>
             }
           />
           <div className="mt-8 grid gap-x-6 gap-y-12 sm:grid-cols-2 lg:grid-cols-3">
-            {viewProducts.map((p) => <TrialBatchCard key={p.id} product={p} />)}
+            {shownProducts.map((p) => <TrialBatchCard key={p.id} product={p} />)}
           </div>
         </section>
 

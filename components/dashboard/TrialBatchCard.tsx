@@ -3,7 +3,8 @@
 import { useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { AlertCircle, BadgeCheck, Check, CheckCircle2, Eye, Film, Loader2, Lock, LogIn, ShieldCheck, ShoppingBag, Smartphone, Timer } from 'lucide-react';
+import clsx from 'clsx';
+import { AlertCircle, BadgeCheck, Check, CheckCircle2, Eye, Film, Heart, Loader2, Lock, LogIn, ShieldCheck, ShoppingBag, Smartphone, Timer } from 'lucide-react';
 import type { TrialProductView } from '@/lib/types';
 import { countryName, flag, formatUSD } from '@/lib/format';
 import { useAuth } from '@/context/AuthContext';
@@ -11,6 +12,7 @@ import { CART_MAX_ITEMS, useCart } from '@/context/CartContext';
 import { createClient } from '@/lib/supabase/client';
 import { ROLE_LABEL, checkoutGate, gateFromStatus, importerLoginUrl, type CheckoutGate } from '@/lib/checkout-gate';
 import { lineTotals } from '@/lib/cart';
+import { useWishlist } from '@/hooks/useWishlist';
 import QuantityStepper from '@/components/cart/QuantityStepper';
 import MessageSupplierButton from '@/components/chat/MessageSupplierButton';
 import ProductGallery from './ProductGallery';
@@ -30,6 +32,9 @@ export default function TrialBatchCard({ product }: { product: TrialProductView 
   const [quickView, setQuickView] = useState(false);
   const [pickQty, setPickQty] = useState(1);   // quantity chosen before the product is in the cart
   const inCart = cart.has(product.id);
+  const wishlist = useWishlist();
+  const saved = wishlist.has(product.id);
+  const [heartBurst, setHeartBurst] = useState(0);   // re-keys the heart so the pop animation replays
   // In the cart, the stepper edits the cart line; otherwise it sets the quantity for Add to cart / Pay now.
   const quantity = inCart ? cart.quantityOf(product.id) : pickQty;
   const setQuantity = (q: number) => (inCart ? cart.setQuantity(product.id, q) : setPickQty(q));
@@ -40,6 +45,7 @@ export default function TrialBatchCard({ product }: { product: TrialProductView 
   // Only importers can buy (also enforced by the API and Postgres). A server 401/403 overrides the client view.
   const [serverGate, setServerGate] = useState<CheckoutGate | null>(null);
   const gate = serverGate ?? checkoutGate({ loading: auth.loading, signedIn: !!auth.user, role: auth.profile?.role });
+  const canBuy = gate.kind !== 'signed_out' && gate.kind !== 'wrong_role';
   const [switching, setSwitching] = useState(false);
 
   /** Signed out → login; wrong role → sign out first, then login. Either way the buyer returns here afterwards. */
@@ -163,20 +169,57 @@ export default function TrialBatchCard({ product }: { product: TrialProductView 
     <article className="group flex flex-col">
       {/* Clicking the photos opens the Quick View; swiping scrolls the gallery (touch swipes don't produce clicks). */}
       <div className="relative cursor-pointer overflow-hidden rounded-lg" onClick={() => setQuickView(true)}>
-        <ProductGallery images={images} media={product.media} alt={product.title} category={product.category} className="aspect-square" arrows="hover" />
+        <ProductGallery images={images} media={product.media} alt={product.title} category={product.category} className="aspect-square" arrows="hover"
+          dotsClassName="group-hover:-translate-y-12 group-focus-within:-translate-y-12 [@media(hover:none)]:-translate-y-12" />
         <div className="pointer-events-none absolute left-3 top-3 flex flex-wrap gap-1.5">
           <span className="pill border-transparent bg-white/95 text-neutral-900">$500 Trial Batch</span>
           {product.is_demo && <span className="pill border-amber-200 bg-amber-50 text-amber-800">Sample</span>}
         </div>
-        {product.has_swatch_video && (
-          <span className="pill pointer-events-none absolute bottom-3 left-3 border-transparent bg-neutral-900/80 text-white">
-            <Film className="h-3.5 w-3.5" /> Swatch video
-          </span>
-        )}
-        <button type="button" onClick={(e) => { e.stopPropagation(); setQuickView(true); }}
-          className="pill absolute right-3 top-3 border-transparent bg-white/95 text-neutral-900 opacity-0 transition-opacity focus-visible:opacity-100 group-hover:opacity-100 [@media(hover:none)]:opacity-100">
-          <Eye className="h-3.5 w-3.5" /> Quick view
-        </button>
+        <div className="pointer-events-none absolute right-3 top-3 flex items-center gap-1.5">
+          {product.has_swatch_video && (
+            <span className="pill border-transparent bg-neutral-900/80 text-white"><Film className="h-3.5 w-3.5" /> Swatch video</span>
+          )}
+          {saved && (
+            <span className="grid h-7 w-7 place-items-center rounded-full bg-white/95 shadow-card" aria-hidden>
+              <Heart className="h-3.5 w-3.5 fill-red-500 text-red-500" />
+            </span>
+          )}
+        </div>
+
+        {/* Hover action bar: slides up from the bottom of the image (always visible on touch screens). */}
+        <div role="toolbar" aria-label={`Actions for ${product.title}`} onClick={(e) => e.stopPropagation()}
+          className="absolute inset-x-3 bottom-3 flex items-center gap-1 rounded-lg bg-white/95 p-1 shadow-overlay ring-1 ring-black/5 backdrop-blur
+            translate-y-[calc(100%+1rem)] opacity-0 transition duration-300 ease-out
+            group-hover:translate-y-0 group-hover:opacity-100 focus-within:translate-y-0 focus-within:opacity-100
+            [@media(hover:none)]:translate-y-0 [@media(hover:none)]:opacity-100 motion-reduce:transition-none">
+          <button type="button" onClick={() => setQuickView(true)} aria-label={`Quick view: ${product.title}`} title="Quick view"
+            className="flex h-9 flex-1 items-center justify-center gap-1.5 rounded-md text-xs font-medium text-neutral-900 transition hover:bg-neutral-100">
+            <Eye className="h-4 w-4" /> <span className="hidden sm:inline">Quick view</span>
+          </button>
+          {canBuy && (
+            inCart ? (
+              <button type="button" onClick={() => cart.setOpen(true)} aria-label="In cart — view cart" title="In cart — view cart"
+                className="flex h-9 flex-1 items-center justify-center gap-1.5 rounded-md bg-neutral-900 text-xs font-medium text-white transition hover:bg-neutral-700">
+                <Check className="h-4 w-4" /> <span className="hidden sm:inline">In cart</span>
+              </button>
+            ) : (
+              <button type="button" onClick={addToCart} disabled={state === 'loading' || product.is_demo}
+                aria-label={`Add ${quantity} to cart`} title={product.is_demo ? 'Sample listing — run supabase/seed.sql to enable' : `Add ${quantity} to cart`}
+                className="flex h-9 flex-1 items-center justify-center gap-1.5 rounded-md bg-neutral-900 text-xs font-medium text-white transition hover:bg-neutral-700 disabled:cursor-not-allowed disabled:opacity-50">
+                <ShoppingBag className="h-4 w-4" /> <span className="hidden sm:inline">Add{quantity > 1 ? ` ${quantity}` : ''}</span>
+              </button>
+            )
+          )}
+          <button type="button" aria-pressed={saved} aria-label={saved ? 'Remove from wishlist' : 'Save to wishlist'} title={saved ? 'Saved' : 'Save'}
+            onClick={() => {
+              const now = wishlist.toggle(product.id);
+              if (now) setHeartBurst((n) => n + 1);
+              toast(now ? 'Saved to your wishlist' : 'Removed from your wishlist', { description: product.title });
+            }}
+            className="grid h-9 w-9 shrink-0 place-items-center rounded-md transition hover:bg-neutral-100">
+            <Heart key={heartBurst} className={clsx('h-4 w-4 transition-colors', saved ? 'fill-red-500 text-red-500 motion-safe:animate-heart-pop' : 'text-neutral-700')} />
+          </button>
+        </div>
       </div>
 
       <div className="flex flex-1 flex-col pt-4">
@@ -191,6 +234,12 @@ export default function TrialBatchCard({ product }: { product: TrialProductView 
             {product.title}
           </button>
         </h3>
+        <p className="mt-1.5 flex items-baseline justify-between gap-3">
+          <span className="text-lg font-semibold tabular-nums tracking-tight text-neutral-900">{formatUSD(totals.landed_cost_cents, true)}</span>
+          <span className="text-xs tabular-nums text-neutral-500">
+            {formatUSD(Math.round(product.landed_cost_cents / Math.max(1, product.trial_units)), true)} / unit landed
+          </span>
+        </p>
 
         {/* Guaranteed Landed Cost breakdown — the core trust element */}
         <div className="mt-4 border-t border-neutral-200 pt-3">
