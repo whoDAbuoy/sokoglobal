@@ -3,6 +3,28 @@
 @tailwind utilities;
 
 @layer base {
+  /* Neutral scale + white as RGB triplets (see tailwind.config.ts). */
+  :root {
+    --sg-white: 255 255 255;
+    --sg-neutral-50: 250 250 250;  --sg-neutral-100: 245 245 245; --sg-neutral-200: 229 229 229;
+    --sg-neutral-300: 212 212 212; --sg-neutral-400: 163 163 163; --sg-neutral-500: 115 115 115;
+    --sg-neutral-600: 82 82 82;    --sg-neutral-700: 64 64 64;    --sg-neutral-800: 38 38 38;
+    --sg-neutral-900: 23 23 23;    --sg-neutral-950: 10 10 10;
+    color-scheme: light;
+  }
+  /* Dark mode: the scale inverts (surfaces dark, text light, primary buttons light-on-dark). */
+  .dark {
+    --sg-white: 12 12 12;
+    --sg-neutral-50: 23 23 23;     --sg-neutral-100: 34 34 34;    --sg-neutral-200: 48 48 48;
+    --sg-neutral-300: 66 66 66;    --sg-neutral-400: 112 112 112; --sg-neutral-500: 150 150 150;
+    --sg-neutral-600: 176 176 176; --sg-neutral-700: 204 204 204; --sg-neutral-800: 228 228 228;
+    --sg-neutral-900: 243 243 243; --sg-neutral-950: 250 250 250;
+    color-scheme: dark;
+  }
+  /* Smooth switch: only while the theme is changing (set by hooks/useTheme.ts). */
+  .theme-transition, .theme-transition *, .theme-transition *::before, .theme-transition *::after {
+    transition: background-color 250ms ease, border-color 250ms ease, color 250ms ease, fill 250ms ease !important;
+  }
   html { -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
   body { @apply bg-white text-neutral-900; }
   h1, h2, h3 { @apply tracking-tight; }
@@ -42,3 +64,15 @@
   .no-scrollbar { scrollbar-width: none; }
   .no-scrollbar::-webkit-scrollbar { display: none; }
 }
+
+/* Dark mode: soften the tinted status surfaces (their light tints would glare on dark).
+   Outside @layer so they are always emitted (two-class selectors beat the utilities). */
+  .dark .bg-emerald-50 { background-color: rgb(6 95 70 / 0.22); }
+  .dark .bg-amber-50   { background-color: rgb(146 64 14 / 0.22); }
+  .dark .bg-red-50     { background-color: rgb(153 27 27 / 0.22); }
+  .dark .border-emerald-200 { border-color: rgb(16 185 129 / 0.35); }
+  .dark .border-amber-200   { border-color: rgb(245 158 11 / 0.35); }
+  .dark .border-red-200     { border-color: rgb(239 68 68 / 0.35); }
+  .dark .text-emerald-700, .dark .text-emerald-800 { color: rgb(110 231 183); }
+  .dark .text-amber-700, .dark .text-amber-800, .dark .text-amber-900 { color: rgb(252 211 77); }
+  .dark .text-red-600, .dark .text-red-700 { color: rgb(252 165 165); }

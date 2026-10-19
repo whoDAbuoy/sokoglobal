@@ -6,6 +6,7 @@ import { AuthProvider } from '@/context/AuthContext';
 import { CartProvider } from '@/context/CartContext';
 import { ChatProvider } from '@/context/ChatContext';
 import CartDrawer from '@/components/cart/CartDrawer';
+import { THEME_INIT_SCRIPT } from '@/lib/theme';
 import './globals.css';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
@@ -20,9 +21,13 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   // response is rendered with that request's CSP nonce (prerendered HTML would
   // carry no nonce). Pass `nonce` to any third-party <Script nonce={nonce} />.
   const nonce = (await headers()).get('x-nonce') ?? undefined;
-  void nonce;
   return (
-    <html lang="en" className={inter.variable}>
+    // suppressHydrationWarning: the theme script may add class="dark" before React hydrates.
+    <html lang="en" className={inter.variable} suppressHydrationWarning>
+      <head>
+        {/* Applies the saved light/dark theme before first paint (no flash). Nonce-allowed under the CSP. */}
+        <script nonce={nonce} dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+      </head>
       <body className="min-h-screen font-sans">
         <AuthProvider>
           <ChatProvider>
