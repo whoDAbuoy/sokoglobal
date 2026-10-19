@@ -40,6 +40,8 @@ MVP built with Next.js 15 (App Router) + Tailwind + Supabase (Postgres, Auth, St
 | Admin shipment tracking | `app/admin/orders` (queue), `app/admin/orders/[id]/tracking` (form + live preview), `lib/tracking/validate.ts` |
 | Payout reconciliation | `lib/payments/reconcile.ts`, `app/api/cron/reconcile-payouts/route.ts` |
 | Content-Security-Policy | `lib/security/csp.ts`, `middleware.ts`, `app/api/csp-report/route.ts` |
+| User management (bans, deletes, profile-edit approval) | `app/admin/users`, `supabase/migrations/012_user_management.sql` (run it in the SQL editor; needs `SUPABASE_SERVICE_ROLE_KEY` on the server for Auth bans / deletes), `lib/user-admin.ts` |
+| Portal messaging hub | `components/chat/MessagingHub.tsx`, `lib/chat-hub.ts` |
 | Tests (`npm test`) | `lib/**/*.test.mts`, `tests/*.test.mts` (41 tests) |
 
 ## How the trust rules are enforced (server-side, not just UI)

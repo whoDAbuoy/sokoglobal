@@ -3,6 +3,7 @@ import { getSessionProfile } from '@/lib/supabase/server';
 import { isMpesaConfigured } from '@/lib/payments/mpesa';
 import DashboardHeader from '@/components/dashboard/DashboardHeader';
 import ProfileSettings, { type ProfileTab } from '@/components/profile/ProfileSettings';
+import type { LatestChangeRequest } from '@/components/profile/ProfileChangeRequest';
 
 export const metadata = { title: 'Profile & settings · SokoGlobal', robots: { index: false, follow: false } };
 export const dynamic = 'force-dynamic';
@@ -11,9 +12,13 @@ const TABS: ProfileTab[] = ['account', 'appearance', 'security'];
 
 /** Profile card + settings for every signed-in role (each user only ever sees their own account). */
 export default async function ProfilePage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
-  const { user, profile } = await getSessionProfile();
+  const { supabase, user, profile } = await getSessionProfile();
   if (!user || !profile) redirect('/login?redirectTo=/dashboard/profile');
   const { tab } = await searchParams;
+  // Latest change request (own rows only under RLS). Missing table before migration 012 → null.
+  const { data: changeRequest } = await supabase.from('profile_change_requests')
+    .select('status, full_name, company_name, review_note, created_at, reviewed_at')
+    .eq('user_id', user.id).neq('status', 'cancelled').order('created_at', { ascending: false }).limit(1).maybeSingle<LatestChangeRequest>();
 
   return (
     <>
@@ -24,6 +29,7 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
         <ProfileSettings
           initialTab={TABS.includes(tab as ProfileTab) ? (tab as ProfileTab) : 'account'}
           profile={profile}
+          changeRequest={changeRequest ?? null}
           email={user.email ?? ''}
           memberSince={user.created_at ?? null}
           regional={{

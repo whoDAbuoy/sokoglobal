@@ -62,6 +62,26 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
+  // Banned accounts (profiles.is_banned, set from /admin/users) are signed out on any private page.
+  // Supabase Auth also refuses their sign-in and token refresh; this catches sessions issued before the ban.
+  // If migration 012 is not applied the column is missing, the query errors and nobody is treated as banned.
+  if (user && PROTECTED.some((p) => path.startsWith(p))) {
+    const { data: flags } = await supabase.from('profiles').select('is_banned').eq('id', user.id).maybeSingle<{ is_banned: boolean }>();
+    if (flags?.is_banned) {
+      await supabase.auth.signOut({ scope: 'local' }).catch(() => undefined);
+      const url = request.nextUrl.clone();
+      url.pathname = '/login';
+      url.search = '';
+      url.searchParams.set('error', 'banned');
+      const redirect = NextResponse.redirect(url);
+      response.cookies.getAll().forEach((c) => redirect.cookies.set(c));
+      for (const c of request.cookies.getAll()) {
+        if (c.name.startsWith('sb-')) redirect.cookies.set(c.name, '', { path: '/', maxAge: 0 });
+      }
+      return redirect;
+    }
+  }
+
   if (user && AUTH_PAGES.includes(path)) {
     const url = request.nextUrl.clone();
     url.pathname = '/';

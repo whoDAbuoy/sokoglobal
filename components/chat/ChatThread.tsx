@@ -1,8 +1,8 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
+import { useCallback, useEffect, useRef, useState, type FormEvent, type KeyboardEvent, type ReactNode } from 'react';
 import clsx from 'clsx';
-import { AlertCircle, Loader2, MessageCircle, Send } from 'lucide-react';
+import { AlertCircle, ChevronDown, Loader2, MessageCircle, Send } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { createClient } from '@/lib/supabase/client';
 import { MAX_MESSAGE_LENGTH, formatChatTime, mergeMessages, pickChannelName, validateMessage, type ChatMessage } from '@/lib/chat';
@@ -19,10 +19,14 @@ const errorMessage = (err: unknown, fallback: string) =>
  * composer. `onRead` runs after the other party's messages are marked read
  * (pass the chat context's refreshUnread, plus anything else to refresh).
  */
-export default function ChatThread({ threadId, className, onRead }: {
+export default function ChatThread({ threadId, className, onRead, collapseAfter, composerExtra }: {
   threadId: string;
   className?: string;
   onRead?: () => void | Promise<void>;
+  /** Show only the latest N messages behind an "N earlier messages" toggle (hub view). Off by default. */
+  collapseAfter?: number;
+  /** Extra controls in the composer footer (e.g. the hub's "Mute this thread" switch). */
+  composerExtra?: ReactNode;
 }) {
   const supabase = createClient();
   const { user } = useAuth();
@@ -38,6 +42,8 @@ export default function ChatThread({ threadId, className, onRead }: {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const onReadRef = useRef(onRead);
   onReadRef.current = onRead;
+  const [showEarlier, setShowEarlier] = useState(false);
+  useEffect(() => { setShowEarlier(false); }, [threadId]);
 
   const markRead = useCallback(async () => {
     const { error } = await supabase.rpc('mark_chat_read', { p_thread_id: threadId });
@@ -122,6 +128,7 @@ export default function ChatThread({ threadId, className, onRead }: {
 
   let lastReadMine = -1;
   messages.forEach((m, i) => { if (m.sender_id === myId && m.read_at) lastReadMine = i; });
+  const hiddenCount = collapseAfter && !showEarlier ? Math.max(0, messages.length - collapseAfter) : 0;
   const length = text.trim().length;
 
   return (
@@ -139,7 +146,17 @@ export default function ChatThread({ threadId, className, onRead }: {
           </div>
         ) : (
           <ul className="space-y-3">
+            {(hiddenCount > 0 || (collapseAfter && showEarlier && messages.length > collapseAfter)) && (
+              <li className="flex justify-center">
+                <button type="button" onClick={() => setShowEarlier((v) => !v)} aria-expanded={showEarlier}
+                  className="press inline-flex items-center gap-1.5 rounded-full border border-neutral-200 px-3 py-1 text-xs font-medium text-neutral-600 hover:text-neutral-900">
+                  <ChevronDown className={clsx('h-3.5 w-3.5 transition-transform', showEarlier ? 'rotate-180' : '')} aria-hidden />
+                  {showEarlier ? 'Hide earlier messages' : `${hiddenCount} earlier message${hiddenCount === 1 ? '' : 's'}`}
+                </button>
+              </li>
+            )}
             {messages.map((m, i) => {
+              if (i < hiddenCount) return null;
               const mine = m.sender_id === myId;
               return (
                 <li key={m.id} className={clsx('flex flex-col', mine ? 'items-end' : 'items-start')}>
@@ -180,7 +197,7 @@ export default function ChatThread({ threadId, className, onRead }: {
         <div className="mt-1.5 flex min-h-[1rem] items-start justify-between gap-3 text-xs">
           {sendError
             ? <p role="alert" className="flex items-start gap-1.5 text-red-600"><AlertCircle className="mt-px h-3.5 w-3.5 shrink-0" />{sendError}</p>
-            : <p className="text-neutral-400">Enter to send · Shift+Enter for a new line</p>}
+            : <div className="flex flex-wrap items-center gap-x-4 gap-y-1">{composerExtra}<p className="text-neutral-500">Enter to send · Shift+Enter for a new line</p></div>}
           {length >= COUNTER_FROM && (
             <span className={clsx('shrink-0 tabular-nums', length > MAX_MESSAGE_LENGTH ? 'text-red-600' : 'text-neutral-500')}>
               {length.toLocaleString('en-GB')}/{MAX_MESSAGE_LENGTH.toLocaleString('en-GB')}

@@ -22,6 +22,8 @@ export interface Profile {
   company_name: string;
   country_code: string;
   kyc_verified: boolean;
+  /** Set by admins (migration 012); absent before the migration runs. */
+  is_banned?: boolean;
 }
 
 export interface ProductMedia {
