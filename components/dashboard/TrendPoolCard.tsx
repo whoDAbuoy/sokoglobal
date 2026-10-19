@@ -65,7 +65,7 @@ export default function TrendPoolCard({ pool }: { pool: TrendPoolView }) {
 
   return (
     <article className="group flex flex-col">
-      <div className="relative overflow-hidden rounded-lg">
+      <div className="relative overflow-hidden rounded-lg transition duration-300 ease-out group-hover:-translate-y-1 group-hover:shadow-xl group-hover:shadow-blue-500/10">
         <ProductVisual src={pool.image_url} alt={pool.title} category={pool.category} className="aspect-[16/10]" />
         <div className="absolute left-3 top-3 flex gap-1.5">
           <span className="pill border-transparent bg-white/95 text-neutral-900">

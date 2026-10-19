@@ -11,6 +11,8 @@ import {
 import { createClient } from '@/lib/supabase/client';
 import type { UserRole } from '@/lib/types';
 import { IMPORTER_COUNTRIES, SUPPLIER_COUNTRIES, dialCode } from '@/lib/countries';
+import Globe from '@/components/motion/Globe';
+import WaveBackground from '@/components/motion/WaveBackground';
 
 type Mode = 'login' | 'signup';
 type SignupRole = Exclude<UserRole, 'admin'>;
@@ -50,7 +52,8 @@ export default function Auth({ mode }: { mode: Mode }) {
   const searchParams = useSearchParams();
   const supabase = createClient();
 
-  const [role, setRole] = useState<SignupRole>('importer');
+  // ?role=supplier preselects the supplier card (landing page "Sell as a supplier").
+  const [role, setRole] = useState<SignupRole>(searchParams.get('role') === 'supplier' ? 'supplier' : 'importer');
   const [fullName, setFullName] = useState('');
   const [company, setCompany] = useState('');
   const [country, setCountry] = useState('');
@@ -129,45 +132,56 @@ export default function Auth({ mode }: { mode: Mode }) {
   }
 
   return (
-    <div className="grid min-h-screen lg:grid-cols-[1fr_1.1fr]">
-      {/* Brand / trust panel */}
-      <aside className="relative hidden overflow-hidden bg-brand-950 px-12 py-14 text-white lg:flex lg:flex-col">
-
-        <Link href="/" className="relative flex items-center gap-2.5">
-          <ShieldCheck className="h-5 w-5 text-white" strokeWidth={2.25} />
+    // Always midnight: globe + live waves on the left, a glass form card on the right.
+    <div className="dark relative isolate min-h-screen overflow-hidden bg-midnight text-neutral-900">
+      <WaveBackground band={0.78} intensity={0.85} className="-z-10" />
+      <div className="grid min-h-screen lg:grid-cols-[1.05fr_1fr]">
+      {/* Globe / trust panel */}
+      <aside className="relative hidden flex-col justify-between gap-6 px-10 py-10 lg:flex xl:px-14">
+        <Link href="/" className="relative flex w-fit items-center gap-2.5 rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400">
+          <ShieldCheck className="h-5 w-5 text-cyan-400" strokeWidth={2.25} aria-hidden />
           <span className="text-lg font-semibold tracking-tight">SokoGlobal</span>
         </Link>
 
-        <div className="relative mt-auto max-w-md">
-          <p className="text-xs font-medium uppercase tracking-eyebrow text-neutral-400">B2B imports, de-risked</p>
-          <h1 className="mt-4 text-5xl font-semibold leading-[1.05]">
-            Source from the West.<br />Pay only when it lands.
+        <div className="relative mx-auto aspect-square w-full max-w-[min(26rem,42vh)]">
+          <Globe className="h-full w-full" focus={{ lat: 18, lon: 30 }} />
+        </div>
+
+        <div className="relative max-w-lg">
+          <p className="text-xs font-medium uppercase tracking-eyebrow text-cyan-400">B2B imports, de-risked</p>
+          <h1 className="mt-3 text-4xl font-semibold leading-[1.08] xl:text-5xl">
+            Source from the West.<br />
+            <span className="bg-gradient-to-r from-blue-400 via-cyan-300 to-indigo-400 bg-clip-text text-transparent">Pay only when it lands.</span>
           </h1>
-          <ul className="mt-10 space-y-6">
+          <ul className="mt-6 grid gap-2.5">
             {TRUST_POINTS.map(({ icon: Icon, title, body }) => (
-              <li key={title} className="flex gap-4">
-                <span className="mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-full border border-white/15">
-                  <Icon className="h-4 w-4 text-white" strokeWidth={1.75} />
+              <li key={title} className="glow-hover flex gap-3 rounded-lg border border-neutral-200 bg-neutral-50/50 p-3 backdrop-blur">
+                <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-cyan-500/25 bg-cyan-500/10">
+                  <Icon className="h-4 w-4 text-cyan-400" strokeWidth={1.75} aria-hidden />
                 </span>
                 <div>
-                  <p className="font-medium">{title}</p>
-                  <p className="mt-1 text-sm leading-relaxed text-neutral-400">{body}</p>
+                  <p className="text-sm font-medium">{title}</p>
+                  <p className="mt-0.5 text-xs leading-relaxed text-neutral-500">{body}</p>
                 </div>
               </li>
             ))}
           </ul>
+          <p className="mt-6 border-t border-neutral-200 pt-4 text-xs text-neutral-500">
+            Bank-grade encryption · Funds held by a licensed escrow partner · 24/7 trade support
+          </p>
         </div>
-
-        <p className="relative mt-auto border-t border-white/10 pt-6 text-xs text-neutral-500">
-          Bank-grade encryption · Funds held by a licensed escrow partner · 24/7 trade support
-        </p>
       </aside>
 
       {/* Form */}
-      <main className="flex items-center justify-center px-5 py-12 sm:px-10">
+      <main className="flex items-center justify-center px-4 py-10 sm:px-10">
         <div className="w-full max-w-md">
+          <Link href="/" className="mb-6 flex w-fit items-center gap-2 rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 lg:hidden">
+            <ShieldCheck className="h-5 w-5 text-cyan-400" strokeWidth={2.25} aria-hidden />
+            <span className="text-base font-semibold tracking-tight">SokoGlobal</span>
+          </Link>
+          <div className="glass rounded-2xl p-6 motion-safe:animate-scale-in sm:p-8">
           {confirmationSentTo ? (
-            <div className="card p-10 text-center">
+            <div className="py-4 text-center">
               <span className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-emerald-50">
                 <CheckCircle2 className="h-6 w-6 text-emerald-600" />
               </span>
@@ -307,8 +321,10 @@ export default function Auth({ mode }: { mode: Mode }) {
               </p>
             </>
           )}
+          </div>
         </div>
       </main>
+      </div>
     </div>
   );
 }

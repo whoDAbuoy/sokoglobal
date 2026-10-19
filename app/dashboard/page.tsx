@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
-import { BadgeCheck, Info, Lock, Plane, Users } from 'lucide-react';
+import { BadgeCheck, Heart, Info, Lock, MessageSquare, Package, Plane, Users } from 'lucide-react';
 import { PAID_ORDER_STATUSES } from '@/lib/order-status';
 import { getSessionProfile } from '@/lib/supabase/server';
 import type { EscrowStatus, GalleryMedia, OrderView, ProductCategory, TrendPoolView, TrialProductView } from '@/lib/types';
@@ -12,6 +12,8 @@ import SupportWidget from '@/components/dashboard/SupportWidget';
 import FeaturedCarousel, { type FeaturedSlide } from '@/components/dashboard/FeaturedCarousel';
 import CategoryTiles, { type CategoryTile } from '@/components/dashboard/CategoryTiles';
 import Link from 'next/link';
+import WaveBackground from '@/components/motion/WaveBackground';
+import QuickActions from '@/components/portal/QuickActions';
 
 export const metadata = { title: 'Buyer dashboard · SokoGlobal' };
 
@@ -151,11 +153,19 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         </p>
       )}
 
-      {/* Hero */}
-      <div className="border-b border-neutral-200 bg-neutral-50">
+      {/* Hero over the live wave wallpaper */}
+      <div className="relative isolate overflow-hidden border-b border-neutral-200 bg-neutral-50">
+        <WaveBackground band={0.82} intensity={0.75} className="-z-10" />
         <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8 lg:py-16">
           <p className="eyebrow">Welcome back, {profile.full_name.split(' ')[0]}</p>
           <div className="mt-4"><EscrowProtectionBanner /></div>
+          <QuickActions className="mt-10" actions={[
+            { href: '/dashboard/orders', label: 'My Orders', hint: 'Escrow & shipment tracking', icon: Package, tone: 'tone-escrow', badge: orders.length || undefined },
+            { href: '/dashboard#batches', label: 'Trial Batches', hint: 'Test a supplier for $500', icon: Plane, tone: 'tone-transit' },
+            { href: '/dashboard#pools', label: 'Trend Pools', hint: 'Split freight with boutiques', icon: Users, tone: 'tone-active' },
+            { href: '/dashboard/messages', label: 'Messages', hint: 'Chat with suppliers', icon: MessageSquare, tone: 'tone-pending' },
+            { href: '/dashboard/wishlist', label: 'Wishlist', hint: 'Saved products', icon: Heart, tone: 'tone-danger' },
+          ]} />
         </div>
       </div>
 
@@ -182,8 +192,8 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                     {CATEGORY_LABEL[activeCategory]} · Clear ×
                   </Link>
                 )}
-                <span className="pill hidden md:inline-flex"><Lock className="h-3.5 w-3.5 text-emerald-600" /> Escrow on every order</span>
-                <span className="pill hidden md:inline-flex"><BadgeCheck className="h-3.5 w-3.5 text-emerald-600" /> KYC-verified sellers</span>
+                <span className="pill tone-escrow hidden md:inline-flex"><Lock className="h-3.5 w-3.5" aria-hidden /> Escrow on every order</span>
+                <span className="pill tone-active hidden md:inline-flex"><BadgeCheck className="h-3.5 w-3.5" aria-hidden /> KYC-verified sellers</span>
               </div>
             }
           />
@@ -216,7 +226,9 @@ function SectionHeader({ icon: Icon, title, subtitle, aside }: {
   return (
     <div className="flex flex-wrap items-end justify-between gap-4 border-b border-neutral-200 pb-5">
       <div className="max-w-2xl">
-        <Icon className="h-5 w-5 text-neutral-400" strokeWidth={1.5} aria-hidden />
+        <span className="grid h-10 w-10 place-items-center rounded-lg border tone-active">
+          <Icon className="h-5 w-5" strokeWidth={1.75} aria-hidden />
+        </span>
         <h2 className="mt-3 text-2xl font-semibold text-neutral-900">{title}</h2>
         <p className="mt-1.5 text-sm leading-relaxed text-neutral-500">{subtitle}</p>
       </div>

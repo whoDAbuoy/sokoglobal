@@ -1,9 +1,12 @@
 import { redirect } from 'next/navigation';
 import { getSessionProfile } from '@/lib/supabase/server';
+import Landing from '@/components/landing/Landing';
 
-/** Role-based entry point. */
+export const metadata = { title: 'SokoGlobal · Escrow-protected B2B imports' };
+
+/** Signed-in users go to their portal (role-based, as before); visitors see the landing page. */
 export default async function Home() {
   const { user, profile } = await getSessionProfile();
-  if (!user) redirect('/login');
+  if (!user) return <Landing />;
   redirect(profile?.role === 'admin' ? '/admin' : profile?.role === 'supplier' ? '/supplier' : '/dashboard');
 }

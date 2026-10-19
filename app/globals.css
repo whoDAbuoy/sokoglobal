@@ -12,13 +12,13 @@
     --sg-neutral-900: 23 23 23;    --sg-neutral-950: 10 10 10;
     color-scheme: light;
   }
-  /* Dark mode: the scale inverts (surfaces dark, text light, primary buttons light-on-dark). */
+  /* Dark mode ("midnight"): the scale inverts onto a deep blue-black (#0B0F17) with a cool tint. */
   .dark {
-    --sg-white: 12 12 12;
-    --sg-neutral-50: 23 23 23;     --sg-neutral-100: 34 34 34;    --sg-neutral-200: 48 48 48;
-    --sg-neutral-300: 66 66 66;    --sg-neutral-400: 112 112 112; --sg-neutral-500: 150 150 150;
-    --sg-neutral-600: 176 176 176; --sg-neutral-700: 204 204 204; --sg-neutral-800: 228 228 228;
-    --sg-neutral-900: 243 243 243; --sg-neutral-950: 250 250 250;
+    --sg-white: 11 15 23;
+    --sg-neutral-50: 17 22 33;     --sg-neutral-100: 24 30 44;    --sg-neutral-200: 36 44 61;
+    --sg-neutral-300: 52 62 82;    --sg-neutral-400: 100 112 135; --sg-neutral-500: 140 152 173;
+    --sg-neutral-600: 168 178 196; --sg-neutral-700: 199 206 219; --sg-neutral-800: 226 231 239;
+    --sg-neutral-900: 241 244 249; --sg-neutral-950: 248 250 252;
     color-scheme: dark;
   }
   /* Smooth switch: only while the theme is changing (set by hooks/useTheme.ts). */
@@ -40,23 +40,40 @@
       disabled:cursor-not-allowed disabled:bg-neutral-50 disabled:text-neutral-500;
   }
   .label { @apply mb-1.5 block text-xs font-medium uppercase tracking-wider text-neutral-600; }
+  /* Electric-blue primary with a soft glow; buttons compress slightly when pressed. */
   .btn-primary {
-    @apply inline-flex items-center justify-center gap-2 rounded-md bg-neutral-900 px-4 py-2.5 text-sm font-medium
-      text-white transition-colors hover:bg-neutral-700 focus:outline-none focus-visible:ring-2
-      focus-visible:ring-neutral-900 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex items-center justify-center gap-2 rounded-md bg-blue-600 px-4 py-2.5 text-sm font-medium
+      text-snow shadow-[0_8px_24px_-10px_rgb(59_130_246/0.7)] transition duration-200 hover:bg-blue-500
+      hover:shadow-[0_10px_30px_-8px_rgb(59_130_246/0.8)] focus:outline-none focus-visible:ring-2
+      focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white active:scale-[0.97]
+      disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100;
   }
   .btn-secondary {
     @apply inline-flex items-center justify-center gap-2 rounded-md border border-neutral-300 bg-white px-4 py-2.5
-      text-sm font-medium text-neutral-900 transition-colors hover:border-neutral-900 focus:outline-none
-      focus-visible:ring-2 focus-visible:ring-neutral-900 focus-visible:ring-offset-2
-      disabled:cursor-not-allowed disabled:opacity-50;
+      text-sm font-medium text-neutral-900 transition duration-200 hover:border-neutral-900 focus:outline-none
+      focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white
+      active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100;
   }
   .card { @apply rounded-lg border border-neutral-200 bg-white; }
+  /* Cards that lift on hover (transform only; disabled for reduced motion below). */
+  .card-lift {
+    @apply transition duration-300 ease-out hover:-translate-y-1 hover:shadow-xl hover:shadow-blue-500/10
+      focus-within:shadow-xl focus-within:shadow-blue-500/10;
+  }
+  /* Translucent glass panel over the wave / globe backgrounds. */
+  .glass { @apply border border-neutral-200/70 bg-white/70 shadow-overlay backdrop-blur-xl; }
 
   /* Small uppercase metadata line above titles. */
   .eyebrow { @apply text-xs font-medium uppercase tracking-eyebrow text-neutral-500; }
   /* Status / metadata pill. Combine with a color, e.g. "pill border-emerald-200 bg-emerald-50 text-emerald-700". */
   .pill { @apply inline-flex items-center gap-1 rounded-full border border-neutral-200 bg-white px-2.5 py-0.5 text-xs font-medium text-neutral-700; }
+  /* Status tones (use with .pill or any surface). Light text shades in dark mode keep WCAG AA contrast. */
+  .tone-escrow  { @apply border-emerald-500/25 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400; }
+  .tone-transit { @apply border-cyan-500/25 bg-cyan-500/10 text-cyan-700 dark:text-cyan-400; }
+  .tone-active  { @apply border-blue-500/25 bg-blue-500/10 text-blue-700 dark:text-blue-400; }
+  .tone-pending { @apply border-amber-500/25 bg-amber-500/10 text-amber-800 dark:text-amber-400; }
+  .tone-danger  { @apply border-rose-500/25 bg-rose-500/10 text-rose-700 dark:text-rose-400; }
+  .tone-muted   { @apply border-neutral-200 bg-neutral-100 text-neutral-600; }
 }
 
 @layer utilities {
@@ -76,3 +93,21 @@
   .dark .text-emerald-700, .dark .text-emerald-800 { color: rgb(110 231 183); }
   .dark .text-amber-700, .dark .text-amber-800, .dark .text-amber-900 { color: rgb(252 211 77); }
   .dark .text-red-600, .dark .text-red-700 { color: rgb(252 165 165); }
+
+/* Metric tiles: a soft radial glow follows the pointer (CSS vars set by GlowCard) or sits centred. */
+.glow-hover { position: relative; isolation: isolate; }
+.glow-hover::before {
+  content: ''; position: absolute; inset: 0; z-index: -1; border-radius: inherit; opacity: 0; pointer-events: none;
+  background: radial-gradient(240px circle at var(--glow-x, 50%) var(--glow-y, 0%), rgb(59 130 246 / 0.16), rgb(6 182 212 / 0.08) 40%, transparent 70%);
+  transition: opacity 300ms ease;
+}
+.glow-hover:hover::before, .glow-hover:focus-within::before { opacity: 1; }
+
+/* WCAG 2.3.3: honour reduced motion everywhere (canvas components also stop their loops). */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important; animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important; scroll-behavior: auto !important;
+  }
+  .card-lift:hover, .card-lift:focus-within { transform: none !important; }
+}

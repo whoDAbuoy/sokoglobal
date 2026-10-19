@@ -21,6 +21,9 @@ const config: Config = {
         // Remap slate to true neutral so every existing gray drops its blue tint.
         slate: neutral,
         white: 'rgb(var(--sg-white) / <alpha-value>)',
+        // Fixed colours that never flip with the theme (text on blue buttons, the midnight canvas).
+        snow: '#ffffff',
+        midnight: '#0B0F17',
       },
       fontFamily: { sans: ['var(--font-inter)', 'system-ui', 'sans-serif'] },
       // Crisper radii: buttons/inputs ~6px, cards and panels 8px.
@@ -45,6 +48,12 @@ const config: Config = {
         'slide-in-right': { from: { transform: 'translateX(100%)' }, to: { transform: 'none' } },
         'slide-up': { from: { opacity: '0', transform: 'translateY(16px)' }, to: { opacity: '1', transform: 'none' } },
         'heart-pop': { '0%': { transform: 'scale(1)' }, '40%': { transform: 'scale(1.35)' }, '70%': { transform: 'scale(0.9)' }, '100%': { transform: 'scale(1)' } },
+        // Motion overhaul
+        'pulse-ring': { '0%': { transform: 'scale(1)', opacity: '0.55' }, '80%, 100%': { transform: 'scale(2.1)', opacity: '0' } },
+        'word-in': { from: { opacity: '0', filter: 'blur(10px)', transform: 'translateY(35%)' }, to: { opacity: '1', filter: 'blur(0)', transform: 'none' } },
+        'word-out': { from: { opacity: '1', filter: 'blur(0)', transform: 'none' }, to: { opacity: '0', filter: 'blur(10px)', transform: 'translateY(-35%)' } },
+        'fade-up': { from: { opacity: '0', transform: 'translateY(14px)' }, to: { opacity: '1', transform: 'none' } },
+        float: { '0%, 100%': { transform: 'translateY(0)' }, '50%': { transform: 'translateY(-6px)' } },
       },
       animation: {
         'fade-in': 'fade-in 200ms ease-out both',
@@ -54,6 +63,11 @@ const config: Config = {
         'slide-in-right': 'slide-in-right 280ms cubic-bezier(0.16, 1, 0.3, 1) both',
         'slide-up': 'slide-up 240ms cubic-bezier(0.16, 1, 0.3, 1) both',
         'heart-pop': 'heart-pop 420ms cubic-bezier(0.16, 1, 0.3, 1)',
+        'pulse-ring': 'pulse-ring 1.8s cubic-bezier(0.22, 1, 0.36, 1) infinite',
+        'word-in': 'word-in 520ms cubic-bezier(0.16, 1, 0.3, 1) both',
+        'word-out': 'word-out 360ms ease-in both',
+        'fade-up': 'fade-up 600ms cubic-bezier(0.16, 1, 0.3, 1) both',
+        float: 'float 6s ease-in-out infinite',
       },
     },
   },

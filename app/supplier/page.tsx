@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { Plus } from 'lucide-react';
+import { FileCheck2, MessageSquare, PackagePlus, Plus, Workflow } from 'lucide-react';
 import { getSessionProfile } from '@/lib/supabase/server';
 import type { EscrowStatus } from '@/lib/types';
 import DashboardHeader from '@/components/dashboard/DashboardHeader';
@@ -8,6 +8,10 @@ import SupportWidget from '@/components/dashboard/SupportWidget';
 import SupplierStats, { type ProductCounts } from '@/components/supplier/SupplierStats';
 import SupplierProductCard, { type SupplierProduct } from '@/components/supplier/SupplierProductCard';
 import { addOrder, emptyCounts, type OrderCounts } from '@/components/supplier/orderStages';
+import FulfilmentPipeline, { type FulfilmentOrder } from '@/components/supplier/FulfilmentPipeline';
+import WaveBackground from '@/components/motion/WaveBackground';
+import QuickActions from '@/components/portal/QuickActions';
+import { payoutSummary, releaseSplit, type PayoutStatus } from '@/lib/supplier-pipeline';
 
 export default async function SupplierHome() {
   const { supabase, user, profile } = await getSessionProfile();
@@ -22,10 +26,26 @@ export default async function SupplierHome() {
   const products = (productRows ?? []) as unknown as SupplierProduct[];
 
   const productIds = products.map((p) => p.id);
-  const { data: orderRows } = productIds.length
-    ? await supabase.from('orders').select('product_id, escrow_status, total_cents').in('product_id', productIds)
-    : { data: [] };
-  const orders = (orderRows ?? []) as { product_id: string; escrow_status: EscrowStatus; total_cents: number }[];
+  const [{ data: orderRows }, { data: payoutRows }] = await Promise.all([
+    productIds.length
+      ? supabase.from('orders')
+        .select('id, product_id, escrow_status, total_cents, created_at, batches, current_status, eta_timestamp')
+        .in('product_id', productIds).order('created_at', { ascending: false })
+      : Promise.resolve({ data: [] }),
+    supabase.from('payouts').select('status, amount_cents').eq('supplier_id', user.id),
+  ]);
+  const orders = (orderRows ?? []) as {
+    id: string; product_id: string; escrow_status: EscrowStatus; total_cents: number; created_at: string;
+    batches: number | null; current_status: string | null; eta_timestamp: string | null;
+  }[];
+  const titleOf = new Map(products.map((p) => [p.id, p.title]));
+  const pipeline: FulfilmentOrder[] = orders.map((o) => ({
+    id: o.id, escrow_status: o.escrow_status, total_cents: o.total_cents, created_at: o.created_at,
+    product_title: titleOf.get(o.product_id) ?? 'Product', batches: o.batches ?? 1,
+    current_status: o.current_status, eta_timestamp: o.eta_timestamp,
+  }));
+  const payouts = payoutSummary((payoutRows ?? []) as { status: PayoutStatus; amount_cents: number }[]);
+  const release = releaseSplit(orders);
 
   const totals = emptyCounts();
   const byProduct = new Map<string, OrderCounts>();
@@ -48,19 +68,31 @@ export default async function SupplierHome() {
   return (
     <>
       <DashboardHeader profile={profile} />
-      <main className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <p className="eyebrow">Supplier</p>
-            <h1 className="mt-2 text-3xl font-semibold text-neutral-900">Your catalogue</h1>
-            <p className="mt-1 text-sm text-neutral-500">Products go live after logistics quoting and photo review.</p>
+      <div className="relative isolate overflow-hidden border-b border-neutral-200 bg-neutral-50">
+        <WaveBackground band={0.8} intensity={0.7} className="-z-10" />
+        <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <div>
+              <p className="eyebrow">Supplier</p>
+              <h1 className="mt-2 text-3xl font-semibold text-neutral-900">Your catalogue</h1>
+              <p className="mt-1 text-sm text-neutral-500">Products go live after logistics quoting and photo review.</p>
+            </div>
+            <Link href="/supplier/products/new" className="btn-primary"><Plus className="h-4 w-4" aria-hidden /> New product</Link>
           </div>
-          <Link href="/supplier/products/new" className="btn-primary"><Plus className="h-4 w-4" /> New product</Link>
+          <QuickActions className="mt-8" label="Supplier shortcuts" actions={[
+            { href: '/supplier/products/new', label: 'New Trial Batch', hint: 'List a product for review', icon: PackagePlus, tone: 'tone-active' },
+            { href: '/supplier#pipeline', label: 'Fulfilment', hint: 'Orders to prepare and ship', icon: Workflow, tone: 'tone-transit', badge: totals.escrow || undefined },
+            { href: '/supplier/verification', label: 'Documents & payouts', hint: 'KYC files and payout account', icon: FileCheck2, tone: 'tone-escrow' },
+            { href: '/supplier/messages', label: 'Buyer messages', hint: 'Answer importer questions', icon: MessageSquare, tone: 'tone-pending' },
+          ]} />
         </div>
+      </div>
+      <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
+        <SupplierStats products={productCounts} orders={totals} payouts={payouts} release={release} />
 
-        <SupplierStats products={productCounts} orders={totals} />
+        <div className="mt-10"><FulfilmentPipeline orders={pipeline} /></div>
 
-        <div className="mt-10 flex items-baseline justify-between border-b border-neutral-200 pb-3">
+        <div className="mt-12 flex items-baseline justify-between border-b border-neutral-200 pb-3">
           <h2 className="text-lg font-semibold text-neutral-900">Trial Batches</h2>
           <p className="text-sm tabular-nums text-neutral-500">{products.length} product{products.length === 1 ? '' : 's'}</p>
         </div>
