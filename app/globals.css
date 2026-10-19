@@ -78,6 +78,14 @@
   /* Modal / drawer panels (opaque enough for long reading) and their <dialog> backdrops. */
   .frost-panel { @apply bg-white/90 backdrop-blur-xl dark:bg-midnight/90; }
   .frost-backdrop { @apply backdrop:bg-midnight/50 backdrop:backdrop-blur-md; }
+  /* iPhone-style glass for the auth panels: deep midnight tint, heavy saturated blur, luminous hairline border.
+     The /60 tint keeps muted text (neutral-600) above 4.5:1 even where a bright wave sits behind the panel. */
+  .frost-ios {
+    @apply border border-snow/10 bg-midnight/60 backdrop-blur-xl backdrop-saturate-150 sm:backdrop-blur-2xl
+      shadow-[0_8px_32px_0_rgba(0,0,0,0.37),inset_0_1px_0_0_rgba(255,255,255,0.07)];
+  }
+  /* Crisp controls on glass: near-opaque fields with a visible edge and a cyan focus ring. */
+  .frost-ios .input { @apply border-snow/15 bg-midnight/85 hover:border-snow/25 focus:border-cyan-400 focus:ring-cyan-400; }
 
   /* Small uppercase metadata line above titles. */
   .eyebrow { @apply text-xs font-medium uppercase tracking-eyebrow text-neutral-500; }
@@ -130,5 +138,5 @@
 
 /* Users who ask for less transparency get solid surfaces instead of frosted ones. */
 @media (prefers-reduced-transparency: reduce) {
-  .frost-card, .frost-bar, .frost-pop, .frost-panel, .glass { backdrop-filter: none !important; background-color: rgb(var(--sg-white)) !important; }
+  .frost-card, .frost-bar, .frost-pop, .frost-panel, .frost-ios, .glass { backdrop-filter: none !important; background-color: rgb(var(--sg-white)) !important; }
 }
