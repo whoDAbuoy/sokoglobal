@@ -1,7 +1,10 @@
 'use client';
 
 import Link from 'next/link';
-import { BadgeCheck, Bell, Heart, LogOut, Package, ShieldCheck, ShoppingBag } from 'lucide-react';
+import {
+  BadgeCheck, Bell, ClipboardCheck, Compass, FileCheck2, Headphones, Heart, LayoutDashboard, LogOut, MessageSquare, Package,
+  PackagePlus, ShieldCheck, ShoppingBag, Store, Truck, Users, type LucideIcon,
+} from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useCart } from '@/context/CartContext';
 import { useChat } from '@/context/ChatContext';
@@ -14,15 +17,25 @@ const NAV: Record<Profile['role'], [string, string][]> = {
   admin: [['Overview', '/admin'], ['Review queue', '/admin/review'], ['Catalogue', '/admin/products'], ['Shipments', '/admin/orders'], ['Supplier KYC', '/admin/kyc'], ['Support', '/admin/support']],
 };
 
+/** Icon per nav label (decorative; the text label stays the accessible name). */
+const NAV_ICON: Record<string, LucideIcon> = {
+  Discover: Compass, 'Trend Pools': Users, Messages: MessageSquare, Catalogue: Store, 'New product': PackagePlus,
+  Verification: FileCheck2, Overview: LayoutDashboard, 'Review queue': ClipboardCheck, Shipments: Truck,
+  'Supplier KYC': BadgeCheck, Support: Headphones,
+};
+
 export default function DashboardHeader({ profile }: { profile: Profile }) {
   const { signOut } = useAuth();
   const cart = useCart();
   const { unreadCount } = useChat();
   const saved = useWishlist().ids.length;
   const initials = profile.full_name.split(/\s+/).map((p) => p[0]).slice(0, 2).join('').toUpperCase();
-  const links = NAV[profile.role].map(([label, href]) => (
+  const links = NAV[profile.role].map(([label, href]) => {
+    const Icon = NAV_ICON[label];
+    return (
     <Link key={label} href={href}
-      className="inline-flex items-center gap-1.5 whitespace-nowrap text-sm text-neutral-600 transition-colors hover:text-neutral-900">
+      className="group/nav inline-flex items-center gap-1.5 whitespace-nowrap rounded-md text-sm text-neutral-600 transition-colors hover:text-neutral-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">
+      {Icon && <Icon className="h-4 w-4 text-neutral-400 transition-colors group-hover/nav:text-blue-500" strokeWidth={1.75} aria-hidden />}
       {label}
       {label === 'Messages' && unreadCount > 0 && (
         <span aria-label={`${unreadCount} unread`} className="grid h-4 min-w-4 place-items-center rounded-full bg-neutral-900 px-1 text-[10px] font-semibold tabular-nums text-white">
@@ -30,14 +43,15 @@ export default function DashboardHeader({ profile }: { profile: Profile }) {
         </span>
       )}
     </Link>
-  ));
+    );
+  });
 
   return (
-    <header className="sticky top-0 z-30 border-b border-neutral-200 bg-white/95 backdrop-blur">
+    <header className="sticky top-0 z-30 border-b border-neutral-200 bg-white/80 backdrop-blur-xl">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-6 px-4 sm:px-6 lg:px-8">
         <div className="flex items-center gap-10">
           <Link href="/" className="flex items-center gap-2">
-            <ShieldCheck className="h-5 w-5 text-neutral-900" strokeWidth={2.25} />
+            <ShieldCheck className="h-5 w-5 text-blue-600 dark:text-cyan-400" strokeWidth={2.25} aria-hidden />
             <span className="text-base font-semibold tracking-tight text-neutral-900">SokoGlobal</span>
           </Link>
           <nav className={profile.role === 'admin' ? 'hidden items-center gap-6 lg:flex' : 'hidden items-center gap-7 md:flex'}>{links}</nav>
@@ -84,7 +98,7 @@ export default function DashboardHeader({ profile }: { profile: Profile }) {
               </p>
               <p className="text-xs text-neutral-500">{profile.full_name}</p>
             </div>
-            <span className="grid h-8 w-8 place-items-center rounded-full bg-neutral-900 text-xs font-medium text-white">{initials}</span>
+            <span className="grid h-8 w-8 place-items-center rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 text-xs font-semibold text-snow shadow-[0_4px_14px_-4px_rgb(59_130_246/0.7)]">{initials}</span>
           </Link>
           <button type="button" onClick={() => void signOut()} aria-label="Sign out" className="rounded-md p-2 text-neutral-600 transition-colors hover:text-neutral-900">
             <LogOut className="h-5 w-5" strokeWidth={1.75} />

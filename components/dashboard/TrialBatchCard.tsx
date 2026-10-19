@@ -17,6 +17,7 @@ import QuantityStepper from '@/components/cart/QuantityStepper';
 import MessageSupplierButton from '@/components/chat/MessageSupplierButton';
 import ProductGallery from './ProductGallery';
 import ProductQuickView from './ProductQuickView';
+import InfoTip from '@/components/portal/InfoTip';
 
 const MPESA_ENABLED = process.env.NEXT_PUBLIC_MPESA_ENABLED === 'true';
 const IS_DEV = process.env.NODE_ENV === 'development';
@@ -79,10 +80,15 @@ export default function TrialBatchCard({ product }: { product: TrialProductView 
   }
 
   const lines = [
-    { label: `Product · ${totals.units} units`, value: totals.goods_cents },
-    { label: 'Consolidated air freight', value: totals.freight_cents },
-    { label: 'Customs clearance & duties', value: totals.customs_cents },
+    { label: `Product · ${totals.units} units`, value: totals.goods_cents, bar: 'bg-blue-500', dot: 'bg-blue-500',
+      tip: 'The supplier’s price for the goods. It is paid to them only after you verify delivery.' },
+    { label: 'Consolidated air freight', value: totals.freight_cents, bar: 'bg-cyan-500', dot: 'bg-cyan-500',
+      tip: 'Your share of a consolidated air shipment from the supplier’s country to your door.' },
+    { label: 'Customs clearance & duties', value: totals.customs_cents, bar: 'bg-indigo-500', dot: 'bg-indigo-500',
+      tip: 'Import duties, taxes and clearance fees, quoted up front so there are no surprise charges on arrival.' },
   ];
+  const lineTotal = Math.max(1, lines.reduce((sum, l) => sum + l.value, 0));
+  const perUnit = Math.round(totals.landed_cost_cents / Math.max(1, totals.units));
   const images = product.image_urls?.length ? product.image_urls : product.image_url ? [product.image_url] : [];
 
   /** Keep browsing: the cart is paid once, from the cart drawer → checkout. */
@@ -168,11 +174,11 @@ export default function TrialBatchCard({ product }: { product: TrialProductView 
   return (
     <article className="group flex flex-col">
       {/* Clicking the photos opens the Quick View; swiping scrolls the gallery (touch swipes don't produce clicks). */}
-      <div className="relative cursor-pointer overflow-hidden rounded-lg" onClick={() => setQuickView(true)}>
+      <div className="relative cursor-pointer overflow-hidden rounded-lg transition duration-300 ease-out group-hover:-translate-y-1 group-hover:shadow-xl group-hover:shadow-blue-500/10" onClick={() => setQuickView(true)}>
         <ProductGallery images={images} media={product.media} alt={product.title} category={product.category} className="aspect-square" arrows="hover"
           dotsClassName="group-hover:-translate-y-12 group-focus-within:-translate-y-12 [@media(hover:none)]:-translate-y-12" />
         <div className="pointer-events-none absolute left-3 top-3 flex flex-wrap gap-1.5">
-          <span className="pill border-transparent bg-white/95 text-neutral-900">$500 Trial Batch</span>
+          <span className="pill border-transparent bg-blue-600 text-snow shadow">$500 Trial Batch</span>
           {product.is_demo && <span className="pill border-amber-200 bg-amber-50 text-amber-800">Sample</span>}
         </div>
         <div className="pointer-events-none absolute right-3 top-3 flex items-center gap-1.5">
@@ -241,14 +247,30 @@ export default function TrialBatchCard({ product }: { product: TrialProductView 
           </span>
         </p>
 
-        {/* Guaranteed Landed Cost breakdown — the core trust element */}
+        {/* Guaranteed Landed Cost breakdown — the core trust element. Updates live with the quantity stepper. */}
         <div className="mt-4 border-t border-neutral-200 pt-3">
+          <div className="mb-3 flex h-2 overflow-hidden rounded-full bg-neutral-100" role="img"
+            aria-label={`Landed cost split: ${lines.map((l) => `${l.label} ${Math.round((l.value / lineTotal) * 100)}%`).join(', ')}`}>
+            {lines.map((l) => (
+              <span key={l.label} className={clsx('h-full transition-[width] duration-500 ease-out first:rounded-l-full last:rounded-r-full', l.bar)}
+                style={{ width: `${(l.value / lineTotal) * 100}%` }} />
+            ))}
+          </div>
           <dl className="space-y-1 text-sm">
             {lines.map((l) => (
-              <div key={l.label} className="flex justify-between text-neutral-500">
-                <dt>{l.label}</dt><dd className="tabular-nums">{formatUSD(l.value, true)}</dd>
+              <div key={l.label} className="flex items-center justify-between gap-2 text-neutral-500">
+                <dt className="flex items-center gap-1.5">
+                  <span className={clsx('h-1.5 w-1.5 shrink-0 rounded-full', l.dot)} aria-hidden />
+                  {l.label}
+                  <InfoTip text={l.tip} label={`About ${l.label}`} />
+                </dt>
+                <dd className="tabular-nums transition-colors">{formatUSD(l.value, true)}</dd>
               </div>
             ))}
+            <div className="flex items-center justify-between gap-2 pt-1 text-xs text-neutral-500">
+              <dt className="flex items-center gap-1.5">Per unit, landed <InfoTip text="Guaranteed Landed Cost divided by the units in your batches — what each piece costs you at your door." label="About per-unit landed price" /></dt>
+              <dd className="font-semibold tabular-nums text-blue-600 dark:text-blue-400">{formatUSD(perUnit, true)} × {totals.units}</dd>
+            </div>
           </dl>
           <div className="mt-2.5 flex items-center justify-between border-t border-dashed border-neutral-200 pt-2.5">
             <div>
