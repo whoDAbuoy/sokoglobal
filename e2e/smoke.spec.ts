@@ -1,0 +1,89 @@
+import { expect, test } from '@playwright/test';
+
+/** Always-on checks that need no test accounts. */
+
+test.describe('public pages', () => {
+  test('landing: headline, interactive globe and calls to action', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.getByRole('heading', { level: 1 })).toContainText('Global trade that feels');
+    const globe = page.getByRole('img', { name: /interactive globe showing sokoglobal trade corridors/i });
+    await expect(globe).toBeVisible();
+    await expect(page.getByRole('link', { name: /start importing/i })).toHaveAttribute('href', '/signup');
+    await expect(page.getByRole('link', { name: /sell as a supplier/i })).toHaveAttribute('href', '/signup?role=supplier');
+  });
+
+  test('globe can be focused and rotated with the keyboard', async ({ page, isMobile }) => {
+    test.skip(isMobile, 'keyboard only');
+    await page.goto('/');
+    const globe = page.getByRole('img', { name: /interactive globe/i });
+    await globe.focus();
+    await expect(globe).toBeFocused();
+    await page.keyboard.press('ArrowRight');   // must not scroll or throw
+    await expect(globe).toBeFocused();
+  });
+
+  test('sign-in: split layout with labelled fields', async ({ page }) => {
+    await page.goto('/login');
+    await expect(page.getByRole('heading', { name: 'Welcome back' })).toBeVisible();
+    await expect(page.getByLabel('Work email')).toBeVisible();
+    await expect(page.getByLabel('Password', { exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: /sign in securely/i })).toBeEnabled();
+  });
+
+  test('sign-up with ?role=supplier preselects the supplier account type', async ({ page }) => {
+    await page.goto('/signup?role=supplier');
+    await expect(page.getByRole('radio', { name: /western supplier/i })).toHaveAttribute('aria-checked', 'true');
+    await expect(page.getByRole('button', { name: /create supplier account/i })).toBeVisible();
+  });
+
+  test('banned sessions land on a clear message', async ({ page }) => {
+    await page.goto('/login?error=banned');
+    await expect(page.getByRole('alert').filter({ hasText: 'suspended' })).toBeVisible();
+  });
+
+  test('reduced motion shows the first headline word, statically', async ({ browser }) => {
+    const context = await browser.newContext({ reducedMotion: 'reduce' });
+    const page = await context.newPage();
+    await page.goto('/');
+    await page.waitForTimeout(3000);   // longer than one word-rotation interval
+    await expect(page.getByRole('heading', { level: 1 })).toContainText('effortless');
+    await context.close();
+  });
+});
+
+test.describe('guards and hardening', () => {
+  for (const path of ['/dashboard', '/dashboard/messages', '/supplier', '/admin', '/admin/users', '/admin/reconciliation']) {
+    test(`${path} requires sign-in`, async ({ page }) => {
+      await page.goto(path);
+      await expect(page).toHaveURL(new RegExp(`/login\\?redirectTo=${encodeURIComponent(path).replace(/%2F/g, '(%2F|/)')}`));
+    });
+  }
+
+  test('documents and crons are not public', async ({ request }) => {
+    const id = '44444444-4444-4444-8444-000000000001';
+    expect((await request.get(`/api/orders/${id}/invoice`)).status()).toBe(401);
+    expect((await request.get(`/api/payouts/${id}/receipt`)).status()).toBe(401);
+    expect((await request.get('/api/cron/reconcile-escrow')).status()).toBe(401);
+    expect((await request.get('/api/cron/retry-webhooks')).status()).toBe(401);
+  });
+
+  test('security headers and CSP are present', async ({ request }) => {
+    const res = await request.get('/login');
+    const h = res.headers();
+    expect(h['x-frame-options']).toBe('DENY');
+    expect(h['x-content-type-options']).toBe('nosniff');
+    expect(h['content-security-policy'] ?? h['content-security-policy-report-only']).toMatch(/script-src[^;]*'nonce-/);
+  });
+
+  test('checkout endpoints are rate limited', async ({ request }) => {
+    let limited = false;
+    for (let i = 0; i < 14 && !limited; i++) {
+      const res = await request.post('/api/orders', { data: {}, headers: { 'x-forwarded-for': '203.0.113.77' } });
+      if (res.status() === 429) {
+        limited = true;
+        expect(res.headers()['retry-after']).toBeTruthy();
+      }
+    }
+    expect(limited).toBe(true);
+  });
+});

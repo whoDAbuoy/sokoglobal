@@ -13,6 +13,14 @@
     {
       "path": "/api/cron/retry-payouts",
       "schedule": "0 0 * * *"
+    },
+    {
+      "path": "/api/cron/retry-webhooks",
+      "schedule": "30 1 * * *"
+    },
+    {
+      "path": "/api/cron/reconcile-escrow",
+      "schedule": "0 3 * * *"
     }
   ],
   "headers": [

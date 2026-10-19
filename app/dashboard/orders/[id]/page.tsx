@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, FileDown } from 'lucide-react';
 import { getSessionProfile } from '@/lib/supabase/server';
 import { formatUSD } from '@/lib/format';
 import type { EscrowStatus, OrderView } from '@/lib/types';
@@ -11,6 +11,7 @@ import OrderActions from './OrderActions';
 import { exceedsMpesaLimit } from '@/lib/payments/mpesa';
 import MessageSupplierButton from '@/components/chat/MessageSupplierButton';
 import AnimatedShipmentMap from '@/components/tracking/AnimatedShipmentMap';
+import { invoiceAvailable } from '@/lib/documents/model';
 
 const EVENT_LABEL: Record<string, string> = {
   status_change: 'Status updated',
@@ -132,6 +133,12 @@ export default async function OrderPage({ params, searchParams }: {
                 <dt className="font-medium">Total held in escrow</dt><dd className="text-xl font-semibold tabular-nums">{formatUSD(order.total_cents, true)}</dd>
               </div>
             </dl>
+            {invoiceAvailable(view.escrow_status) && (
+              // Plain link: the route streams a PDF with Content-Disposition: attachment.
+              <a href={`/api/orders/${order.id}/invoice`} className="btn-secondary mt-5 w-full py-2 text-sm">
+                <FileDown className="h-4 w-4" aria-hidden /> Download commercial invoice (PDF)
+              </a>
+            )}
           </section>
         </aside>
         </div>
