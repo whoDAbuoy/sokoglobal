@@ -2,7 +2,7 @@ import { notFound, redirect } from 'next/navigation';
 import { getSessionProfile } from '@/lib/supabase/server';
 import { UUID_RE } from '@/lib/uploads';
 import DashboardHeader from '@/components/dashboard/DashboardHeader';
-import ChatInbox from '@/components/chat/ChatInbox';
+import MessagingHub from '@/components/chat/MessagingHub';
 
 export const metadata = { title: 'Messages · SokoGlobal' };
 export const dynamic = 'force-dynamic';
@@ -19,10 +19,10 @@ export default async function BuyerMessagesPage({ searchParams }: { searchParams
   return (
     <>
       <DashboardHeader profile={profile} />
-      <main className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
+      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <p className="eyebrow">Messages</p>
         <h1 className="mt-2 text-3xl font-semibold text-neutral-900">Inbox</h1>
-        <ChatInbox basePath="/dashboard/messages" initialThreadId={threadId} />
+        <MessagingHub basePath="/dashboard/messages" role="importer" initialThreadId={threadId} />
       </main>
     </>
   );

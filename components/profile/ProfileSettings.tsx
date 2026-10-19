@@ -14,6 +14,7 @@ import { passwordStrength, validatePasswordChange, type PasswordChangeErrors } f
 import { createClient } from '@/lib/supabase/client';
 import { useTheme } from '@/hooks/useTheme';
 import type { ThemePreference } from '@/lib/theme';
+import ProfileChangeRequest, { type LatestChangeRequest } from './ProfileChangeRequest';
 
 export type ProfileTab = 'account' | 'appearance' | 'security';
 
@@ -29,8 +30,10 @@ const TAB_META: Record<ProfileTab, { label: string; icon: typeof Building2 }> = 
   security: { label: 'Security', icon: KeyRound },
 };
 
-export default function ProfileSettings({ initialTab, profile, email, memberSince, regional }: {
+export default function ProfileSettings({ initialTab, profile, email, memberSince, regional, changeRequest = null }: {
   initialTab: ProfileTab;
+  /** Latest profile change request (migration 012), shown on the Account tab. */
+  changeRequest?: LatestChangeRequest | null;
   profile: Profile;
   email: string;
   memberSince: string | null;
@@ -76,7 +79,7 @@ export default function ProfileSettings({ initialTab, profile, email, memberSinc
       </div>
 
       <div role="tabpanel" id={`panel-${tab}`} aria-labelledby={`tab-${tab}`} className="p-6 sm:p-8">
-        {tab === 'account' && <AccountPanel profile={profile} memberSince={memberSince} regional={regional} />}
+        {tab === 'account' && <AccountPanel profile={profile} memberSince={memberSince} regional={regional} changeRequest={changeRequest} />}
         {tab === 'appearance' && <AppearancePanel />}
         {tab === 'security' && <SecurityPanel email={email} />}
       </div>
@@ -86,8 +89,9 @@ export default function ProfileSettings({ initialTab, profile, email, memberSinc
 
 /* ------------------------------------------------------------------ Account */
 
-function AccountPanel({ profile, memberSince, regional }: {
+function AccountPanel({ profile, memberSince, regional, changeRequest }: {
   profile: Profile; memberSince: string | null; regional: { escrowCurrency: string; cardCurrency: string; mpesaEnabled: boolean };
+  changeRequest: LatestChangeRequest | null;
 }) {
   const code = profile.country_code.toUpperCase();
   const dial = dialCode(code);
@@ -102,6 +106,7 @@ function AccountPanel({ profile, memberSince, regional }: {
         <Row label="Account type" value={ROLE_BADGE[profile.role].label} />
         <Row label="Member since" value={memberSince ? new Date(memberSince).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }) : '—'} />
       </Section>
+      {profile.role !== 'admin' && <ProfileChangeRequest profile={profile} latest={changeRequest} />}
 
       <Section title="Region" icon={Globe2}>
         <Row label="Country" value={<span>{flag(code)} {countryName(code)}</span>} />

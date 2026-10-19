@@ -44,6 +44,7 @@ function mapAuthError(message: string): string {
   if (/email not confirmed/i.test(message)) return 'Please confirm your email address first — check your inbox.';
   if (/already registered/i.test(message)) return 'An account with this email already exists. Try signing in.';
   if (/rate limit/i.test(message)) return 'Too many attempts. Please wait a minute and try again.';
+  if (/banned/i.test(message)) return 'This account has been suspended. Contact SokoGlobal trade support if you think this is a mistake.';
   return message;
 }
 
@@ -63,7 +64,8 @@ export default function Auth({ mode }: { mode: Mode }) {
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(
-    searchParams.get('error') === 'confirmation_failed' ? 'That confirmation link is invalid or expired.' : null,
+    searchParams.get('error') === 'confirmation_failed' ? 'That confirmation link is invalid or expired.'
+      : searchParams.get('error') === 'banned' ? 'This account has been suspended. Contact SokoGlobal trade support if you think this is a mistake.' : null,
   );
   const [confirmationSentTo, setConfirmationSentTo] = useState<string | null>(null);
 
