@@ -12,7 +12,6 @@ import SupportWidget from '@/components/dashboard/SupportWidget';
 import FeaturedCarousel, { type FeaturedSlide } from '@/components/dashboard/FeaturedCarousel';
 import CategoryTiles, { type CategoryTile } from '@/components/dashboard/CategoryTiles';
 import Link from 'next/link';
-import WaveBackground from '@/components/motion/WaveBackground';
 import QuickActions from '@/components/portal/QuickActions';
 
 export const metadata = { title: 'Buyer dashboard · SokoGlobal' };
@@ -154,8 +153,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
       )}
 
       {/* Hero over the live wave wallpaper */}
-      <div className="relative isolate overflow-hidden border-b border-neutral-200 bg-neutral-50">
-        <WaveBackground band={0.82} intensity={0.75} className="-z-10" />
+      <div className="relative">
         <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8 lg:py-16">
           <p className="eyebrow">Welcome back, {profile.full_name.split(' ')[0]}</p>
           <div className="mt-4"><EscrowProtectionBanner /></div>

@@ -26,12 +26,16 @@ const STOPS = {
  *
  * Place inside a `relative` container; it fills it.
  */
-export default function WaveBackground({ className, band = 0.55, intensity = 1, speed = 1 }: {
+export default function WaveBackground({ className, band = 0.55, intensity = 1, speed = 1, maxFps, fade = true }: {
   /** Vertical centre of the wave band, 0 (top) – 1 (bottom). */
   band?: number;
   /** Overall opacity multiplier (0–1). */
   intensity?: number;
   speed?: number;
+  /** Optional frame-rate cap. */
+  maxFps?: number;
+  /** Fade the band out towards the top and bottom edges. */
+  fade?: boolean;
   className?: string;
 }) {
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -114,11 +118,11 @@ export default function WaveBackground({ className, band = 0.55, intensity = 1, 
   }, [band, intensity, speed]);
   drawRef.current = draw;
 
-  useMotionLoop(wrapRef, draw, reduced, lowPower ? 30 : 60);
+  useMotionLoop(wrapRef, draw, reduced, Math.min(maxFps ?? 60, lowPower ? 30 : 60));
 
   return (
     <div ref={wrapRef} aria-hidden className={clsx('pointer-events-none absolute inset-0 overflow-hidden', className)}
-      style={{ maskImage: 'linear-gradient(to bottom, transparent, black 18%, black 82%, transparent)', WebkitMaskImage: 'linear-gradient(to bottom, transparent, black 18%, black 82%, transparent)' }}>
+      style={fade ? { maskImage: 'linear-gradient(to bottom, transparent, black 18%, black 82%, transparent)', WebkitMaskImage: 'linear-gradient(to bottom, transparent, black 18%, black 82%, transparent)' } : undefined}>
       <canvas ref={glowRef} className="absolute inset-0 h-full w-full blur-2xl" />
       <canvas ref={lineRef} className="absolute inset-0 h-full w-full blur-[1.5px]" />
     </div>

@@ -21,7 +21,7 @@ export default function EscrowProtectionBanner() {
       </div>
       <ol className="grid gap-8 sm:grid-cols-3 sm:gap-6">
         {STEPS.map(({ icon: Icon, tone, title, body }, i) => (
-          <li key={title} className="glass card-lift rounded-xl p-4">
+          <li key={title} className="card card-lift p-4">
             <div className="flex items-center justify-between">
               <span className={`grid h-9 w-9 place-items-center rounded-lg border ${tone}`}>
                 <Icon className="h-4 w-4" strokeWidth={1.75} aria-hidden />

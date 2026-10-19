@@ -146,7 +146,7 @@ export default function SupportWidget({ orders = [] }: { orders?: OrderView[] })
             aria-modal="false"
             aria-labelledby={`${baseId}-title`}
             onKeyDown={(e) => { if (e.key === 'Escape' && !faqOpen) close(); }}
-            className="flex max-h-[min(36rem,calc(100vh-7rem))] w-[min(24rem,calc(100vw-2.5rem))] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl"
+            className="flex max-h-[min(36rem,calc(100vh-7rem))] w-[min(24rem,calc(100vw-2.5rem))] flex-col overflow-hidden rounded-[18px] border border-black/[0.06] text-neutral-900 shadow-2xl frost-panel dark:border-snow/10"
           >
             <header className="flex items-center justify-between bg-brand-900 px-4 py-3 text-white">
               <div className="flex items-center gap-2.5">

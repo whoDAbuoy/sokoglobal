@@ -300,7 +300,7 @@ export default async function AdminOverviewPage({ searchParams }: {
         </div>
 
         {/* Transactions */}
-        <section id="transactions" className="mt-4 scroll-mt-24 overflow-hidden rounded-xl border border-neutral-200 bg-white">
+        <section id="transactions" className="card mt-4 scroll-mt-28 overflow-hidden">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-neutral-200 px-4 py-3">
             <h2 className="font-semibold text-neutral-900">Transactions</h2>
             <form className="flex flex-1 flex-wrap justify-end gap-2" role="search" action="/admin#transactions">

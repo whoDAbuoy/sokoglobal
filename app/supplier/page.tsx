@@ -9,7 +9,6 @@ import SupplierStats, { type ProductCounts } from '@/components/supplier/Supplie
 import SupplierProductCard, { type SupplierProduct } from '@/components/supplier/SupplierProductCard';
 import { addOrder, emptyCounts, type OrderCounts } from '@/components/supplier/orderStages';
 import FulfilmentPipeline, { type FulfilmentOrder } from '@/components/supplier/FulfilmentPipeline';
-import WaveBackground from '@/components/motion/WaveBackground';
 import QuickActions from '@/components/portal/QuickActions';
 import { payoutSummary, releaseSplit, type PayoutStatus } from '@/lib/supplier-pipeline';
 
@@ -68,8 +67,7 @@ export default async function SupplierHome() {
   return (
     <>
       <DashboardHeader profile={profile} />
-      <div className="relative isolate overflow-hidden border-b border-neutral-200 bg-neutral-50">
-        <WaveBackground band={0.8} intensity={0.7} className="-z-10" />
+      <div className="relative">
         <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div>

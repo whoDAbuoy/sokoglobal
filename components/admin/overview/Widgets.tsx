@@ -4,7 +4,7 @@ import { barHeights, filledDots, formatChange } from '@/lib/admin-metrics';
 
 /** Panel surface for the admin dashboard; flips with the `.dark` neutral scale. */
 export function Panel({ className, children }: { className?: string; children: React.ReactNode }) {
-  return <section className={clsx('rounded-xl border border-neutral-200 bg-white p-5', className)}>{children}</section>;
+  return <section className={clsx('card p-5', className)}>{children}</section>;
 }
 
 /** Change badge, e.g. "+18.2% than last week". `goodWhenUp=false` for metrics where growth is bad (disputes). */
@@ -28,7 +28,7 @@ export function KpiCard({ icon: Icon, value, label, children }: {
   icon: LucideIcon; value: string | number; label: string; children?: React.ReactNode;
 }) {
   return (
-    <Panel className="p-4">
+    <Panel className="card-lift p-4">
       <div className="flex items-center gap-3">
         <span className="grid h-8 w-8 place-items-center rounded-md border border-neutral-200 bg-neutral-50">
           <Icon className="h-4 w-4 text-neutral-700" strokeWidth={1.75} aria-hidden />
