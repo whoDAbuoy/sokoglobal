@@ -82,7 +82,7 @@ export default function ProductQuickView({ product, quantity = 1, onClose, actio
 
         {/* Gallery */}
         <div className="group relative bg-neutral-100 md:min-h-[32rem]">
-          <ProductGallery images={images} media={product.media} alt={product.title} category={product.category} className="aspect-square md:aspect-auto md:h-full" arrows />
+          <ProductGallery images={images} media={product.media} alt={product.title} category={product.category} className="aspect-square md:aspect-auto md:h-full" arrows thumbnails />
           {product.has_swatch_video && (
             <span className="pill pointer-events-none absolute left-3 top-3 border-transparent bg-neutral-900/80 text-white">
               <Film className="h-3.5 w-3.5" /> Swatch video

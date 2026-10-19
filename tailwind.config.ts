@@ -48,6 +48,7 @@ const config: Config = {
         'scale-out': { from: { opacity: '1', transform: 'none' }, to: { opacity: '0', transform: 'translateY(8px) scale(0.97)' } },
         'slide-in-right': { from: { transform: 'translateX(100%)' }, to: { transform: 'none' } },
         'slide-up': { from: { opacity: '0', transform: 'translateY(16px)' }, to: { opacity: '1', transform: 'none' } },
+        'heart-pop': { '0%': { transform: 'scale(1)' }, '40%': { transform: 'scale(1.35)' }, '70%': { transform: 'scale(0.9)' }, '100%': { transform: 'scale(1)' } },
       },
       animation: {
         'fade-in': 'fade-in 200ms ease-out both',
@@ -56,6 +57,7 @@ const config: Config = {
         'scale-out': 'scale-out 160ms ease-in both',
         'slide-in-right': 'slide-in-right 280ms cubic-bezier(0.16, 1, 0.3, 1) both',
         'slide-up': 'slide-up 240ms cubic-bezier(0.16, 1, 0.3, 1) both',
+        'heart-pop': 'heart-pop 420ms cubic-bezier(0.16, 1, 0.3, 1)',
       },
     },
   },
