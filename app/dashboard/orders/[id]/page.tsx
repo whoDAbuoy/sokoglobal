@@ -58,8 +58,8 @@ export default async function OrderPage({ params, searchParams }: {
     <>
       <DashboardHeader profile={profile} />
       <main className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
-        <Link href="/dashboard#orders" className="inline-flex items-center gap-1 text-sm text-neutral-500 transition-colors hover:text-neutral-900">
-          <ArrowLeft className="h-4 w-4" /> Orders
+        <Link href="/dashboard/orders" className="inline-flex items-center gap-1 text-sm text-neutral-500 transition-colors hover:text-neutral-900">
+          <ArrowLeft className="h-4 w-4" /> My Orders
         </Link>
         <div className="mt-6 border-b border-neutral-200 pb-6">
           <p className="eyebrow">Order #{order.id.slice(0, 8).toUpperCase()} · {batches > 1 ? `${batches} Trial Batches · ` : ''}{order.quantity} units</p>

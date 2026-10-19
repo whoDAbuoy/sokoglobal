@@ -9,7 +9,7 @@ import { useWishlist } from '@/hooks/useWishlist';
 import type { Profile } from '@/lib/types';
 
 const NAV: Record<Profile['role'], [string, string][]> = {
-  importer: [['Discover', '/dashboard'], ['Trend Pools', '/dashboard#pools'], ['Orders', '/dashboard/orders'], ['Messages', '/dashboard/messages']],
+  importer: [['Discover', '/dashboard'], ['Trend Pools', '/dashboard#pools'], ['Messages', '/dashboard/messages']],
   supplier: [['Catalogue', '/supplier'], ['Messages', '/supplier/messages'], ['New product', '/supplier/products/new'], ['Verification', '/supplier/verification']],
   admin: [['Review queue', '/admin'], ['Catalogue', '/admin/products'], ['Shipments', '/admin/orders'], ['Supplier KYC', '/admin/kyc'], ['Support', '/admin/support']],
 };
@@ -47,7 +47,7 @@ export default function DashboardHeader({ profile }: { profile: Profile }) {
           {profile.role === 'importer' && (
             <Link href="/dashboard/orders" aria-label="My orders and escrow tracking"
               className="mr-0.5 inline-flex items-center gap-1.5 rounded-md border border-neutral-300 px-2 py-1.5 text-sm font-medium text-neutral-900 transition-colors hover:border-neutral-900 sm:mr-1 sm:px-2.5">
-              <Package className="h-4 w-4" strokeWidth={1.75} /> <span className="hidden sm:inline">My orders</span>
+              <Package className="h-4 w-4" strokeWidth={1.75} /> <span className="hidden sm:inline">My Orders</span>
             </Link>
           )}
           {profile.role === 'importer' && (

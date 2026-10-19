@@ -1,13 +1,13 @@
 import { redirect } from 'next/navigation';
 import { BadgeCheck, Info, Lock, Plane, Users } from 'lucide-react';
+import { PAID_ORDER_STATUSES } from '@/lib/order-status';
 import { getSessionProfile } from '@/lib/supabase/server';
 import type { EscrowStatus, GalleryMedia, OrderView, ProductCategory, TrendPoolView, TrialProductView } from '@/lib/types';
-import { DEMO_ORDERS, DEMO_POOLS, DEMO_PRODUCTS } from '@/lib/demo-data';
+import { DEMO_POOLS, DEMO_PRODUCTS } from '@/lib/demo-data';
 import DashboardHeader from '@/components/dashboard/DashboardHeader';
 import EscrowProtectionBanner from '@/components/dashboard/EscrowProtectionBanner';
 import TrendPoolCard from '@/components/dashboard/TrendPoolCard';
 import TrialBatchCard from '@/components/dashboard/TrialBatchCard';
-import EscrowTracker from '@/components/dashboard/EscrowTracker';
 import SupportWidget from '@/components/dashboard/SupportWidget';
 import FeaturedCarousel, { type FeaturedSlide } from '@/components/dashboard/FeaturedCarousel';
 import CategoryTiles, { type CategoryTile } from '@/components/dashboard/CategoryTiles';
@@ -57,8 +57,9 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
       .from('orders')
       .select('id, order_type, escrow_status, total_cents, created_at, product:products ( title )')
       .eq('buyer_id', user.id)
+      .in('escrow_status', PAID_ORDER_STATUSES)
       .order('created_at', { ascending: false })
-      .limit(5),
+      .limit(20), // support widget only — the order list lives at /dashboard/orders (header "My orders")
     supabase.from('pool_members').select('pool_id, contribution_cents, payment_status').eq('buyer_id', user.id),
   ]);
 
@@ -100,7 +101,6 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const usingDemo = pools.length === 0 && products.length === 0;
   const viewPools = usingDemo ? DEMO_POOLS : pools;
   const viewProducts = usingDemo ? DEMO_PRODUCTS : products;
-  const viewOrders = usingDemo && orders.length === 0 ? DEMO_ORDERS : orders;
 
   // Category browsing filters the products already loaded above (no extra query).
   const { category } = await searchParams;
@@ -202,13 +202,6 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
           <div className="mt-8 grid gap-x-6 gap-y-12 sm:grid-cols-2 lg:grid-cols-3">
             {viewPools.map((p) => <TrendPoolCard key={p.id} pool={p} />)}
           </div>
-        </section>
-
-        {/* Escrow tracker */}
-        <section id="orders" className="scroll-mt-24">
-          <SectionHeader icon={Lock} title="Your orders in escrow" subtitle="Track every shipment from payment to doorstep verification."
-            aside={<Link href="/dashboard/orders" className="btn-secondary px-3.5 py-2">View all orders</Link>} />
-          <div className="mt-8 max-w-3xl"><EscrowTracker orders={viewOrders} /></div>
         </section>
       </main>
 
