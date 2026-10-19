@@ -13,6 +13,7 @@ import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/context/AuthContext';
 import { formatUSD } from '@/lib/format';
 import type { EscrowStatus, OrderView } from '@/lib/types';
+import { OPEN_SUPPORT_EVENT, type OpenSupportDetail } from '@/lib/support-events';
 
 /* -------------------------------------------------------------------------- */
 /* Content — policy wording must be confirmed by Ops/Legal before launch.      */
@@ -107,6 +108,18 @@ export default function SupportWidget({ orders = [] }: { orders?: OrderView[] })
   useEffect(() => {
     if (open) panelRef.current?.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]')?.focus();
   }, [open]);
+
+  // Order cards can open the widget on that order's support chat (lib/support-events.ts).
+  useEffect(() => {
+    const onOpen = (e: Event) => {
+      const { orderId } = (e as CustomEvent<OpenSupportDetail>).detail ?? {};
+      if (orderId) setChatOrderId(orderId);
+      setTab('chat');
+      setOpen(true);
+    };
+    window.addEventListener(OPEN_SUPPORT_EVENT, onOpen);
+    return () => window.removeEventListener(OPEN_SUPPORT_EVENT, onOpen);
+  }, []);
 
   function onTabKey(e: KeyboardEvent<HTMLButtonElement>) {
     const idx = tabs.findIndex((t) => t.id === tab);

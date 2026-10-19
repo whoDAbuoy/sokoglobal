@@ -71,7 +71,7 @@ export default async function OrderPage({ params, searchParams }: {
 
         <div className="mt-8 grid gap-10 lg:grid-cols-[minmax(0,1fr)_22rem]">
         <div className="min-w-0">
-        <EscrowTracker orders={[view]} />
+        <EscrowTracker orders={[view]} actions={false} />
 
         {order.checkout_group_id && view.escrow_status === 'pending_payment' ? (
           // Cart orders are paid together, from their checkout (per-order payment is refused in Postgres).
