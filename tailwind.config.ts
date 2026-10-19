@@ -1,30 +1,26 @@
 import type { Config } from 'tailwindcss';
 
 // Saleor-inspired neutral scale: near-black primary, warm-neutral grays.
-const neutral = {
-  50: '#fafafa',
-  100: '#f5f5f5',
-  200: '#e5e5e5',
-  300: '#d4d4d4',
-  400: '#a3a3a3',
-  500: '#737373',
-  600: '#525252',
-  700: '#404040',
-  800: '#262626',
-  900: '#171717',
-  950: '#0a0a0a',
-};
+// Values live in CSS variables (app/globals.css) so the whole scale — and
+// white — flips for dark mode (`.dark` on <html>) without per-component dark: classes.
+const shade = (n: string) => `rgb(var(--sg-neutral-${n}) / <alpha-value>)`;
+const neutral = Object.fromEntries(
+  ['50', '100', '200', '300', '400', '500', '600', '700', '800', '900', '950'].map((n) => [n, shade(n)]),
+);
 
 const config: Config = {
   content: ['./app/**/*.{ts,tsx}', './components/**/*.{ts,tsx}'],
+  darkMode: 'class',
   theme: {
     extend: {
       colors: {
         // Monochrome brand (Saleor storefront look). Emerald stays reserved for
         // escrow / verified / success states; amber and red for warnings and errors.
+        neutral,
         brand: neutral,
         // Remap slate to true neutral so every existing gray drops its blue tint.
         slate: neutral,
+        white: 'rgb(var(--sg-white) / <alpha-value>)',
       },
       fontFamily: { sans: ['var(--font-inter)', 'system-ui', 'sans-serif'] },
       // Crisper radii: buttons/inputs ~6px, cards and panels 8px.

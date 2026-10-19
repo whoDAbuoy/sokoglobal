@@ -43,21 +43,21 @@ export default function FeaturedCarousel({ slides }: { slides: FeaturedSlide[] }
     <section aria-roledescription="carousel" aria-label="Featured collections"
       onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)}
       onFocusCapture={() => setPaused(true)} onBlurCapture={() => setPaused(false)}
-      className="group/banner relative h-[22rem] overflow-hidden rounded-lg bg-neutral-900 sm:h-[26rem]">
+      className="group/banner relative h-[22rem] overflow-hidden rounded-lg bg-black sm:h-[26rem]">
       {slides.map((s, i) => (
         <div key={s.id} role="group" aria-roledescription="slide" aria-label={`${i + 1} of ${slides.length}`} aria-hidden={i !== index}
           className={clsx('absolute inset-0 transition-opacity duration-700 ease-out motion-reduce:transition-none',
             i === index ? 'z-10 opacity-100' : 'pointer-events-none opacity-0')}>
           <ProductVisual src={s.image} alt="" category={s.category}
             className={clsx('h-full w-full transition-transform duration-[6000ms] ease-out motion-reduce:transition-none', i === index ? 'scale-105' : 'scale-100')} />
-          <div className="absolute inset-0 bg-gradient-to-r from-neutral-950/85 via-neutral-950/55 to-neutral-950/10" />
+          <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/55 to-black/10" />
           <div className="absolute inset-0 flex items-end p-6 sm:items-center sm:p-12">
-            <div className="max-w-md text-white">
-              <p className="text-xs font-medium uppercase tracking-eyebrow text-white/70">{s.eyebrow}</p>
+            <div className="max-w-md text-[#fff]">
+              <p className="text-xs font-medium uppercase tracking-eyebrow text-[#fff]/70">{s.eyebrow}</p>
               <h2 className="mt-3 text-3xl font-semibold leading-tight sm:text-4xl">{s.title}</h2>
-              <p className="mt-3 text-sm leading-relaxed text-white/80">{s.body}</p>
+              <p className="mt-3 text-sm leading-relaxed text-[#fff]/80">{s.body}</p>
               <Link href={s.href} tabIndex={i === index ? 0 : -1}
-                className="mt-6 inline-flex items-center gap-2 rounded-md bg-white px-4 py-2.5 text-sm font-medium text-neutral-900 transition hover:bg-neutral-100">
+                className="mt-6 inline-flex items-center gap-2 rounded-md bg-[#fff] px-4 py-2.5 text-sm font-medium text-[#171717] transition hover:bg-[#f5f5f5]">
                 {s.cta} <ArrowRight className="h-4 w-4" />
               </Link>
             </div>
@@ -77,7 +77,7 @@ export default function FeaturedCarousel({ slides }: { slides: FeaturedSlide[] }
           <div className="absolute bottom-5 right-6 z-20 flex items-center gap-1.5">
             {slides.map((s, i) => (
               <button key={s.id} type="button" onClick={() => go(i)} aria-label={`Show slide ${i + 1}`} aria-current={i === index}
-                className={clsx('h-1.5 rounded-full transition-all duration-500 ease-out', i === index ? 'w-6 bg-white' : 'w-1.5 bg-white/50 hover:bg-white/80')} />
+                className={clsx('h-1.5 rounded-full transition-all duration-500 ease-out', i === index ? 'w-6 bg-[#fff]' : 'w-1.5 bg-[#fff]/50 hover:bg-[#fff]/80')} />
             ))}
           </div>
         </>
