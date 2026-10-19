@@ -83,12 +83,12 @@ export default function CartDrawer() {
       {onBuyerPage && count > 0 && !cart.open && (
         <div className="pointer-events-none fixed inset-x-0 bottom-4 z-40 flex justify-center px-4">
           <button type="button" onClick={() => cart.setOpen(true)}
-            className="pointer-events-auto flex w-full max-w-md items-center justify-between gap-4 rounded-full bg-neutral-900 py-3 pl-5 pr-3 text-sm text-white shadow-overlay transition hover:bg-neutral-800 motion-safe:animate-slide-up">
+            className="glass-toolbar press pointer-events-auto flex w-full max-w-md items-center justify-between gap-4 !rounded-full py-2.5 pl-5 pr-2.5 text-sm text-neutral-900 hover:border-blue-500/30 motion-safe:animate-slide-up">
             <span className="flex items-center gap-2">
               <ShoppingBag className="h-4 w-4" />
               {cart.batchCount} Trial Batch{cart.batchCount === 1 ? '' : 'es'} · <span className="font-semibold tabular-nums">{formatUSD(cart.subtotalCents, true)}</span>
             </span>
-            <span className="flex items-center gap-1 rounded-full bg-white px-3 py-1.5 text-xs font-medium text-neutral-900">
+            <span className="flex items-center gap-1 rounded-full bg-blue-600 px-3 py-1.5 text-xs font-medium text-snow">
               View cart <ArrowRight className="h-3.5 w-3.5" />
             </span>
           </button>

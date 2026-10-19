@@ -6,6 +6,7 @@ import { AuthProvider } from '@/context/AuthContext';
 import { CartProvider } from '@/context/CartContext';
 import { ChatProvider } from '@/context/ChatContext';
 import CartDrawer from '@/components/cart/CartDrawer';
+import AmbientBackdrop from '@/components/motion/AmbientBackdrop';
 import { THEME_INIT_SCRIPT } from '@/lib/theme';
 import './globals.css';
 
@@ -29,6 +30,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <script nonce={nonce} dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
       </head>
       <body className="min-h-screen font-sans">
+        <AmbientBackdrop />
         <AuthProvider>
           <ChatProvider>
             <CartProvider>
@@ -38,7 +40,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           </ChatProvider>
         </AuthProvider>
         <Toaster closeButton position="top-right"
-          toastOptions={{ classNames: { toast: 'rounded-lg border border-neutral-200 shadow-overlay font-sans', description: 'text-neutral-500' } }} />
+          toastOptions={{ classNames: { toast: 'rounded-[18px] border border-black/[0.06] !bg-white/85 shadow-overlay backdrop-blur-xl font-sans dark:border-snow/10 dark:!bg-midnight/80', description: 'text-neutral-500' } }} />
       </body>
     </html>
   );

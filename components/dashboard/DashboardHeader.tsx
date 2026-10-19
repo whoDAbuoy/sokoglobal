@@ -34,7 +34,7 @@ export default function DashboardHeader({ profile }: { profile: Profile }) {
     const Icon = NAV_ICON[label];
     return (
     <Link key={label} href={href}
-      className="group/nav inline-flex items-center gap-1.5 whitespace-nowrap rounded-md text-sm text-neutral-600 transition-colors hover:text-neutral-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">
+      className="group/nav press inline-flex items-center gap-1.5 whitespace-nowrap rounded-md text-sm text-neutral-600 hover:text-neutral-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">
       {Icon && <Icon className="h-4 w-4 text-neutral-400 transition-colors group-hover/nav:text-blue-500" strokeWidth={1.75} aria-hidden />}
       {label}
       {label === 'Messages' && unreadCount > 0 && (
@@ -47,8 +47,9 @@ export default function DashboardHeader({ profile }: { profile: Profile }) {
   });
 
   return (
-    <header className="frost-bar sticky top-0 z-30 border-b">
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-6 px-4 sm:px-6 lg:px-8">
+    <header className="sticky top-3 z-50 px-3 sm:top-4 sm:px-4">
+      <div className="glass-toolbar mx-auto max-w-7xl">
+      <div className="flex h-14 items-center justify-between gap-6 px-3 sm:h-16 sm:px-5">
         <div className="flex items-center gap-10">
           <Link href="/" className="flex items-center gap-2">
             <ShieldCheck className="h-5 w-5 text-blue-600 dark:text-cyan-400" strokeWidth={2.25} aria-hidden />
@@ -106,7 +107,8 @@ export default function DashboardHeader({ profile }: { profile: Profile }) {
         </div>
       </div>
       {/* Small screens: the same links as a scrollable row. */}
-      <nav className={`flex gap-6 overflow-x-auto border-t border-neutral-100 px-4 py-2.5 sm:px-6 ${profile.role === 'admin' ? 'lg:hidden' : 'md:hidden'}`}>{links}</nav>
+      <nav className={`no-scrollbar flex gap-6 overflow-x-auto border-t border-black/[0.06] px-4 py-2.5 dark:border-snow/[0.08] sm:px-5 ${profile.role === 'admin' ? 'lg:hidden' : 'md:hidden'}`}>{links}</nav>
+      </div>
     </header>
   );
 }

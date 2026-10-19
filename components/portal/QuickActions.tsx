@@ -18,7 +18,7 @@ export default function QuickActions({ actions, label = 'Quick actions', classNa
     <nav aria-label={label} className={clsx('grid gap-3 sm:grid-cols-2 lg:grid-cols-[repeat(auto-fit,minmax(11rem,1fr))]', className)}>
       {actions.map(({ href, label: text, hint, icon: Icon, tone, badge }) => (
         <Link key={href + text} href={href}
-          className="group relative flex items-center gap-3 rounded-xl border border-neutral-200 bg-white/70 p-3 backdrop-blur-md transition dark:border-snow/10 dark:bg-midnight/70 duration-300 ease-out
+          className="group relative flex items-center gap-3 glass-surface rounded-[18px] p-3 transform-gpu transition duration-300 ease-out
             hover:-translate-y-1 hover:border-blue-500/40 hover:shadow-lg hover:shadow-blue-500/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 active:scale-[0.98]">
           <span className={clsx('grid h-10 w-10 shrink-0 place-items-center rounded-lg border transition-transform duration-300 group-hover:scale-110', tone)}>
             <Icon className="h-5 w-5" strokeWidth={1.75} aria-hidden />

@@ -16,11 +16,15 @@ const MAX_PITCH = 1.1;
  * client. Drag or use the arrow keys to rotate; spins slowly on its own unless
  * the user prefers reduced motion. Pauses off-screen.
  */
-export default function Globe({ className, focus = { lat: 12, lon: 30 }, labels = true }: {
+export default function Globe({ className, focus = { lat: 12, lon: 30 }, labels = true, interactive = true, maxFps }: {
   className?: string;
   /** Initial point of view. */
   focus?: { lat: number; lon: number };
   labels?: boolean;
+  /** false = purely decorative (ambient backdrop): no focus stop, no pointer handling, hidden from screen readers. */
+  interactive?: boolean;
+  /** Optional frame-rate cap (the ambient backdrop runs slower to keep blurred glass above it cheap). */
+  maxFps?: number;
 }) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -145,7 +149,7 @@ export default function Globe({ className, focus = { lat: 12, lon: 30 }, labels 
   }, [arcs, dots, hubs, labels]);
   drawRef.current = draw;
 
-  useMotionLoop(wrapRef, draw, reduced, lowPower ? 30 : 60);
+  useMotionLoop(wrapRef, draw, reduced, Math.min(maxFps ?? 60, lowPower ? 30 : 60));
 
   // When paused (reduced motion) interactions still need a repaint.
   const repaint = () => { if (reducedRef.current) drawRef.current?.(view.current.lastMs + 16); };
@@ -185,11 +189,11 @@ export default function Globe({ className, focus = { lat: 12, lon: 30 }, labels 
     `${HUBS.find((x) => x.id === a)!.label} to ${HUBS.find((x) => x.id === b)!.label}`).join(', ')}. Use arrow keys to rotate.`;
 
   return (
-    <div ref={wrapRef} className={clsx('relative', className)}>
-      <canvas ref={canvasRef} role="img" aria-label={description} tabIndex={0}
+    <div ref={wrapRef} className={clsx('relative', className)} aria-hidden={interactive ? undefined : true}>
+      {!interactive ? <canvas ref={canvasRef} className="absolute inset-0 h-full w-full" /> : <canvas ref={canvasRef} role="img" aria-label={description} tabIndex={0}
         onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerUp}
         onKeyDown={onKeyDown}
-        className="absolute inset-0 h-full w-full cursor-grab touch-pan-y rounded-full outline-none active:cursor-grabbing focus-visible:ring-2 focus-visible:ring-cyan-400 focus-visible:ring-offset-4 focus-visible:ring-offset-midnight" />
+        className="absolute inset-0 h-full w-full cursor-grab touch-pan-y rounded-full outline-none active:cursor-grabbing focus-visible:ring-2 focus-visible:ring-cyan-400 focus-visible:ring-offset-4 focus-visible:ring-offset-midnight" />}
     </div>
   );
 }
