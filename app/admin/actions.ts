@@ -44,7 +44,7 @@ export async function approveProduct(_prev: ReviewState, form: FormData): Promis
   });
   if (error) return { ok: false, message: friendlyError(error.message) };
 
-  revalidatePath('/admin');
+  revalidatePath('/admin', 'layout'); // overview counts + /admin/review
   revalidatePath('/dashboard');
   return { ok: true, message: `Approved — live at ${formatUSD(data.trial_landed_cost_cents, true)} landed.` };
 }
@@ -61,7 +61,7 @@ export async function rejectProduct(_prev: ReviewState, form: FormData): Promise
   const { error } = await ctx.supabase.rpc('admin_reject_product', { p_product_id: productId, p_notes: notes });
   if (error) return { ok: false, message: friendlyError(error.message) };
 
-  revalidatePath('/admin');
+  revalidatePath('/admin', 'layout');
   return { ok: true, message: 'Sent back to the supplier with your notes.' };
 }
 

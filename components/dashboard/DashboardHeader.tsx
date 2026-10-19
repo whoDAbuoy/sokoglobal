@@ -11,7 +11,7 @@ import type { Profile } from '@/lib/types';
 const NAV: Record<Profile['role'], [string, string][]> = {
   importer: [['Discover', '/dashboard'], ['Trend Pools', '/dashboard#pools'], ['Messages', '/dashboard/messages']],
   supplier: [['Catalogue', '/supplier'], ['Messages', '/supplier/messages'], ['New product', '/supplier/products/new'], ['Verification', '/supplier/verification']],
-  admin: [['Review queue', '/admin'], ['Catalogue', '/admin/products'], ['Shipments', '/admin/orders'], ['Supplier KYC', '/admin/kyc'], ['Support', '/admin/support']],
+  admin: [['Overview', '/admin'], ['Review queue', '/admin/review'], ['Catalogue', '/admin/products'], ['Shipments', '/admin/orders'], ['Supplier KYC', '/admin/kyc'], ['Support', '/admin/support']],
 };
 
 export default function DashboardHeader({ profile }: { profile: Profile }) {
@@ -40,7 +40,7 @@ export default function DashboardHeader({ profile }: { profile: Profile }) {
             <ShieldCheck className="h-5 w-5 text-neutral-900" strokeWidth={2.25} />
             <span className="text-base font-semibold tracking-tight text-neutral-900">SokoGlobal</span>
           </Link>
-          <nav className="hidden items-center gap-7 md:flex">{links}</nav>
+          <nav className={profile.role === 'admin' ? 'hidden items-center gap-6 lg:flex' : 'hidden items-center gap-7 md:flex'}>{links}</nav>
         </div>
 
         <div className="flex items-center gap-1">
@@ -92,7 +92,7 @@ export default function DashboardHeader({ profile }: { profile: Profile }) {
         </div>
       </div>
       {/* Small screens: the same links as a scrollable row. */}
-      <nav className="flex gap-6 overflow-x-auto border-t border-neutral-100 px-4 py-2.5 sm:px-6 md:hidden">{links}</nav>
+      <nav className={`flex gap-6 overflow-x-auto border-t border-neutral-100 px-4 py-2.5 sm:px-6 ${profile.role === 'admin' ? 'lg:hidden' : 'md:hidden'}`}>{links}</nav>
     </header>
   );
 }
