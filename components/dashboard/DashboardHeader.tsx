@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { BadgeCheck, Bell, Heart, LogOut, ShieldCheck, ShoppingBag } from 'lucide-react';
+import { BadgeCheck, Bell, Heart, LogOut, Package, ShieldCheck, ShoppingBag } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useCart } from '@/context/CartContext';
 import { useChat } from '@/context/ChatContext';
@@ -9,7 +9,7 @@ import { useWishlist } from '@/hooks/useWishlist';
 import type { Profile } from '@/lib/types';
 
 const NAV: Record<Profile['role'], [string, string][]> = {
-  importer: [['Discover', '/dashboard'], ['Trend Pools', '/dashboard#pools'], ['Orders', '/dashboard#orders'], ['Messages', '/dashboard/messages']],
+  importer: [['Discover', '/dashboard'], ['Trend Pools', '/dashboard#pools'], ['Orders', '/dashboard/orders'], ['Messages', '/dashboard/messages']],
   supplier: [['Catalogue', '/supplier'], ['Messages', '/supplier/messages'], ['New product', '/supplier/products/new'], ['Verification', '/supplier/verification']],
   admin: [['Review queue', '/admin'], ['Catalogue', '/admin/products'], ['Shipments', '/admin/orders'], ['Supplier KYC', '/admin/kyc'], ['Support', '/admin/support']],
 };
@@ -45,6 +45,12 @@ export default function DashboardHeader({ profile }: { profile: Profile }) {
 
         <div className="flex items-center gap-1">
           {profile.role === 'importer' && (
+            <Link href="/dashboard/orders" aria-label="My orders and escrow tracking"
+              className="mr-0.5 inline-flex items-center gap-1.5 rounded-md border border-neutral-300 px-2 py-1.5 text-sm font-medium text-neutral-900 transition-colors hover:border-neutral-900 sm:mr-1 sm:px-2.5">
+              <Package className="h-4 w-4" strokeWidth={1.75} /> <span className="hidden sm:inline">My orders</span>
+            </Link>
+          )}
+          {profile.role === 'importer' && (
             <Link href="/dashboard/wishlist" aria-label={`Wishlist, ${saved} saved`}
               className="relative rounded-md p-2 text-neutral-600 transition-colors hover:text-neutral-900">
               <Heart className="h-5 w-5" strokeWidth={1.75} />
@@ -66,11 +72,11 @@ export default function DashboardHeader({ profile }: { profile: Profile }) {
               )}
             </button>
           )}
-          <button type="button" aria-label="Notifications" className="rounded-md p-2 text-neutral-600 transition-colors hover:text-neutral-900">
+          <button type="button" aria-label="Notifications" className="hidden rounded-md p-2 text-neutral-600 transition-colors hover:text-neutral-900 sm:block">
             <Bell className="h-5 w-5" strokeWidth={1.75} />
           </button>
           <Link href="/dashboard/profile" aria-label="Profile & settings" title="Profile & settings"
-            className="ml-2 flex items-center gap-3 rounded-md border-l border-neutral-200 py-1 pl-4 pr-1 transition-colors hover:bg-neutral-50">
+            className="ml-1 flex items-center gap-3 rounded-md border-l border-neutral-200 py-1 pl-2 pr-1 transition-colors hover:bg-neutral-50 sm:ml-2 sm:pl-4">
             <div className="hidden text-right sm:block">
               <p className="flex items-center justify-end gap-1 text-sm font-medium text-neutral-900">
                 {profile.company_name}

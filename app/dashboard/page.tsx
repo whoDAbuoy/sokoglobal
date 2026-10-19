@@ -206,7 +206,8 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
 
         {/* Escrow tracker */}
         <section id="orders" className="scroll-mt-24">
-          <SectionHeader icon={Lock} title="Your orders in escrow" subtitle="Track every shipment from payment to doorstep verification." />
+          <SectionHeader icon={Lock} title="Your orders in escrow" subtitle="Track every shipment from payment to doorstep verification."
+            aside={<Link href="/dashboard/orders" className="btn-secondary px-3.5 py-2">View all orders</Link>} />
           <div className="mt-8 max-w-3xl"><EscrowTracker orders={viewOrders} /></div>
         </section>
       </main>
