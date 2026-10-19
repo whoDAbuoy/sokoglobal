@@ -132,56 +132,50 @@ export default function Auth({ mode }: { mode: Mode }) {
   }
 
   return (
-    // Always midnight: large globe + live waves on the left, a frosted form card on the right.
+    // Superlist-style split: an info panel and the form card, both iOS-style frosted glass, floating over a
+    // full-viewport interactive globe and the live waves. The content layer comes first in the DOM so
+    // keyboard focus reaches the form before the globe; gaps between panels let pointer drags reach the globe.
     <div className="dark relative isolate min-h-screen overflow-hidden bg-midnight text-neutral-900">
-      <WaveBackground band={0.78} intensity={0.85} className="-z-10" />
-      <div className="grid min-h-screen lg:grid-cols-[1.05fr_1fr]">
-      {/* Left: large left-aligned globe that bleeds off the edge, with the value proposition on a frosted panel */}
-      <aside className="relative hidden min-h-screen overflow-hidden lg:block">
-        <div className="absolute left-[-14%] top-[46%] aspect-square w-[min(112%,88vh)] -translate-y-1/2">
-          <Globe className="h-full w-full" focus={{ lat: 16, lon: 26 }} />
-        </div>
-
-        <div className="pointer-events-none relative z-10 flex min-h-screen flex-col justify-between gap-8 px-10 py-10 xl:px-14">
-          <Link href="/" className="pointer-events-auto frost-bar flex w-fit items-center gap-2.5 rounded-full border px-3.5 py-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400">
+      <div className="pointer-events-none relative z-10 mx-auto grid min-h-screen max-w-6xl content-center gap-6 px-4 py-8 sm:px-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:py-12">
+        {/* Left: brand, value proposition and trust points */}
+        <aside className="frost-ios pointer-events-auto hidden flex-col rounded-3xl p-8 motion-safe:animate-fade-up lg:flex xl:p-10">
+          <Link href="/" className="flex w-fit items-center gap-2.5 rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400">
             <ShieldCheck className="h-5 w-5 text-cyan-400" strokeWidth={2.25} aria-hidden />
             <span className="text-lg font-semibold tracking-tight">SokoGlobal</span>
           </Link>
 
-          <div className="pointer-events-auto frost-card max-w-xl rounded-2xl p-6 xl:p-7">
-            <p className="text-xs font-medium uppercase tracking-eyebrow text-cyan-400">B2B imports, de-risked</p>
-            <h1 className="mt-3 text-4xl font-semibold leading-[1.06] xl:text-5xl">
-              Source from the West.<br />
-              <span className="bg-gradient-to-r from-blue-400 via-cyan-300 to-indigo-400 bg-clip-text text-transparent">Pay only when it lands.</span>
-            </h1>
-            <ul className="mt-6 grid gap-3 xl:grid-cols-3">
-              {TRUST_POINTS.map(({ icon: Icon, title, body }) => (
-                <li key={title} className="flex gap-3 xl:flex-col xl:gap-2">
-                  <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-cyan-500/25 bg-cyan-500/10">
-                    <Icon className="h-4 w-4 text-cyan-400" strokeWidth={1.75} aria-hidden />
-                  </span>
-                  <div>
-                    <p className="text-sm font-medium">{title}</p>
-                    <p className="mt-0.5 text-xs leading-relaxed text-neutral-600">{body}</p>
-                  </div>
-                </li>
-              ))}
-            </ul>
-            <p className="mt-6 border-t border-snow/10 pt-4 text-xs text-neutral-600">
-              Bank-grade encryption · Funds held by a licensed escrow partner · 24/7 trade support
-            </p>
-          </div>
-        </div>
-      </aside>
+          <h1 className="mt-6 text-3xl font-semibold leading-[1.1] xl:text-4xl">
+            Source from the West.{' '}
+            <span className="bg-gradient-to-r from-blue-400 via-cyan-300 to-indigo-400 bg-clip-text text-transparent">Pay only when it lands.</span>
+          </h1>
+          <p className="mt-3 flex items-center gap-1.5 text-sm text-neutral-600">
+            <CheckCircle2 className="h-4 w-4 text-cyan-400" aria-hidden /> Escrow on every order · no surprise fees
+          </p>
 
-      {/* Form */}
-      <main className="flex items-center justify-center px-4 py-10 sm:px-10">
-        <div className="w-full max-w-md">
+          <ul className="mt-10 space-y-8">
+            {TRUST_POINTS.map(({ icon: Icon, title, body }) => (
+              <li key={title}>
+                <Icon className="h-6 w-6 text-cyan-400" strokeWidth={1.75} aria-hidden />
+                <p className="mt-3 text-sm font-semibold">{title}</p>
+                <p className="mt-1 max-w-sm text-sm leading-relaxed text-neutral-600">{body}</p>
+              </li>
+            ))}
+          </ul>
+
+          <div className="mt-auto flex flex-wrap items-center justify-between gap-3 pt-10 text-xs text-neutral-600">
+            <p>Bank-grade encryption · Licensed escrow partner · 24/7 support</p>
+            <p className="flex items-center gap-1.5"><Globe2 className="h-3.5 w-3.5" aria-hidden /> Drag the globe to explore</p>
+          </div>
+        </aside>
+
+      {/* Right: the form card */}
+      <main className="pointer-events-auto flex items-center">
+        <div className="mx-auto w-full max-w-lg lg:max-w-none">
           <Link href="/" className="mb-6 flex w-fit items-center gap-2 rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 lg:hidden">
             <ShieldCheck className="h-5 w-5 text-cyan-400" strokeWidth={2.25} aria-hidden />
             <span className="text-base font-semibold tracking-tight">SokoGlobal</span>
           </Link>
-          <div className="frost-card rounded-2xl p-6 motion-safe:animate-scale-in sm:p-8">
+          <div className="frost-ios rounded-3xl p-6 motion-safe:animate-scale-in sm:p-9">
           {confirmationSentTo ? (
             <div className="py-4 text-center">
               <span className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-emerald-50">
@@ -326,6 +320,14 @@ export default function Auth({ mode }: { mode: Mode }) {
           </div>
         </div>
       </main>
+      </div>
+
+      {/* Background: live waves behind a full-viewport interactive globe (drag in the gaps, or Tab to it and use the arrow keys). */}
+      <div className="absolute inset-0 z-0">
+        <WaveBackground band={0.8} intensity={0.85} />
+        <div className="absolute left-1/2 top-1/2 aspect-square w-[min(115vw,104vh)] -translate-x-1/2 -translate-y-1/2 lg:left-1/2">
+          <Globe className="h-full w-full" focus={{ lat: 14, lon: 30 }} />
+        </div>
       </div>
     </div>
   );
