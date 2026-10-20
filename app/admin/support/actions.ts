@@ -3,10 +3,11 @@
 import { revalidatePath } from 'next/cache';
 import { getSessionProfile } from '@/lib/supabase/server';
 import { UUID_RE } from '@/lib/uploads';
+import { isAdmin } from '@/lib/auth/admin-access';
 
 async function requireAdmin() {
   const ctx = await getSessionProfile();
-  return ctx.user && ctx.profile?.role === 'admin' ? ctx : null;
+  return ctx.user && isAdmin(ctx.profile) ? ctx : null;
 }
 
 /** Agent reply. sender_id/sender_role are stamped by a DB trigger, not trusted from here. */

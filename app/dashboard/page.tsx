@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
-import { BadgeCheck, Heart, Info, Lock, MessageSquare, Package, Plane, Users } from 'lucide-react';
+import { ArrowRight, BadgeCheck, Compass, Heart, Info, Lock, MessageSquare, Package, Plane, Users } from 'lucide-react';
 import { PAID_ORDER_STATUSES } from '@/lib/order-status';
 import { getSessionProfile } from '@/lib/supabase/server';
 import type { EscrowStatus, GalleryMedia, OrderView, ProductCategory, TrendPoolView, TrialProductView } from '@/lib/types';
@@ -105,14 +105,14 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
 
   // Category browsing filters the products already loaded above (no extra query).
   const { category } = await searchParams;
-  const activeCategory: ProductCategory | null = category === 'beauty' || category === 'clothing' ? category : null;
+  const activeCategory: ProductCategory | null = category === 'beauty' || category === 'clothing' || category === 'general' ? category : null;
   const shownProducts = activeCategory ? viewProducts.filter((p) => p.category === activeCategory) : viewProducts;
   const inCategory = (c: ProductCategory) => viewProducts.filter((p) => p.category === c);
   const imageOf = (c: ProductCategory) => inCategory(c).find((p) => p.image_url)?.image_url ?? null;
   const origins = (c: ProductCategory) => [...new Set(inCategory(c).map((p) => p.origin_country))].length;
-  const CATEGORY_LABEL: Record<ProductCategory, string> = { beauty: 'Beauty', clothing: 'Clothing' };
+  const CATEGORY_LABEL: Record<ProductCategory, string> = { beauty: 'Beauty', clothing: 'Clothing', general: 'Commodities' };
 
-  const categoryTiles: CategoryTile[] = (['beauty', 'clothing'] as const)
+  const categoryTiles: CategoryTile[] = (['beauty', 'clothing', 'general'] as const)
     .filter((c) => inCategory(c).length > 0)
     .map((c) => ({
       key: c, label: CATEGORY_LABEL[c], category: c, image: imageOf(c), active: activeCategory === c,
@@ -159,6 +159,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
           <div className="mt-4"><EscrowProtectionBanner /></div>
           <QuickActions className="mt-10" actions={[
             { href: '/dashboard/orders', label: 'My Orders', hint: 'Escrow & shipment tracking', icon: Package, tone: 'tone-escrow', badge: orders.length || undefined },
+            { href: '/dashboard/discover', label: 'Catalogue', hint: 'Every category, filters & search', icon: Compass, tone: 'tone-muted' },
             { href: '/dashboard#batches', label: 'Trial Batches', hint: 'Test a supplier for $500', icon: Plane, tone: 'tone-transit' },
             { href: '/dashboard#pools', label: 'Trend Pools', hint: 'Split freight with boutiques', icon: Users, tone: 'tone-active' },
             { href: '/dashboard/messages', label: 'Messages', hint: 'Chat with suppliers', icon: MessageSquare, tone: 'tone-pending' },
@@ -190,6 +191,9 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                     {CATEGORY_LABEL[activeCategory]} · Clear ×
                   </Link>
                 )}
+                <Link href="/dashboard/discover" className="pill border-neutral-300 text-neutral-800 hover:border-neutral-900">
+                  Full catalogue <ArrowRight className="h-3.5 w-3.5" aria-hidden />
+                </Link>
                 <span className="pill tone-escrow hidden md:inline-flex"><Lock className="h-3.5 w-3.5" aria-hidden /> Escrow on every order</span>
                 <span className="pill tone-active hidden md:inline-flex"><BadgeCheck className="h-3.5 w-3.5" aria-hidden /> KYC-verified sellers</span>
               </div>

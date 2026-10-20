@@ -7,13 +7,14 @@ import { deadline } from '@/lib/cron';
 import { friendlyError } from '@/lib/format';
 import { retryWebhooks } from '@/lib/payments/webhook-retry';
 import { runEscrowReconciliation } from '@/lib/payments/escrow-reconcile';
+import { isAdmin } from '@/lib/auth/admin-access';
 
 export type ReconActionResult = { ok: boolean; message: string };
 
 /** Server actions are public POST endpoints: re-check the admin role first, and only then use the service-role client. */
 async function requireAdmin() {
   const ctx = await getSessionProfile();
-  if (!ctx.user || ctx.profile?.role !== 'admin') return null;
+  if (!ctx.user || !isAdmin(ctx.profile)) return null;
   return ctx;
 }
 

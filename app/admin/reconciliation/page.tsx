@@ -5,6 +5,7 @@ import { getSessionProfile } from '@/lib/supabase/server';
 import { formatUSD } from '@/lib/format';
 import DashboardHeader from '@/components/dashboard/DashboardHeader';
 import { RequeueEvent, ResolveIssue, RunButtons } from '@/components/admin/recon/ReconButtons';
+import { isAdmin } from '@/lib/auth/admin-access';
 
 export const metadata = { title: 'Reconciliation · SokoGlobal Ops', robots: { index: false, follow: false } };
 export const dynamic = 'force-dynamic';
@@ -18,7 +19,7 @@ const dt = (iso: string | null) => (iso ? new Date(iso).toLocaleString('en-GB', 
 export default async function ReconciliationPage() {
   const { supabase, user, profile } = await getSessionProfile();
   if (!user) redirect('/login?redirectTo=/admin/reconciliation');
-  if (profile?.role !== 'admin') notFound();
+  if (!isAdmin(profile)) notFound();
 
   const [runsRes, issuesRes, deadRes, pendingRes] = await Promise.all([
     supabase.from('escrow_recon_runs').select('id, started_at, finished_at, status, summary, triggered_by').order('started_at', { ascending: false }).limit(10),

@@ -3,6 +3,11 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { buildCsp, createNonce, cspHeaderName, cspMode, reportingEndpointsHeader } from '@/lib/security/csp';
 import { clientIp, limitFor } from '@/lib/security/rate-limit-core';
 import { rateLimit, rateLimitHeaders } from '@/lib/security/rate-limit';
+import { maintenanceDecision } from '@/lib/platform';
+
+// Maintenance flag (platform_settings, migration 014), cached per instance so pages don't each pay a query.
+const MAINTENANCE_TTL_MS = 15_000;
+let maintenanceCache: { on: boolean; at: number } | null = null;
 
 const PROTECTED = ['/dashboard', '/supplier', '/admin'];
 const AUTH_PAGES = ['/login', '/signup'];
@@ -65,6 +70,32 @@ export async function middleware(request: NextRequest) {
     if (!result.success) {
       return NextResponse.json({ error: 'Too many requests — please wait a moment and try again.' },
         { status: 429, headers: rateLimitHeaders(result) });
+    }
+  }
+
+  // ── Maintenance mode (kill switch in /admin/control). Admins pass; everyone else sees /maintenance. ──
+  if (!maintenanceCache || Date.now() - maintenanceCache.at > MAINTENANCE_TTL_MS) {
+    const { data, error } = await supabase.from('platform_settings').select('maintenance_mode').maybeSingle<{ maintenance_mode: boolean }>();
+    maintenanceCache = { on: !error && data?.maintenance_mode === true, at: Date.now() };   // table missing (pre-014) → off
+  }
+  if (maintenanceCache.on) {
+    let isAdminUser = false;
+    if (user) {
+      const { data: access, error } = await supabase.rpc('my_admin_access');
+      isAdminUser = !error && access !== null;
+    }
+    const decision = maintenanceDecision({ maintenance: true, path, isAdminUser, isServerAction: request.headers.has('next-action') });
+    if (decision === 'api') {
+      return NextResponse.json({ error: 'SokoGlobal is in maintenance mode. Please try again shortly.' }, { status: 503, headers: { 'Retry-After': '120' } });
+    }
+    if (decision === 'page') {
+      const url = request.nextUrl.clone();
+      url.pathname = '/maintenance';
+      url.search = '';
+      const rewrite = NextResponse.rewrite(url, { request: { headers: requestHeaders }, status: 503 });
+      response.cookies.getAll().forEach((c) => rewrite.cookies.set(c));
+      if (csp && mode !== 'off') rewrite.headers.set(cspHeaderName(mode), csp);
+      return rewrite;
     }
   }
 

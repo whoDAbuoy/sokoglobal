@@ -15,6 +15,7 @@ import { createClient } from '@/lib/supabase/client';
 import { useTheme } from '@/hooks/useTheme';
 import type { ThemePreference } from '@/lib/theme';
 import ProfileChangeRequest, { type LatestChangeRequest } from './ProfileChangeRequest';
+import { isPermanentAdmin } from '@/lib/auth/admin-access';
 
 export type ProfileTab = 'account' | 'appearance' | 'security';
 
@@ -22,6 +23,7 @@ const ROLE_BADGE: Record<Profile['role'], { label: string; className: string }> 
   importer: { label: 'Importer', className: 'border-emerald-200 bg-emerald-50 text-emerald-700' },
   supplier: { label: 'Supplier', className: 'border-neutral-300 bg-neutral-100 text-neutral-800' },
   admin: { label: 'Admin', className: 'border-amber-200 bg-amber-50 text-amber-800' },
+  super_admin: { label: 'Super admin', className: 'border-violet-200 bg-violet-50 text-violet-800' },
 };
 
 const TAB_META: Record<ProfileTab, { label: string; icon: typeof Building2 }> = {
@@ -106,7 +108,7 @@ function AccountPanel({ profile, memberSince, regional, changeRequest }: {
         <Row label="Account type" value={ROLE_BADGE[profile.role].label} />
         <Row label="Member since" value={memberSince ? new Date(memberSince).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }) : '—'} />
       </Section>
-      {profile.role !== 'admin' && <ProfileChangeRequest profile={profile} latest={changeRequest} />}
+      {!isPermanentAdmin(profile) && <ProfileChangeRequest profile={profile} latest={changeRequest} />}
 
       <Section title="Region" icon={Globe2}>
         <Row label="Country" value={<span>{flag(code)} {countryName(code)}</span>} />

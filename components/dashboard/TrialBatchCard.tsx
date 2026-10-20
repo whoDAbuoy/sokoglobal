@@ -179,6 +179,7 @@ export default function TrialBatchCard({ product }: { product: TrialProductView 
           dotsClassName="group-hover:-translate-y-12 group-focus-within:-translate-y-12 [@media(hover:none)]:-translate-y-12" />
         <div className="pointer-events-none absolute left-3 top-3 flex flex-wrap gap-1.5">
           <span className="pill border-transparent bg-blue-600 text-snow shadow">$500 Trial Batch</span>
+          {product.is_featured && <span className="pill border-transparent bg-violet-600 text-snow shadow">Featured</span>}
           {product.is_demo && <span className="pill border-amber-200 bg-amber-50 text-amber-800">Sample</span>}
         </div>
         <div className="pointer-events-none absolute right-3 top-3 flex items-center gap-1.5">
@@ -240,6 +241,13 @@ export default function TrialBatchCard({ product }: { product: TrialProductView 
             {product.title}
           </button>
         </h3>
+        {(product.category_name || product.moq || product.price_tiers?.length) && (
+          <p className="mt-1 text-xs text-neutral-600">
+            {[product.category_name, product.moq ? `MOQ ${product.moq.toLocaleString('en-US')} ${product.unit_of_measure ?? ''}`.trim() : null,
+              product.price_tiers?.length ? `Volume pricing from ${formatUSD(Math.min(...product.price_tiers.map((t) => t.unit_price_cents)), true)}/${product.unit_of_measure ?? 'unit'}` : null]
+              .filter(Boolean).join(' · ')}
+          </p>
+        )}
         <p className="mt-1.5 flex items-baseline justify-between gap-3">
           <span className="text-lg font-semibold tabular-nums tracking-tight text-neutral-900">{formatUSD(totals.landed_cost_cents, true)}</span>
           <span className="text-xs tabular-nums text-neutral-500">

@@ -5,6 +5,9 @@ import { getSessionProfile } from '@/lib/supabase/server';
 import { friendlyError, formatUSD } from '@/lib/format';
 import { MEDIA_BUCKET, UUID_RE } from '@/lib/uploads';
 import type { ProductRemovalResult } from '@/lib/types';
+import { headers } from 'next/headers';
+import { PRODUCT_STATES, type ProductStateOverride } from '@/lib/admin-overrides';
+import { isAdmin, isSuperAdmin, requestFingerprint } from '@/lib/auth/admin-access';
 
 export type ReviewState = { ok: boolean; message: string } | null;
 
@@ -21,7 +24,7 @@ function dollarsToCents(value: FormDataEntryValue | null): number | null {
  */
 async function requireAdmin() {
   const ctx = await getSessionProfile();
-  if (!ctx.user || ctx.profile?.role !== 'admin') return null;
+  if (!ctx.user || !isAdmin(ctx.profile)) return null;
   return ctx;
 }
 
@@ -109,4 +112,21 @@ export async function removeProduct(productId: string, reason: string): Promise<
     }
   }
   return { ok: true, message: `Deleted permanently${paths.length ? ` with ${plural(paths.length, 'media file')}` : ''}.` };
+}
+
+
+/** Super admin catalogue override (migration 015: super_set_product_state, audited with IP). */
+export async function setProductState(productId: string, state: ProductStateOverride, reason: string): Promise<{ ok: boolean; message: string }> {
+  const ctx = await getSessionProfile();
+  if (!ctx.user || !isSuperAdmin(ctx.profile)) return { ok: false, message: 'Super admin access required.' };
+  if (!UUID_RE.test(productId) || !PRODUCT_STATES.includes(state)) return { ok: false, message: 'Invalid request.' };
+  if (reason.trim().length < 5) return { ok: false, message: 'Give a reason (5+ characters). It is written to the audit log.' };
+  const fp = requestFingerprint(await headers());
+  const { error } = await ctx.supabase.rpc('super_set_product_state', {
+    p_product_id: productId, p_state: state, p_reason: reason.trim().slice(0, 1000), p_ip: fp.ip, p_ua: fp.ua,
+  });
+  if (error) return { ok: false, message: friendlyError(error.message) };
+  revalidatePath('/admin', 'layout');
+  revalidatePath('/dashboard', 'layout');
+  return { ok: true, message: `Listing is now ${state.replace('_', ' ')}.` };
 }

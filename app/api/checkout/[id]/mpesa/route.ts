@@ -4,6 +4,7 @@ import { buyerPaymentView, latestPayment, startMpesaPayment } from '@/lib/paymen
 import { loadCheckoutGroup, unpaidOrders } from '@/lib/payments/checkout-group';
 import { friendlyError } from '@/lib/format';
 import { UUID_RE } from '@/lib/uploads';
+import { checkCanTransact } from '@/lib/platform-server';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -17,9 +18,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   if (!UUID_RE.test(id)) return NextResponse.json({ error: 'Invalid checkout' }, { status: 400 });
   if (!isMpesaConfigured()) return NextResponse.json({ error: 'M-Pesa payments are not available right now' }, { status: 503 });
 
-  const { user, profile, group } = await loadCheckoutGroup(id);
+  const { supabase, user, profile, group } = await loadCheckoutGroup(id);
   if (!user || !profile) return NextResponse.json({ error: 'Not signed in' }, { status: 401 });
   if (profile.role !== 'importer') return NextResponse.json({ error: 'Importer account required' }, { status: 403 });
+  const blocked = await checkCanTransact(supabase, user.id, 'checkout');
+  if (blocked) return NextResponse.json({ error: blocked.error }, { status: blocked.status });
   if (!group) return NextResponse.json({ error: 'Checkout not found' }, { status: 404 });
   if (unpaidOrders(group).length === 0) return NextResponse.json({ error: 'This checkout is already paid' }, { status: 409 });
 

@@ -16,6 +16,7 @@ import MutedIcon from '@/components/admin/support/MutedIcon';
 import ReplyBox from '@/components/admin/support/ReplyBox';
 import ThreadHistory from '@/components/admin/support/ThreadHistory';
 import { resolveTicket } from './actions';
+import { isAdmin } from '@/lib/auth/admin-access';
 
 export const metadata = { title: 'Support inbox · SokoGlobal Ops', robots: { index: false, follow: false } };
 export const dynamic = 'force-dynamic';
@@ -46,7 +47,7 @@ export default async function SupportInbox({ searchParams }: {
   const params = await searchParams;
   const { supabase, user, profile } = await getSessionProfile();
   if (!user) redirect('/login?redirectTo=/admin/support');
-  if (profile?.role !== 'admin') notFound();
+  if (!isAdmin(profile)) notFound();
 
   const box = parseMailbox(params.box);
   const label = parseLabel(params.label);

@@ -3,6 +3,7 @@ import { getSessionProfile } from '@/lib/supabase/server';
 import { UUID_RE } from '@/lib/uploads';
 import DashboardHeader from '@/components/dashboard/DashboardHeader';
 import MessagingHub from '@/components/chat/MessagingHub';
+import { roleAdminLevel } from '@/lib/auth/admin-access';
 
 export const metadata = { title: 'Messages · SokoGlobal' };
 export const dynamic = 'force-dynamic';
@@ -13,7 +14,7 @@ export default async function SupplierMessagesPage({ searchParams }: { searchPar
   const threadId = typeof thread === 'string' && UUID_RE.test(thread) ? thread : null;
   const { user, profile } = await getSessionProfile();
   if (!user || !profile) redirect(`/login?redirectTo=${encodeURIComponent(threadId ? `/supplier/messages?thread=${threadId}` : '/supplier/messages')}`);
-  if (profile.role === 'admin') notFound();
+  if (roleAdminLevel(profile.role)) notFound();
   if (profile.role !== 'supplier') redirect(threadId ? `/dashboard/messages?thread=${threadId}` : '/dashboard/messages');
 
   return (

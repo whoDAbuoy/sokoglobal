@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { getSessionProfile } from '@/lib/supabase/server';
 import Landing from '@/components/landing/Landing';
+import { homePathFor } from '@/lib/auth/admin-access';
 
 export const metadata = { title: 'SokoGlobal · Escrow-protected B2B imports' };
 
@@ -8,5 +9,5 @@ export const metadata = { title: 'SokoGlobal · Escrow-protected B2B imports' };
 export default async function Home() {
   const { user, profile } = await getSessionProfile();
   if (!user) return <Landing />;
-  redirect(profile?.role === 'admin' ? '/admin' : profile?.role === 'supplier' ? '/supplier' : '/dashboard');
+  redirect(homePathFor(profile?.role));
 }

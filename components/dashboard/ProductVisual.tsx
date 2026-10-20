@@ -1,6 +1,6 @@
 import Image from 'next/image';
 import clsx from 'clsx';
-import { Shirt, Sparkles } from 'lucide-react';
+import { Boxes, Shirt, Sparkles } from 'lucide-react';
 import type { ProductCategory } from '@/lib/types';
 
 /** Real product photo when available; otherwise a branded category placeholder. */
@@ -15,7 +15,7 @@ export default function ProductVisual({ src, alt, category, className }: {
       </div>
     );
   }
-  const Icon = category === 'beauty' ? Sparkles : Shirt;
+  const Icon = category === 'beauty' ? Sparkles : category === 'clothing' ? Shirt : Boxes;
   return (
     <div className={clsx('grid place-items-center bg-neutral-100', className)}>
       <Icon className="h-10 w-10 text-neutral-300" strokeWidth={1.25} />

@@ -108,9 +108,11 @@ export async function verifyTransaction(reference: string): Promise<VerifiedChar
 }
 
 /** Full refund of a card transaction (by Paystack transaction id or reference). */
-export async function refundTransaction(transaction: string): Promise<{ id: string; status: string }> {
+/** Full refund, or a partial one when amountMinor (charge currency minor units) is given. */
+export async function refundTransaction(transaction: string, amountMinor?: number): Promise<{ id: string; status: string }> {
+  if (amountMinor !== undefined && (!Number.isInteger(amountMinor) || amountMinor <= 0)) throw new PaystackError('Refund amount must be a positive integer', 400);
   const d = await paystack<{ id?: number | string; status?: string; transaction?: { id?: number | string } }>('/refund', {
-    method: 'POST', body: { transaction },
+    method: 'POST', body: amountMinor === undefined ? { transaction } : { transaction, amount: amountMinor },
   });
   return { id: String(d.id ?? d.transaction?.id ?? transaction), status: String(d.status ?? 'pending') };
 }

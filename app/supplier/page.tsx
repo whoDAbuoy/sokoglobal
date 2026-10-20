@@ -112,7 +112,10 @@ export default async function SupplierHome() {
 
         <div className="mt-12 flex items-baseline justify-between border-b border-neutral-200 pb-3">
           <h2 className="text-lg font-semibold text-neutral-900">Trial Batches</h2>
-          <p className="text-sm tabular-nums text-neutral-500">{products.length} product{products.length === 1 ? '' : 's'}</p>
+          <p className="flex items-center gap-3 text-sm tabular-nums text-neutral-500">
+            <Link href="/supplier/products/import" className="font-medium text-blue-700 hover:underline dark:text-cyan-300">Bulk import</Link>
+            {products.length} product{products.length === 1 ? '' : 's'}
+          </p>
         </div>
 
         {products.length === 0 ? (

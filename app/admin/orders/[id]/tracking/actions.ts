@@ -5,6 +5,7 @@ import { getSessionProfile } from '@/lib/supabase/server';
 import { friendlyError } from '@/lib/format';
 import { UUID_RE } from '@/lib/uploads';
 import { validateTracking, type FieldErrors, type TrackingDraft } from '@/lib/tracking/validate';
+import { isAdmin } from '@/lib/auth/admin-access';
 
 export type TrackingActionState = { ok: boolean; message: string; errors?: FieldErrors; savedAt?: string } | null;
 
@@ -24,7 +25,7 @@ const isoOrNull = (v: FormDataEntryValue | null) => {
  */
 export async function saveTracking(_prev: TrackingActionState, form: FormData): Promise<TrackingActionState> {
   const { supabase, user, profile } = await getSessionProfile();
-  if (!user || profile?.role !== 'admin') return { ok: false, message: 'Admin access required.' };
+  if (!user || !isAdmin(profile)) return { ok: false, message: 'Admin access required.' };
 
   const orderId = str(form.get('orderId'));
   if (!UUID_RE.test(orderId)) return { ok: false, message: 'Invalid order.' };

@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import clsx from 'clsx';
-import { AlertTriangle, ChevronLeft, ChevronRight, Search, UserCheck, UserCog, Users, UserX } from 'lucide-react';
+import { AlertTriangle, ChevronLeft, ChevronRight, Search, Snowflake, UserCheck, UserCog, Users, UserX } from 'lucide-react';
 import { getSessionProfile } from '@/lib/supabase/server';
 import { pageList, parsePage } from '@/lib/admin-metrics';
 import { initials } from '@/lib/admin-inbox';
@@ -11,6 +11,8 @@ import type { UserRole } from '@/lib/types';
 import DashboardHeader from '@/components/dashboard/DashboardHeader';
 import UserActions from '@/components/admin/users/UserActions';
 import ChangeRequestCard, { type ChangeRequest } from '@/components/admin/users/ChangeRequestCard';
+import { formatTimeLeft, isAdmin, isSuperAdmin } from '@/lib/auth/admin-access';
+import SuperUserControls from '@/components/admin/users/SuperUserControls';
 
 export const metadata = { title: 'Users · SokoGlobal Ops', robots: { index: false, follow: false } };
 export const dynamic = 'force-dynamic';
@@ -21,6 +23,8 @@ interface DirectoryRow {
   id: string; full_name: string; company_name: string; email: string | null; role: UserRole; country_code: string;
   kyc_verified: boolean; is_banned: boolean; ban_reason: string | null; created_at: string; last_sign_in_at: string | null;
   pending_change: boolean; total_count: number;
+  /** Migration 014 columns (absent before it runs). */
+  is_frozen?: boolean; grant_id?: string | null; grant_expires_at?: string | null;
 }
 
 /**
@@ -33,8 +37,9 @@ export default async function AdminUsersPage({ searchParams }: {
 }) {
   const { supabase, user, profile } = await getSessionProfile();
   if (!user) redirect('/login?redirectTo=/admin/users');
-  if (profile?.role !== 'admin') notFound();
+  if (!isAdmin(profile)) notFound();
 
+  const viewerIsSuper = isSuperAdmin(profile);
   const params = await searchParams;
   const q = (params.q ?? '').trim().slice(0, 100);
   const role = parseRoleFilter(params.role);
@@ -158,12 +163,17 @@ export default async function AdminUsersPage({ searchParams }: {
                           </div>
                         </td>
                         <td className="px-4 py-3 text-neutral-700">
-                          {ROLE_LABEL[u.role]}
+                          {ROLE_LABEL[u.role] ?? u.role}
+                          {u.grant_id && u.grant_expires_at && (
+                            <span className="pill ml-1.5 border-violet-300 bg-violet-50 text-violet-800" title={`Temporary admin until ${new Date(u.grant_expires_at).toLocaleString('en-GB')}`}>
+                              Temp admin · {formatTimeLeft(u.grant_expires_at)}
+                            </span>
+                          )}
                           <span className="block text-xs text-neutral-500">{flag(u.country_code)} {countryName(u.country_code)}{u.kyc_verified ? ' · KYC verified' : ''}</span>
                         </td>
                         <td className="px-4 py-3">
                           <span className={clsx('pill', st.tone)} title={u.is_banned && u.ban_reason ? `Reason: ${u.ban_reason}` : undefined}>
-                            {st.status === 'active' ? <UserCheck className="h-3 w-3" aria-hidden /> : st.status === 'banned' ? <UserX className="h-3 w-3" aria-hidden /> : <UserCog className="h-3 w-3" aria-hidden />}
+                            {st.status === 'active' ? <UserCheck className="h-3 w-3" aria-hidden /> : st.status === 'banned' ? <UserX className="h-3 w-3" aria-hidden /> : st.status === 'frozen' ? <Snowflake className="h-3 w-3" aria-hidden /> : <UserCog className="h-3 w-3" aria-hidden />}
                             {st.label}
                           </span>
                         </td>
@@ -172,7 +182,13 @@ export default async function AdminUsersPage({ searchParams }: {
                           <span className="block text-neutral-500">{u.last_sign_in_at ? `Last seen ${new Date(u.last_sign_in_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}` : 'Never signed in'}</span>
                         </td>
                         <td className="px-4 py-3 text-right">
-                          <UserActions userId={u.id} name={u.full_name} isBanned={u.is_banned} isAdmin={u.role === 'admin'} isSelf={u.id === user.id} />
+                          <div className="flex flex-col items-end gap-1">
+                            <UserActions userId={u.id} name={u.full_name} isBanned={u.is_banned} isAdmin={u.role === 'admin' || u.role === 'super_admin'} isSelf={u.id === user.id} />
+                            {viewerIsSuper && u.id !== user.id && (
+                              <SuperUserControls userId={u.id} name={u.full_name} targetIsAdmin={u.role === 'admin' || u.role === 'super_admin'}
+                                targetIsSuper={u.role === 'super_admin'} isFrozen={!!u.is_frozen} grantId={u.grant_id ?? null} grantExpiresAt={u.grant_expires_at ?? null} />
+                            )}
+                          </div>
                         </td>
                       </tr>
                     );

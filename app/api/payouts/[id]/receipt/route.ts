@@ -3,6 +3,7 @@ import { getSessionProfile } from '@/lib/supabase/server';
 import { UUID_RE } from '@/lib/uploads';
 import { payoutReceiptModel, receiptAvailable, type PayoutInput } from '@/lib/documents/model';
 import { pdfResponse, renderDocument } from '@/lib/documents/pdf';
+import { isAdmin } from '@/lib/auth/admin-access';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -22,7 +23,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
              supplier:profiles!payouts_supplier_id_fkey ( company_name, country_code ),
              order:orders ( product:products ( title ) )`)
     .eq('id', id).maybeSingle();
-  if (!p || (p.supplier_id !== user.id && profile.role !== 'admin')) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  if (!p || (p.supplier_id !== user.id && !isAdmin(profile))) return NextResponse.json({ error: 'Not found' }, { status: 404 });
   if (!receiptAvailable(p.status)) return NextResponse.json({ error: 'A receipt is available once the payout has completed.' }, { status: 409 });
 
   const order = one(p.order as unknown as { product: unknown } | null);

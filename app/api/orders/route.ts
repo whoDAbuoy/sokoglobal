@@ -3,6 +3,7 @@ import { getSessionProfile } from '@/lib/supabase/server';
 import { friendlyError } from '@/lib/format';
 import { UUID_RE } from '@/lib/uploads';
 import { MAX_BATCHES_PER_LINE } from '@/lib/cart';
+import { checkCanTransact } from '@/lib/platform-server';
 
 /**
  * POST /api/orders — start a $500 Trial Batch and open escrow checkout.
@@ -18,6 +19,8 @@ export async function POST(request: Request) {
   const { supabase, user, profile } = await getSessionProfile();
   if (!user || !profile) return NextResponse.json({ error: 'Not signed in' }, { status: 401 });
   if (profile.role !== 'importer') return NextResponse.json({ error: 'Importer account required' }, { status: 403 });
+  const blocked = await checkCanTransact(supabase, user.id, 'order');
+  if (blocked) return NextResponse.json({ error: blocked.error }, { status: blocked.status });
 
   const body = await request.json().catch(() => null) as { productId?: string; method?: string; quantity?: unknown } | null;
   if (!body?.productId || !UUID_RE.test(body.productId)) return NextResponse.json({ error: 'Invalid product' }, { status: 400 });

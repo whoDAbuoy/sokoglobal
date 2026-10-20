@@ -36,4 +36,5 @@ export const ROLE_LABEL: Record<UserRole, string> = {
   importer: 'an importer',
   supplier: 'a supplier',
   admin: 'an admin',
+  super_admin: 'a super admin',
 };

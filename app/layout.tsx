@@ -7,6 +7,7 @@ import { CartProvider } from '@/context/CartContext';
 import { ChatProvider } from '@/context/ChatContext';
 import CartDrawer from '@/components/cart/CartDrawer';
 import AmbientBackdrop from '@/components/motion/AmbientBackdrop';
+import PlatformBanner from '@/components/platform/PlatformBanner';
 import { THEME_INIT_SCRIPT } from '@/lib/theme';
 import './globals.css';
 
@@ -31,6 +32,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       </head>
       <body className="min-h-screen font-sans">
         <AmbientBackdrop />
+        <PlatformBanner />
         <AuthProvider>
           <ChatProvider>
             <CartProvider>
