@@ -12,7 +12,8 @@
     "mpesa:check": "tsx --conditions=react-server --env-file=.env.local scripts/mpesa-check.mts",
     "dev:importer": "tsx --env-file=.env.local scripts/dev-importer.mts",
     "e2e": "playwright test",
-    "e2e:install": "playwright install --with-deps chromium"
+    "e2e:install": "playwright install --with-deps chromium",
+    "sentry:setup": "node scripts/sentry-setup.mjs"
   },
   "dependencies": {
     "@paystack/inline-js": "^2.26.0",

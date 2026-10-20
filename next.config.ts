@@ -58,6 +58,7 @@ export default withSentryConfig(nextConfig, {
   org: process.env.SENTRY_ORG,
   project: process.env.SENTRY_PROJECT,
   authToken: process.env.SENTRY_AUTH_TOKEN,
+  sentryUrl: process.env.SENTRY_URL,   // only for EU-hosted orgs (https://de.sentry.io)
   silent: !process.env.CI,
   tunnelRoute: '/monitoring',
   widenClientFileUpload: true,
