@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getSessionProfile } from '@/lib/supabase/server';
+import { isAdmin } from '@/lib/auth/admin-access';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -11,6 +12,6 @@ export const dynamic = 'force-dynamic';
  */
 export async function GET() {
   const { user, profile } = await getSessionProfile();
-  if (!user || profile?.role !== 'admin') return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  if (!user || !isAdmin(profile)) return NextResponse.json({ error: 'Not found' }, { status: 404 });
   throw new Error(`SokoGlobal Sentry test event (${new Date().toISOString()})`);
 }

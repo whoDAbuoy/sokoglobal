@@ -3,6 +3,7 @@ import { getSessionProfile } from '@/lib/supabase/server';
 import { createCheckout } from '@/lib/payments/checkout';
 import { friendlyError } from '@/lib/format';
 import { UUID_RE } from '@/lib/uploads';
+import { checkCanTransact } from '@/lib/platform-server';
 
 /**
  * POST /api/orders/:id/checkout — start a Bank Card payment (Paystack) for an unpaid order.
@@ -21,6 +22,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   if (!order) return NextResponse.json({ error: 'Order not found' }, { status: 404 });
   if (order.escrow_status !== 'pending_payment') return NextResponse.json({ error: 'This order is already paid' }, { status: 409 });
   if (profile.role !== 'importer') return NextResponse.json({ error: 'Importer account required' }, { status: 403 });
+  const blocked = await checkCanTransact(supabase, user.id, 'checkout');
+  if (blocked) return NextResponse.json({ error: blocked.error }, { status: blocked.status });
 
   const body = await request.json().catch(() => null) as { billingName?: unknown } | null;
   const billingName = typeof body?.billingName === 'string' ? body.billingName.trim().slice(0, 120) : '';

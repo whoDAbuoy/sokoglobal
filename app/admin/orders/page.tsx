@@ -5,6 +5,7 @@ import { ArrowRight, Plane } from 'lucide-react';
 import { getSessionProfile } from '@/lib/supabase/server';
 import { formatUSD } from '@/lib/format';
 import DashboardHeader from '@/components/dashboard/DashboardHeader';
+import { isAdmin } from '@/lib/auth/admin-access';
 
 export const metadata = { title: 'Shipments · SokoGlobal Ops', robots: { index: false, follow: false } };
 export const dynamic = 'force-dynamic';
@@ -15,7 +16,7 @@ const one = <T,>(v: T | T[] | null | undefined): T | null => (Array.isArray(v) ?
 export default async function AdminOrdersPage() {
   const { supabase, user, profile } = await getSessionProfile();
   if (!user) redirect('/login?redirectTo=/admin/orders');
-  if (profile?.role !== 'admin') notFound();
+  if (!isAdmin(profile)) notFound();
 
   const { data: orders, error } = await supabase
     .from('orders')

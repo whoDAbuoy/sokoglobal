@@ -3,6 +3,7 @@
 import { useOptimistic } from 'react';
 import clsx from 'clsx';
 import DeleteProductButton from '@/components/admin/DeleteProductButton';
+import ProductStateMenu from '@/components/admin/ProductStateMenu';
 import { flag, formatUSD } from '@/lib/format';
 import type { ProductStatus } from '@/lib/types';
 
@@ -18,6 +19,9 @@ export interface AdminProductRow {
   supplier: { company_name: string; country_code: string } | null;
   order_count: number;
   pool_count: number;
+  /** Migration 015 (absent before it runs). */
+  is_featured?: boolean;
+  category_name?: string | null;
 }
 
 const STATUS_STYLE: Record<ProductStatus, string> = {
@@ -28,7 +32,7 @@ const STATUS_STYLE: Record<ProductStatus, string> = {
 };
 
 /** Rows vanish as soon as Delete is confirmed; they come back if the action fails. */
-export default function ProductTable({ rows }: { rows: AdminProductRow[] }) {
+export default function ProductTable({ rows, canOverride = false }: { rows: AdminProductRow[]; canOverride?: boolean }) {
   const [visible, hide] = useOptimistic(rows, (state, id: string) => state.filter((r) => r.id !== id));
 
   return (
@@ -54,7 +58,7 @@ export default function ProductTable({ rows }: { rows: AdminProductRow[] }) {
               <tr key={p.id} className="hover:bg-slate-50">
                 <td className="px-5 py-3">
                   <p className="font-medium text-slate-900">{p.title}</p>
-                  <p className="text-xs text-slate-500">{p.brand ?? '—'} · #{p.id.slice(0, 8).toUpperCase()}</p>
+                  <p className="text-xs text-slate-500">{p.category_name ? `${p.category_name} · ` : ''}{p.brand ?? '—'} · #{p.id.slice(0, 8).toUpperCase()}</p>
                   {p.deleted_at && (
                     <p className="mt-1 max-w-md text-xs text-red-700">
                       Removed {new Date(p.deleted_at).toLocaleDateString('en-GB', { dateStyle: 'medium' })}: {p.deletion_reason}
@@ -66,14 +70,16 @@ export default function ProductTable({ rows }: { rows: AdminProductRow[] }) {
                 </td>
                 <td className="px-5 py-3">
                   <span className={clsx('rounded-full px-2 py-0.5 text-xs font-medium capitalize', STATUS_STYLE[p.status])}>
-                    {p.deleted_at ? 'removed' : p.status.replace('_', ' ')}
+                    {p.deleted_at ? 'removed' : p.status === 'archived' ? 'delisted' : p.status.replace('_', ' ')}
                   </span>
+                  {p.is_featured && <span className="ml-1.5 rounded-full bg-violet-50 px-2 py-0.5 text-xs font-medium text-violet-800">Featured</span>}
                 </td>
                 <td className="px-5 py-3 text-xs text-slate-600">
                   {hasHistory ? `${p.order_count} order(s) · ${p.pool_count} pool(s)` : 'None'}
                 </td>
                 <td className="px-5 py-3 text-right tabular-nums">{formatUSD(p.trial_landed_cost_cents, true)}</td>
                 <td className="px-5 py-3 text-right">
+                  {!p.deleted_at && canOverride && <ProductStateMenu productId={p.id} title={p.title} status={p.status} featured={!!p.is_featured} />}
                   {!p.deleted_at && (
                     <DeleteProductButton productId={p.id} title={p.title} hasHistory={hasHistory}
                       onOptimisticRemove={() => hide(p.id)} />

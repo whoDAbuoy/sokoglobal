@@ -1,6 +1,7 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import type { Profile } from '@/lib/types';
+import { parseAdminAccess, roleAdminLevel } from '@/lib/auth/admin-access';
 
 /**
  * Supabase client for Server Components, Route Handlers and Server Actions.
@@ -38,5 +39,18 @@ export async function getSessionProfile() {
     .eq('id', user.id)
     .single<Profile>();
 
+  if (profile) profile.admin_access = await resolveAdminAccess(supabase, profile);
   return { supabase, user, profile } as const;
+}
+
+/**
+ * Admin level for the header, nav and page guards. Roles answer directly; anyone
+ * else may hold a temporary grant (checked against now() in Postgres). If
+ * migration 014 is not applied the RPC errors and nobody is a delegated admin.
+ */
+async function resolveAdminAccess(supabase: Awaited<ReturnType<typeof createClient>>, profile: Profile) {
+  const level = roleAdminLevel(profile.role);
+  if (level) return { level };
+  const { data, error } = await supabase.rpc('my_admin_access');
+  return error ? null : parseAdminAccess(data);
 }

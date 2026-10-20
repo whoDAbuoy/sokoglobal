@@ -3,6 +3,7 @@ import { getSessionProfile } from '@/lib/supabase/server';
 import { friendlyError } from '@/lib/format';
 import { UUID_RE } from '@/lib/uploads';
 import { MAX_BATCHES_PER_LINE, MAX_CART_LINES as MAX_ITEMS } from '@/lib/cart';
+import { checkCanTransact } from '@/lib/platform-server';
 
 /**
  * POST /api/checkout — turn the cart into one escrow order per product (quantity = Trial Batches),
@@ -17,6 +18,8 @@ export async function POST(request: Request) {
   const { supabase, user, profile } = await getSessionProfile();
   if (!user || !profile) return NextResponse.json({ error: 'Not signed in' }, { status: 401 });
   if (profile.role !== 'importer') return NextResponse.json({ error: 'Importer account required' }, { status: 403 });
+  const blocked = await checkCanTransact(supabase, user.id, 'order');
+  if (blocked) return NextResponse.json({ error: blocked.error }, { status: blocked.status });
 
   const body = await request.json().catch(() => null) as { items?: unknown; productIds?: unknown } | null;
   const raw: { productId: string; quantity: number }[] = Array.isArray(body?.items)

@@ -3,6 +3,7 @@ import { CheckCircle2, Clock, ShieldCheck, Wallet } from 'lucide-react';
 import { getSessionProfile } from '@/lib/supabase/server';
 import DashboardHeader from '@/components/dashboard/DashboardHeader';
 import KycReviewCard, { type KycCase } from './KycReviewCard';
+import { isAdmin } from '@/lib/auth/admin-access';
 
 export const metadata = { title: 'Supplier KYC · SokoGlobal Ops', robots: { index: false, follow: false } };
 export const dynamic = 'force-dynamic';
@@ -18,7 +19,7 @@ const one = <T,>(v: T | T[] | null | undefined): T | null => (Array.isArray(v) ?
 export default async function KycAdminPage() {
   const { supabase, user, profile } = await getSessionProfile();
   if (!user) redirect('/login?redirectTo=/admin/kyc');
-  if (profile?.role !== 'admin') notFound();
+  if (!isAdmin(profile)) notFound();
 
   const [queueRes, recentRes] = await Promise.all([
     supabase.from('supplier_kyc')

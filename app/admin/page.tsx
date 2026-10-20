@@ -17,6 +17,7 @@ import DashboardHeader from '@/components/dashboard/DashboardHeader';
 import { ChangeBadge, CohortDots, KpiCard, MiniBars, MiniStat, Panel, ShareBar } from '@/components/admin/overview/Widgets';
 import ProgressGauge from '@/components/admin/overview/ProgressGauge';
 import RowActions from '@/components/admin/overview/RowActions';
+import { isAdmin } from '@/lib/auth/admin-access';
 
 export const metadata = { title: 'Overview · SokoGlobal Ops', robots: { index: false, follow: false } };
 export const dynamic = 'force-dynamic';
@@ -49,7 +50,7 @@ export default async function AdminOverviewPage({ searchParams }: {
 }) {
   const { supabase, user, profile } = await getSessionProfile();
   if (!user) redirect('/login?redirectTo=/admin');
-  if (profile?.role !== 'admin') notFound();
+  if (!isAdmin(profile)) notFound();
 
   const params = await searchParams;
   const q = (params.q ?? '').trim().slice(0, 100);

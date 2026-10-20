@@ -48,7 +48,9 @@ MVP built with Next.js 15 (App Router) + Tailwind + Supabase (Postgres, Auth, St
 | Rate limiting (Upstash) | `lib/security/rate-limit{,-core}.ts`, applied in `middleware.ts` — set `UPSTASH_REDIS_REST_URL` / `_TOKEN` in production |
 | Invoices & payout receipts (PDF) | `lib/documents/{model,pdf}.ts`, `app/api/orders/[id]/invoice`, `app/api/payouts/[id]/receipt` |
 | E2E tests (Playwright) | `playwright.config.ts`, `e2e/` — `npm run e2e:install` once, then `npm run e2e`; journeys need the `E2E_*` accounts in `.env.example` |
-| Tests (`npm test`) | `lib/**/*.test.mts`, `tests/*.test.mts` (41 tests) |
+| Super admin, temporary admins, kill switch, audit log | `supabase/migrations/014_super_admin.sql`, `lib/auth/admin-access.ts`, `lib/platform.ts`, `app/admin/control`, `app/admin/view-as/[userId]`, `middleware.ts` (maintenance mode) |
+| Multi-commodity catalogue | `supabase/migrations/015_catalog.sql`, `lib/catalog.ts`, `lib/catalog-import.ts`, `app/dashboard/discover`, `app/supplier/products/{new,import}`, `app/admin/categories` |
+| Tests (`npm test`) | `lib/**/*.test.mts`, `tests/*.test.mts` (180 tests) |
 
 ## How the trust rules are enforced (server-side, not just UI)
 
@@ -65,6 +67,43 @@ MVP built with Next.js 15 (App Router) + Tailwind + Supabase (Postgres, Auth, St
   scoped to `{supplier_id}/{product_id}/`.
 - **Roles / KYC**: column-level grants stop users from changing `role` or `kyc_verified`, or setting
   freight/customs quotes. Nobody can sign up as `admin`.
+
+## Super admin & delegated admins (migration 014)
+
+Run `014_super_admin.sql`, then `015_catalog.sql`, in the SQL editor (both are re-runnable). Then make the first super admin by hand:
+
+```sql
+update public.profiles set role = 'super_admin' where id = '<your auth user id>';
+```
+
+- **Levels**: `super_admin` (everything below plus audited overrides), `admin`, and **temporary admins**: any importer or
+  supplier given a `delegated_admin_grants` row from `/admin/users` (switch in the Actions column, 1 hour to 30 days, reason
+  required). `current_role_is('admin')` checks `now() < expires_at` and `revoked_at is null` on every call, so every existing
+  admin policy and function honours grants and expiry with no app involvement. Revoking takes effect on the next request.
+- **Super admin powers are explicit functions, not an RLS bypass.** Each `super_*` function re-checks `is_super_admin()`,
+  requires a reason and writes `admin_audit_logs` (append-only by trigger, with IP and user agent):
+  force-release escrow (then the normal payout starts), full / partial refunds (card refunds go through Paystack's refund API;
+  M-Pesa refunds are recorded as *manual required* for finance), start or retry a payout, tracking number, landed cost before
+  payment, account freeze, and catalogue status (draft / under review / published / delisted / featured).
+- **View As** (`/admin/view-as/<user id>`, super admins) is a read-only inspector. It never uses the user's session, and
+  every visit is audited.
+- **Kill switch** (`/admin/control`, permanent admins only): pause new orders, halt checkout, maintenance mode, banner.
+  Enforced by `BEFORE INSERT` triggers for user requests, in the order and payment API routes for service-role writes, and in
+  `middleware.ts` for maintenance (non-admins see `/maintenance`; API calls get 503). Webhooks and cron keep running.
+- **Freeze** blocks orders, payments, pledges and payouts for an account under dispute; the user can still sign in and message.
+
+## Multi-commodity catalogue (migration 015)
+
+- `categories` is an admin-managed tree (up to 4 levels, no cycles) seeded with Agriculture → Spices & Herbs → Vanilla Beans,
+  coffee, grains, food, beauty, apparel, electronics, machinery, industrial, chemicals, minerals, home and health.
+  Each node's `attribute_schema` lists the fields suppliers fill in and buyers filter on; children inherit them.
+- Products gain `category_id`, `sku` (unique per supplier), `moq`, `unit_of_measure`, `price_tiers` and `is_featured`.
+  The legacy `category` enum (`beauty` / `clothing` / new `general`) is kept in sync by trigger, so the beauty swatch-video
+  rule and every older query keep working. Existing listings are backfilled.
+- Suppliers: `/supplier/products/new` (cascading category, schema-driven specs, custom attributes, price tiers) and
+  `/supplier/products/import` (CSV or Excel `.xlsx`, up to 500 rows, preview then import as drafts; template download).
+- Buyers: `/dashboard/discover` (category tree, full-text search, attribute facets, featured first).
+- Regulated categories (`requires_compliance`) show a notice to suppliers and a review warning to admins.
 
 ## Operations & payments (migration 002)
 

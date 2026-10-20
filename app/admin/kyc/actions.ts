@@ -6,12 +6,13 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { processPayout } from '@/lib/payments/payouts';
 import { friendlyError } from '@/lib/format';
 import { UUID_RE } from '@/lib/uploads';
+import { isAdmin } from '@/lib/auth/admin-access';
 
 export type KycActionState = { ok: boolean; message: string } | null;
 
 async function requireAdmin() {
   const ctx = await getSessionProfile();
-  return ctx.user && ctx.profile?.role === 'admin' ? ctx : null;
+  return ctx.user && isAdmin(ctx.profile) ? ctx : null;
 }
 
 /**

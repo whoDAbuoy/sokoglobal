@@ -9,24 +9,27 @@ export const USER_PAGE_SIZE = 20;
 export const AUTH_BAN_DURATION = '876000h';
 
 export const ROLE_FILTERS = [['', 'All accounts'], ['importer', 'Importers'], ['supplier', 'Suppliers'], ['admin', 'Admins']] as const;
-export const STATUS_FILTERS = [['', 'Any status'], ['active', 'Active'], ['banned', 'Banned'], ['pending_edit', 'Pending edit']] as const;
+export const STATUS_FILTERS = [['', 'Any status'], ['active', 'Active'], ['banned', 'Banned'], ['frozen', 'Frozen'], ['temp_admin', 'Temporary admin'], ['pending_edit', 'Pending edit']] as const;
 
+/** 'admin' also matches super admins and temporary admins (see admin_list_users in migration 014). */
 export function parseRoleFilter(v: string | undefined): '' | UserRole {
-  return v === 'importer' || v === 'supplier' || v === 'admin' ? v : '';
+  return v === 'importer' || v === 'supplier' || v === 'admin' || v === 'super_admin' ? v : '';
 }
-export function parseStatusFilter(v: string | undefined): '' | 'active' | 'banned' | 'pending_edit' {
-  return v === 'active' || v === 'banned' || v === 'pending_edit' ? v : '';
+export type StatusFilter = '' | 'active' | 'banned' | 'frozen' | 'temp_admin' | 'pending_edit';
+export function parseStatusFilter(v: string | undefined): StatusFilter {
+  return v === 'active' || v === 'banned' || v === 'frozen' || v === 'temp_admin' || v === 'pending_edit' ? v : '';
 }
 
-export type UserStatus = 'active' | 'banned' | 'pending_edit';
-/** Badge for a directory row. A ban outranks a pending edit. */
-export function userStatus(u: { is_banned: boolean; pending_change: boolean }): { status: UserStatus; label: string; tone: string } {
+export type UserStatus = 'active' | 'banned' | 'frozen' | 'pending_edit';
+/** Badge for a directory row. Ban > freeze > pending edit. */
+export function userStatus(u: { is_banned: boolean; pending_change: boolean; is_frozen?: boolean | null }): { status: UserStatus; label: string; tone: string } {
   if (u.is_banned) return { status: 'banned', label: 'Banned', tone: 'tone-danger' };
+  if (u.is_frozen) return { status: 'frozen', label: 'Frozen', tone: 'tone-transit' };
   if (u.pending_change) return { status: 'pending_edit', label: 'Pending edit', tone: 'tone-pending' };
   return { status: 'active', label: 'Active', tone: 'tone-escrow' };
 }
 
-export const ROLE_LABEL: Record<UserRole, string> = { importer: 'Importer', supplier: 'Supplier', admin: 'Admin' };
+export const ROLE_LABEL: Record<UserRole, string> = { importer: 'Importer', supplier: 'Supplier', admin: 'Admin', super_admin: 'Super admin' };
 
 /** Why a hard delete is refused, in plain words. Empty string = deletion allowed. */
 export function deletionBlockMessage(blockers: Record<string, number> | null | undefined): string {

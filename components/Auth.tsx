@@ -13,9 +13,10 @@ import type { UserRole } from '@/lib/types';
 import { IMPORTER_COUNTRIES, SUPPLIER_COUNTRIES, dialCode } from '@/lib/countries';
 import Globe from '@/components/motion/Globe';
 import WaveBackground from '@/components/motion/WaveBackground';
+import { homePathFor } from '@/lib/auth/admin-access';
 
 type Mode = 'login' | 'signup';
-type SignupRole = Exclude<UserRole, 'admin'>;
+type SignupRole = Exclude<UserRole, 'admin' | 'super_admin'>;
 
 
 const regionNames = new Intl.DisplayNames(['en'], { type: 'region' });
@@ -78,7 +79,7 @@ export default function Auth({ mode }: { mode: Mode }) {
 
   async function routeByRole(userId: string) {
     const { data } = await supabase.from('profiles').select('role').eq('id', userId).single<{ role: UserRole }>();
-    router.replace(redirectTo ?? (data?.role === 'admin' ? '/admin' : data?.role === 'supplier' ? '/supplier' : '/dashboard'));
+    router.replace(redirectTo ?? homePathFor(data?.role));
     router.refresh();
   }
 

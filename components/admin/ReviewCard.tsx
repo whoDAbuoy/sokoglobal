@@ -4,7 +4,7 @@ import { useActionState, useState } from 'react';
 import Image from 'next/image';
 import clsx from 'clsx';
 import {
-  AlertTriangle, BadgeCheck, CheckCircle2, Clock, Film, Loader2, Lock, Shirt, Sparkles, Undo2,
+  AlertTriangle, BadgeCheck, Boxes, CheckCircle2, Clock, Film, Loader2, Lock, Shirt, Sparkles, Undo2,
 } from 'lucide-react';
 import { approveProduct, rejectProduct, type ReviewState } from '@/app/admin/actions';
 import DeleteProductButton from '@/components/admin/DeleteProductButton';
@@ -26,7 +26,12 @@ export interface PendingProduct {
   updated_at: string;
   supplier: { company_name: string; full_name: string; country_code: string; kyc_verified: boolean } | null;
   media: { id: string; media_type: MediaType; public_url: string; captured_at: string | null; width: number | null; height: number | null }[];
+  /** Migration 015 catalogue fields (null before it runs). */
+  catalog?: { sku: string | null; moq: number | null; unit: string | null; tiers: number; category_name: string | null; requires_compliance: boolean } | null;
 }
+
+const humanKey = (k: string) => k.replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase());
+const showValue = (v: unknown) => (Array.isArray(v) ? v.join(', ') : typeof v === 'boolean' ? (v ? 'Yes' : 'No') : String(v ?? ''));
 
 const toCents = (v: string) => {
   const n = Number.parseFloat(v.replace(/,/g, ''));
@@ -59,10 +64,11 @@ export default function ReviewCard({ product }: { product: PendingProduct }) {
     !product.supplier?.kyc_verified && 'Supplier has not passed KYC verification.',
     images.length < 3 && `Only ${images.length} photo(s) — 3 required.`,
     product.category === 'beauty' && videos.length === 0 && 'Beauty product without a swatch video.',
+    product.catalog?.requires_compliance && 'Regulated category: check permits, SDS or assay documents before approving.',
   ].filter(Boolean) as string[];
 
-  const variants = (product.attributes.shade_range ?? product.attributes.sizes) as string[] | string | undefined;
-  const CategoryIcon = product.category === 'beauty' ? Sparkles : Shirt;
+  const specs = Object.entries(product.attributes).filter(([, v]) => showValue(v).trim() !== '').slice(0, 12);
+  const CategoryIcon = product.category === 'beauty' ? Sparkles : product.category === 'clothing' ? Shirt : Boxes;
 
   return (
     <article className="card overflow-hidden">
@@ -102,7 +108,7 @@ export default function ReviewCard({ product }: { product: PendingProduct }) {
         <div className="p-5">
           <div className="flex flex-wrap items-center gap-2 text-xs">
             <span className="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2 py-0.5 font-medium capitalize text-slate-700">
-              <CategoryIcon className="h-3.5 w-3.5" /> {product.category}
+              <CategoryIcon className="h-3.5 w-3.5" /> {product.catalog?.category_name ?? product.category}
             </span>
             <span className={clsx('inline-flex items-center gap-1 rounded-md px-2 py-0.5 font-medium',
               waited >= 24 ? 'bg-red-50 text-red-700' : 'bg-slate-100 text-slate-600')}>
@@ -130,8 +136,10 @@ export default function ReviewCard({ product }: { product: PendingProduct }) {
             <Detail label="Goods value" value={formatUSD(product.trial_goods_cents, true)} />
             <Detail label="Ships from" value={countryName(product.origin_country)} />
             <Detail label="Lead time" value={product.lead_time_days ? `${product.lead_time_days} days` : '—'} />
-            <Detail label={product.category === 'beauty' ? 'Shades' : 'Sizes'}
-              value={Array.isArray(variants) ? variants.join(', ') || '—' : variants ?? '—'} />
+            {product.catalog?.sku && <Detail label="SKU" value={product.catalog.sku} />}
+            {product.catalog?.moq && <Detail label="MOQ" value={`${product.catalog.moq} ${product.catalog.unit ?? ''}`.trim()} />}
+            {!!product.catalog?.tiers && <Detail label="Price tiers" value={String(product.catalog.tiers)} />}
+            {specs.map(([k, v]) => <Detail key={k} label={k === 'shade_range' ? 'Shades' : humanKey(k)} value={showValue(v)} />)}
           </dl>
 
           {warnings.length > 0 && (

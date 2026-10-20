@@ -3,6 +3,7 @@ import { createCheckout } from '@/lib/payments/checkout';
 import { loadCheckoutGroup, unpaidOrders } from '@/lib/payments/checkout-group';
 import { friendlyError } from '@/lib/format';
 import { UUID_RE } from '@/lib/uploads';
+import { checkCanTransact } from '@/lib/platform-server';
 
 /**
  * POST /api/checkout/:id/card — one Bank Card payment (Paystack) for every unpaid order in the cart.
@@ -12,9 +13,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const { id } = await params;
   if (!UUID_RE.test(id)) return NextResponse.json({ error: 'Invalid checkout' }, { status: 400 });
 
-  const { user, profile, group } = await loadCheckoutGroup(id);
+  const { supabase, user, profile, group } = await loadCheckoutGroup(id);
   if (!user || !profile) return NextResponse.json({ error: 'Not signed in' }, { status: 401 });
   if (profile.role !== 'importer') return NextResponse.json({ error: 'Importer account required' }, { status: 403 });
+  const blocked = await checkCanTransact(supabase, user.id, 'checkout');
+  if (blocked) return NextResponse.json({ error: blocked.error }, { status: blocked.status });
   if (!group) return NextResponse.json({ error: 'Checkout not found' }, { status: 404 });
   const unpaid = unpaidOrders(group);
   if (unpaid.length === 0) return NextResponse.json({ error: 'This checkout is already paid' }, { status: 409 });

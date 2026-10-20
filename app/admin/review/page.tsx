@@ -5,6 +5,7 @@ import { formatUSD } from '@/lib/format';
 import DashboardHeader from '@/components/dashboard/DashboardHeader';
 import ReviewCard, { type PendingProduct } from '@/components/admin/ReviewCard';
 import DeleteProductButton from '@/components/admin/DeleteProductButton';
+import { isAdmin } from '@/lib/auth/admin-access';
 
 export const metadata = { title: 'Review queue · SokoGlobal Ops', robots: { index: false, follow: false } };
 export const dynamic = 'force-dynamic';
@@ -20,7 +21,7 @@ const one = <T,>(v: T | T[] | null | undefined): T | null => (Array.isArray(v) ?
 export default async function AdminPage() {
   const { supabase, user, profile } = await getSessionProfile();
   if (!user) redirect('/login?redirectTo=/admin/review');
-  if (profile?.role !== 'admin') notFound();
+  if (!isAdmin(profile)) notFound();
 
   const startOfDay = new Date();
   startOfDay.setUTCHours(0, 0, 0, 0);
@@ -48,8 +49,23 @@ export default async function AdminPage() {
 
   if (pendingRes.error) throw new Error(`Could not load review queue: ${pendingRes.error.message}`);
 
+  // Catalogue fields (migration 015). Optional: before it runs the query errors and cards show the basics.
+  const ids = (pendingRes.data ?? []).map((p) => p.id);
+  const { data: extra } = ids.length
+    ? await supabase.from('products').select('id, sku, moq, unit_of_measure, price_tiers, category:categories ( name, requires_compliance )').in('id', ids)
+    : { data: [] };
+  const extraById = new Map(((extra ?? []) as { id: string; sku: string | null; moq: number | null; unit_of_measure: string | null; price_tiers: unknown; category: unknown }[])
+    .map((x) => [x.id, x]));
+
   const pending: PendingProduct[] = (pendingRes.data ?? []).map((p) => ({
     ...p,
+    catalog: (() => {
+      const x = extraById.get(p.id);
+      if (!x) return null;
+      const cat = one(x.category as { name: string; requires_compliance: boolean } | null);
+      return { sku: x.sku, moq: x.moq, unit: x.unit_of_measure, tiers: Array.isArray(x.price_tiers) ? x.price_tiers.length : 0,
+        category_name: cat?.name ?? null, requires_compliance: !!cat?.requires_compliance };
+    })(),
     attributes: (p.attributes ?? {}) as Record<string, unknown>,
     supplier: one(p.supplier as unknown as PendingProduct['supplier']),
     media: [...((p.product_media ?? []) as (PendingProduct['media'][number] & { sort_order: number })[])]

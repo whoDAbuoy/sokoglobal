@@ -52,12 +52,25 @@ test.describe('public pages', () => {
 });
 
 test.describe('guards and hardening', () => {
-  for (const path of ['/dashboard', '/dashboard/messages', '/supplier', '/admin', '/admin/users', '/admin/reconciliation']) {
+  for (const path of ['/dashboard', '/dashboard/messages', '/dashboard/discover', '/supplier', '/supplier/products/import', '/admin', '/admin/users', '/admin/reconciliation', '/admin/control', '/admin/categories']) {
     test(`${path} requires sign-in`, async ({ page }) => {
       await page.goto(path);
       await expect(page).toHaveURL(new RegExp(`/login\\?redirectTo=${encodeURIComponent(path).replace(/%2F/g, '(%2F|/)')}`));
     });
   }
+
+  test('view-as and the import template are not public', async ({ page, request }) => {
+    await page.goto('/admin/view-as/44444444-4444-4444-8444-000000000001');
+    await expect(page).toHaveURL(/\/login\?redirectTo=/);
+    const tpl = await request.get('/supplier/products/import/template', { maxRedirects: 0 });
+    expect(tpl.status()).toBe(307);
+  });
+
+  test('maintenance page renders with staff sign-in', async ({ page }) => {
+    await page.goto('/maintenance');
+    await expect(page.getByRole('heading', { name: /doing some maintenance/i })).toBeVisible();
+    await expect(page.getByRole('link', { name: /staff sign in/i })).toHaveAttribute('href', '/login');
+  });
 
   test('documents and crons are not public', async ({ request }) => {
     const id = '44444444-4444-4444-8444-000000000001';

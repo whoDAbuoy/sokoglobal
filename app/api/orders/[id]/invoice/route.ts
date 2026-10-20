@@ -4,6 +4,7 @@ import { UUID_RE } from '@/lib/uploads';
 import { invoiceAvailable, invoiceModel, type InvoiceInput } from '@/lib/documents/model';
 import { pdfResponse, renderDocument } from '@/lib/documents/pdf';
 import type { EscrowStatus } from '@/lib/types';
+import { isAdmin } from '@/lib/auth/admin-access';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -27,7 +28,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
              product:products ( title, brand, category, origin_country, supplier:profiles!products_supplier_id_fkey ( company_name, country_code ) ),
              buyer:profiles!orders_buyer_id_fkey ( company_name, full_name, country_code )`)
     .eq('id', id).maybeSingle();
-  if (!order || (order.buyer_id !== user.id && profile.role !== 'admin')) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  if (!order || (order.buyer_id !== user.id && !isAdmin(profile))) return NextResponse.json({ error: 'Not found' }, { status: 404 });
   if (!invoiceAvailable(order.escrow_status as EscrowStatus)) {
     return NextResponse.json({ error: 'The invoice is available once the shipment has cleared customs.' }, { status: 409 });
   }

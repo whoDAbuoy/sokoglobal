@@ -4,6 +4,7 @@ import { MpesaError, isMpesaConfigured, mpesaLimitMessage, normalizeKenyanPhone 
 import { buyerPaymentView, latestPayment, startMpesaPayment } from '@/lib/payments/mpesa-checkout';
 import { friendlyError } from '@/lib/format';
 import { UUID_RE } from '@/lib/uploads';
+import { checkCanTransact } from '@/lib/platform-server';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -15,7 +16,7 @@ async function loadOrder(id: string) {
   const { data: order } = await supabase
     .from('orders').select('id, buyer_id, escrow_status, product:products ( title )').eq('id', id).maybeSingle();
   if (!order || order.buyer_id !== user.id) return { error: NextResponse.json({ error: 'Order not found' }, { status: 404 }) } as const;
-  return { user, profile, order } as const;
+  return { supabase, user, profile, order } as const;
 }
 
 /**
@@ -30,6 +31,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const ctx = await loadOrder(id);
   if ('error' in ctx) return ctx.error;
   if (ctx.profile.role !== 'importer') return NextResponse.json({ error: 'Importer account required' }, { status: 403 });
+  const blocked = await checkCanTransact(ctx.supabase, ctx.user.id, 'checkout');
+  if (blocked) return NextResponse.json({ error: blocked.error }, { status: blocked.status });
   if (ctx.order.escrow_status !== 'pending_payment') return NextResponse.json({ error: 'This order is already paid' }, { status: 409 });
 
   const body = await request.json().catch(() => null) as { phone?: string } | null;

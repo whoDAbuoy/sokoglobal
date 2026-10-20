@@ -3,6 +3,9 @@ import { Search } from 'lucide-react';
 import { getSessionProfile } from '@/lib/supabase/server';
 import DashboardHeader from '@/components/dashboard/DashboardHeader';
 import ProductTable, { type AdminProductRow } from '@/components/admin/ProductTable';
+import { isAdmin, isSuperAdmin } from '@/lib/auth/admin-access';
+import Link from 'next/link';
+import { FolderTree } from 'lucide-react';
 
 export const metadata = { title: 'Catalogue · SokoGlobal Ops', robots: { index: false, follow: false } };
 export const dynamic = 'force-dynamic';
@@ -20,35 +23,39 @@ export default async function AdminProductsPage({ searchParams }: {
 }) {
   const { supabase, user, profile } = await getSessionProfile();
   if (!user) redirect('/login?redirectTo=/admin/products');
-  if (profile?.role !== 'admin') notFound();
+  if (!isAdmin(profile)) notFound();
 
   const params = await searchParams;
   const q = (params.q ?? '').trim().slice(0, 100);
   const status = FILTERS.some(([v]) => v === params.status) ? params.status! : '';
 
-  let query = supabase
-    .from('products')
-    .select(`id, title, brand, status, trial_landed_cost_cents, updated_at, deleted_at, deletion_reason,
+  const run = (columns: string) => {
+    let query = supabase.from('products').select(columns).order('updated_at', { ascending: false }).limit(200);
+    if (status === 'removed') query = query.not('deleted_at', 'is', null);
+    else {
+      query = query.is('deleted_at', null);
+      if (status) query = query.eq('status', status);
+    }
+    if (q) query = query.ilike('title', `%${q.replace(/[\\%_]/g, '\\$&')}%`);
+    return query;
+  };
+  const BASE = `id, title, brand, status, trial_landed_cost_cents, updated_at, deleted_at, deletion_reason,
              supplier:profiles!products_supplier_id_fkey ( company_name, country_code ),
-             orders ( count ), trend_pools ( count )`)
-    .order('updated_at', { ascending: false })
-    .limit(200);
-  if (status === 'removed') query = query.not('deleted_at', 'is', null);
-  else {
-    query = query.is('deleted_at', null);
-    if (status) query = query.eq('status', status);
-  }
-  if (q) query = query.ilike('title', `%${q.replace(/[\\%_]/g, '\\$&')}%`);
-
-  const { data, error } = await query;
+             orders ( count ), trend_pools ( count )`;
+  // Catalogue columns arrive with migration 015; fall back to the base columns before it runs.
+  let res = await run(`${BASE}, is_featured, category:categories ( name )`);
+  if (res.error) res = await run(BASE);
+  const { data, error } = res;
   if (error) throw new Error(`Could not load products: ${error.message}`);
 
-  const rows: AdminProductRow[] = (data ?? []).map((p) => ({
+  type Row = Omit<AdminProductRow, 'supplier' | 'order_count' | 'pool_count' | 'category_name'> & { supplier: unknown; orders: unknown; trend_pools: unknown; category?: unknown };
+  const rows: AdminProductRow[] = ((data ?? []) as unknown as Row[]).map((p) => ({
     id: p.id, title: p.title, brand: p.brand, status: p.status,
     trial_landed_cost_cents: p.trial_landed_cost_cents, updated_at: p.updated_at,
     deleted_at: p.deleted_at, deletion_reason: p.deletion_reason,
     supplier: one(p.supplier as unknown as AdminProductRow['supplier']),
     order_count: count(p.orders), pool_count: count(p.trend_pools),
+    is_featured: !!p.is_featured, category_name: one(p.category as { name: string } | null)?.name ?? null,
   }));
 
   return (
@@ -56,7 +63,10 @@ export default async function AdminProductsPage({ searchParams }: {
       <DashboardHeader profile={profile} />
       <main className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
         <p className="eyebrow">Internal · Moderation</p>
-        <h1 className="mt-2 text-3xl font-semibold text-neutral-900">Catalogue</h1>
+        <div className="mt-2 flex flex-wrap items-end justify-between gap-3">
+          <h1 className="text-3xl font-semibold text-neutral-900">Catalogue</h1>
+          <Link href="/admin/categories" className="btn-secondary px-3 py-2 text-sm"><FolderTree className="h-4 w-4" aria-hidden /> Categories</Link>
+        </div>
         <p className="mt-1 text-sm text-slate-500">
           Every product on the platform. Products with order history are archived instead of erased.
         </p>
@@ -72,7 +82,7 @@ export default async function AdminProductsPage({ searchParams }: {
           <button className="btn-secondary">Filter</button>
         </form>
 
-        <ProductTable rows={rows} />
+        <ProductTable rows={rows} canOverride={isSuperAdmin(profile)} />
         {rows.length === 200 && <p className="mt-3 text-xs text-slate-500">Showing the 200 most recently updated — refine the search to see more.</p>}
       </main>
     </>

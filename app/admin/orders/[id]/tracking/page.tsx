@@ -6,6 +6,7 @@ import { UUID_RE } from '@/lib/uploads';
 import { formatUSD } from '@/lib/format';
 import DashboardHeader from '@/components/dashboard/DashboardHeader';
 import TrackingForm, { type TrackingFormOrder } from './TrackingForm';
+import { isAdmin } from '@/lib/auth/admin-access';
 
 export const metadata = { title: 'Shipment tracking · SokoGlobal Ops', robots: { index: false, follow: false } };
 export const dynamic = 'force-dynamic';
@@ -21,7 +22,7 @@ export default async function TrackingPage({ params }: { params: Promise<{ id: s
   const { id } = await params;
   const { supabase, user, profile } = await getSessionProfile();
   if (!user) redirect(`/login?redirectTo=/admin/orders/${id}/tracking`);
-  if (profile?.role !== 'admin') notFound();
+  if (!isAdmin(profile)) notFound();
   if (!UUID_RE.test(id)) notFound();
 
   const { data: order } = await supabase

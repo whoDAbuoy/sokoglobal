@@ -3,6 +3,7 @@ import { getSessionProfile } from '@/lib/supabase/server';
 import { createCheckout } from '@/lib/payments/checkout';
 import { friendlyError } from '@/lib/format';
 import { UUID_RE } from '@/lib/uploads';
+import { checkCanTransact } from '@/lib/platform-server';
 
 /**
  * POST /api/pools/:id/join — pledge to a Trend Pool and open escrow checkout.
@@ -20,6 +21,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const { supabase, user, profile } = await getSessionProfile();
   if (!user || !profile) return NextResponse.json({ error: 'Not signed in' }, { status: 401 });
   if (profile.role !== 'importer') return NextResponse.json({ error: 'Importer account required' }, { status: 403 });
+  const blocked = await checkCanTransact(supabase, user.id, 'order');
+  if (blocked) return NextResponse.json({ error: blocked.error }, { status: blocked.status });
 
   const [{ data: pool }, { data: existing }] = await Promise.all([
     supabase.from('trend_pools').select('id, title').eq('id', id).maybeSingle(),
