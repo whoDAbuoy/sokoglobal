@@ -1,4 +1,5 @@
 import type { NextConfig } from 'next';
+import { withSentryConfig } from '@sentry/nextjs/config';
 
 /**
  * Whitelist ONLY this project's Supabase Storage host for <Image /> optimisation
@@ -47,4 +48,20 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+/**
+ * Sentry build integration. Source maps are uploaded only when SENTRY_AUTH_TOKEN
+ * (+ SENTRY_ORG / SENTRY_PROJECT) are set at build time; without them the build
+ * is unchanged apart from the /monitoring tunnel route (same-origin, so the CSP
+ * needs no Sentry host and ad-blockers don't drop events).
+ */
+export default withSentryConfig(nextConfig, {
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+  sentryUrl: process.env.SENTRY_URL,   // only for EU-hosted orgs (https://de.sentry.io)
+  silent: !process.env.CI,
+  tunnelRoute: '/monitoring',
+  widenClientFileUpload: true,
+  sourcemaps: { disable: !process.env.SENTRY_AUTH_TOKEN },
+  telemetry: false,
+});

@@ -142,9 +142,12 @@ export default async function AdminOverviewPage({ searchParams }: {
             <h1 className="mt-2 text-3xl font-semibold text-neutral-900">Overview</h1>
             <p className="mt-1 text-sm text-neutral-500">Escrow, shipments, disputes and support at a glance.</p>
           </div>
+          <div className="flex flex-wrap gap-2">
+          <Link href="/admin/reconciliation" className="btn-secondary py-2 text-sm">Reconciliation <ArrowRight className="h-4 w-4" aria-hidden /></Link>
           <Link href="/admin/review" className="btn-secondary py-2 text-sm">
             Review queue <span className="tabular-nums text-neutral-500">({pendingRes.count ?? 0})</span> <ArrowRight className="h-4 w-4" aria-hidden />
           </Link>
+          </div>
         </div>
 
         {/* KPI row */}

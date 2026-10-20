@@ -42,6 +42,12 @@ MVP built with Next.js 15 (App Router) + Tailwind + Supabase (Postgres, Auth, St
 | Content-Security-Policy | `lib/security/csp.ts`, `middleware.ts`, `app/api/csp-report/route.ts` |
 | User management (bans, deletes, profile-edit approval) | `app/admin/users`, `supabase/migrations/012_user_management.sql` (run it in the SQL editor; needs `SUPABASE_SERVICE_ROLE_KEY` on the server for Auth bans / deletes), `lib/user-admin.ts` |
 | Portal messaging hub | `components/chat/MessagingHub.tsx`, `lib/chat-hub.ts` |
+| Webhook dead-letter retries | `lib/payments/webhook-retry.ts`, `app/api/cron/retry-webhooks`, `supabase/migrations/013_payment_resilience.sql` |
+| Escrow reconciliation | `lib/payments/{resilience,escrow-reconcile}.ts` (+ tests), `app/api/cron/reconcile-escrow`, `app/admin/reconciliation` |
+| Monitoring (Sentry) | `instrumentation.ts`, `instrumentation-client.ts`, `sentry.{server,edge}.config.ts`, `lib/monitoring/sentry-options.ts` — off until `NEXT_PUBLIC_SENTRY_DSN` is set |
+| Rate limiting (Upstash) | `lib/security/rate-limit{,-core}.ts`, applied in `middleware.ts` — set `UPSTASH_REDIS_REST_URL` / `_TOKEN` in production |
+| Invoices & payout receipts (PDF) | `lib/documents/{model,pdf}.ts`, `app/api/orders/[id]/invoice`, `app/api/payouts/[id]/receipt` |
+| E2E tests (Playwright) | `playwright.config.ts`, `e2e/` — `npm run e2e:install` once, then `npm run e2e`; journeys need the `E2E_*` accounts in `.env.example` |
 | Tests (`npm test`) | `lib/**/*.test.mts`, `tests/*.test.mts` (41 tests) |
 
 ## How the trust rules are enforced (server-side, not just UI)

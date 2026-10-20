@@ -1,6 +1,8 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 import { buildCsp, createNonce, cspHeaderName, cspMode, reportingEndpointsHeader } from '@/lib/security/csp';
+import { clientIp, limitFor } from '@/lib/security/rate-limit-core';
+import { rateLimit, rateLimitHeaders } from '@/lib/security/rate-limit';
 
 const PROTECTED = ['/dashboard', '/supplier', '/admin'];
 const AUTH_PAGES = ['/login', '/signup'];
@@ -55,6 +57,17 @@ export async function middleware(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   const path = request.nextUrl.pathname;
 
+  // ── Rate limits on state-changing API routes and server actions (lib/security/rate-limit-core.ts) ──
+  const limitName = limitFor(request.method, path, request.headers.has('next-action'));
+  if (limitName) {
+    const key = user?.id ?? `ip:${clientIp(request.headers.get('x-forwarded-for'), request.headers.get('x-real-ip'))}`;
+    const result = await rateLimit(limitName, key);
+    if (!result.success) {
+      return NextResponse.json({ error: 'Too many requests — please wait a moment and try again.' },
+        { status: 429, headers: rateLimitHeaders(result) });
+    }
+  }
+
   if (!user && PROTECTED.some((p) => path.startsWith(p))) {
     const url = request.nextUrl.clone();
     url.pathname = '/login';
@@ -101,7 +114,7 @@ export const config = {
   // Prefetches are skipped too (they'd mint nonces for documents never rendered).
   matcher: [
     {
-      source: '/((?!_next/static|_next/image|favicon.ico|api/webhooks|api/cron|api/csp-report|.*\\.(?:svg|png|jpg|jpeg|webp|ico|txt|xml)$).*)',
+      source: '/((?!_next/static|_next/image|favicon.ico|api/webhooks|api/cron|api/csp-report|monitoring|.*\\.(?:svg|png|jpg|jpeg|webp|ico|txt|xml)$).*)',
       missing: [
         { type: 'header', key: 'next-router-prefetch' },
         { type: 'header', key: 'purpose', value: 'prefetch' },

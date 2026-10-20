@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { FileCheck2, MessageSquare, PackagePlus, Plus, Workflow } from 'lucide-react';
+import { FileCheck2, FileDown, MessageSquare, PackagePlus, Plus, Workflow } from 'lucide-react';
+import { formatUSD } from '@/lib/format';
 import { getSessionProfile } from '@/lib/supabase/server';
 import type { EscrowStatus } from '@/lib/types';
 import DashboardHeader from '@/components/dashboard/DashboardHeader';
@@ -31,7 +32,7 @@ export default async function SupplierHome() {
         .select('id, product_id, escrow_status, total_cents, created_at, batches, current_status, eta_timestamp')
         .in('product_id', productIds).order('created_at', { ascending: false })
       : Promise.resolve({ data: [] }),
-    supabase.from('payouts').select('status, amount_cents').eq('supplier_id', user.id),
+    supabase.from('payouts').select('id, status, amount_cents, currency, reference, completed_at').eq('supplier_id', user.id).order('created_at', { ascending: false }),
   ]);
   const orders = (orderRows ?? []) as {
     id: string; product_id: string; escrow_status: EscrowStatus; total_cents: number; created_at: string;
@@ -44,6 +45,8 @@ export default async function SupplierHome() {
     current_status: o.current_status, eta_timestamp: o.eta_timestamp,
   }));
   const payouts = payoutSummary((payoutRows ?? []) as { status: PayoutStatus; amount_cents: number }[]);
+  const recentPaid = ((payoutRows ?? []) as { id: string; status: string; amount_cents: number; currency: string; reference: string; completed_at: string | null }[])
+    .filter((p) => p.status === 'succeeded').slice(0, 5);
   const release = releaseSplit(orders);
 
   const totals = emptyCounts();
@@ -89,6 +92,23 @@ export default async function SupplierHome() {
         <SupplierStats products={productCounts} orders={totals} payouts={payouts} release={release} />
 
         <div className="mt-10"><FulfilmentPipeline orders={pipeline} /></div>
+
+        {recentPaid.length > 0 && (
+          <section aria-labelledby="payouts-title" className="card mt-10 overflow-hidden">
+            <h2 id="payouts-title" className="border-b border-neutral-200 px-4 py-3 font-semibold text-neutral-900">Recent payouts</h2>
+            <ul className="divide-y divide-neutral-200">
+              {recentPaid.map((p) => (
+                <li key={p.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 text-sm">
+                  <div>
+                    <p className="font-medium tabular-nums text-neutral-900">{formatUSD(p.amount_cents, true)} <span className="text-xs font-normal text-neutral-500">{p.currency}</span></p>
+                    <p className="font-mono text-xs text-neutral-500">{p.reference}{p.completed_at ? ` · ${new Date(p.completed_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}` : ''}</p>
+                  </div>
+                  <a href={`/api/payouts/${p.id}/receipt`} className="btn-secondary px-3 py-1.5 text-xs"><FileDown className="h-3.5 w-3.5" aria-hidden /> Receipt (PDF)</a>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
 
         <div className="mt-12 flex items-baseline justify-between border-b border-neutral-200 pb-3">
           <h2 className="text-lg font-semibold text-neutral-900">Trial Batches</h2>
