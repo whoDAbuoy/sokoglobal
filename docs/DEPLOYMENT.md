@@ -69,7 +69,9 @@ Buyers pay by **Bank Card (Visa / Mastercard)** through Paystack (migration `011
 Card number, expiry and CVC are entered in Paystack's secure form (iframe from `checkout.paystack.com`),
 so card data never touches SokoGlobal's servers.
 
-- Webhook URL: `https://<your-domain>/api/webhooks/card` (Paystack → Settings → API Keys & Webhooks).
+- Webhook URL: `https://<your-domain>/api/webhooks/card` or the alias `/api/webhooks/paystack` (Paystack → Settings → API Keys & Webhooks).
+  Use the exact host Vercel serves (no redirect): webhook senders do not follow redirects, so `https://sokoglobal.shop/...`
+  fails while the apex domain redirects to `www`.
   Events are authenticated with `x-paystack-signature` (HMAC-SHA512 of the body with `PAYSTACK_SECRET_KEY`).
 - Every charge is re-verified with `GET /transaction/verify/:reference` before escrow is funded; the
   buyer's browser also asks for that verification right after paying, so confirmation doesn't wait for the webhook.

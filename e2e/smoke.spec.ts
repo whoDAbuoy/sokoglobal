@@ -72,6 +72,14 @@ test.describe('guards and hardening', () => {
     await expect(page.getByRole('link', { name: /staff sign in/i })).toHaveAttribute('href', '/login');
   });
 
+  test('payment webhooks exist and reject unsigned calls', async ({ request }) => {
+    for (const path of ['/api/webhooks/card', '/api/webhooks/paystack']) {
+      const res = await request.post(path, { data: { event: 'charge.success', data: { reference: 'probe' } }, maxRedirects: 0 });
+      expect(res.status(), `${path} must not redirect or 404`).not.toBe(404);
+      expect([401, 500]).toContain(res.status());   // 401 forged signature · 500 when PAYSTACK_SECRET_KEY is unset
+    }
+  });
+
   test('documents and crons are not public', async ({ request }) => {
     const id = '44444444-4444-4444-8444-000000000001';
     expect((await request.get(`/api/orders/${id}/invoice`)).status()).toBe(401);
