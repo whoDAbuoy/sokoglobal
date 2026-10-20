@@ -50,7 +50,8 @@ MVP built with Next.js 15 (App Router) + Tailwind + Supabase (Postgres, Auth, St
 | E2E tests (Playwright) | `playwright.config.ts`, `e2e/` — `npm run e2e:install` once, then `npm run e2e`; journeys need the `E2E_*` accounts in `.env.example` |
 | Super admin, temporary admins, kill switch, audit log | `supabase/migrations/014_super_admin.sql`, `lib/auth/admin-access.ts`, `lib/platform.ts`, `app/admin/control`, `app/admin/view-as/[userId]`, `middleware.ts` (maintenance mode) |
 | Multi-commodity catalogue | `supabase/migrations/015_catalog.sql`, `lib/catalog.ts`, `lib/catalog-import.ts`, `app/dashboard/discover`, `app/supplier/products/{new,import}`, `app/admin/categories` |
-| Tests (`npm test`) | `lib/**/*.test.mts`, `tests/*.test.mts` (180 tests) |
+| Settings hub, avatars, 2FA | `supabase/migrations/016_profiles_and_security.sql`, `app/dashboard/settings`, `app/api/auth/2fa`, `app/auth/2fa`, `lib/security/two-factor*.ts`, `lib/settings.ts`, `components/settings` |
+| Tests (`npm test`) | `lib/**/*.test.mts`, `tests/*.test.mts` (196 tests) |
 
 ## How the trust rules are enforced (server-side, not just UI)
 
@@ -104,6 +105,23 @@ update public.profiles set role = 'super_admin' where id = '<your auth user id>'
   `/supplier/products/import` (CSV or Excel `.xlsx`, up to 500 rows, preview then import as drafts; template download).
 - Buyers: `/dashboard/discover` (category tree, full-text search, attribute facets, featured first).
 - Regulated categories (`requires_compliance`) show a notice to suppliers and a review warning to admins.
+
+## Settings, avatars & two-factor authentication (migration 016)
+
+Run `016_profiles_and_security.sql` and set `TWO_FACTOR_ENCRYPTION_KEY` (`openssl rand -base64 32`) in Vercel.
+
+- `/dashboard/settings` (old `/dashboard/profile` links redirect): **Profile & identity** (photo, job title, phone; name and
+  company still go through the reviewed change request), **Security & 2FA** (password, TOTP), **Notifications**, **Appearance**.
+- **Avatars**: cropped to a 512 px JPEG in the browser (EXIF stripped), magic-byte checked on the server, stored content-hashed in
+  the public `avatars` bucket under `<user id>/`. Storage policies and a profile trigger only allow the user's own folder.
+- **2FA (TOTP, otplib + qrcode)**: `/api/auth/2fa/{enroll,verify,challenge,disable,backup-codes}`. Secrets are AES-256-GCM
+  encrypted; ten single-use backup codes are stored as keyed hashes; a TOTP step is never accepted twice. 2FA switches on only
+  after the server verifies a code. Rate limited (6/min).
+- **Enforcement**: a pass is bound to the Supabase session (`session_id` in the JWT) for 12 hours (`two_factor_sessions`).
+  Middleware sends unverified sessions to `/auth/2fa` and refuses their API calls; Postgres refuses audited admin actions from
+  them, and money-moving overrides (force release, refunds, payouts, landed cost) require 2FA to be on.
+- Notification preferences are stored on the profile (`email_notifications`, `sms_alerts`, `order_status_updates`) for the
+  email / WhatsApp / SMS senders to read.
 
 ## Operations & payments (migration 002)
 

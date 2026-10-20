@@ -12,7 +12,7 @@ test('importer requests a profile change, admin approves it, profile updates', a
   const admin = await asRole(browser, 'admin');
 
   async function request(name: string) {
-    await importer.goto('/dashboard/profile?tab=account');
+    await importer.goto('/dashboard/settings?tab=profile');
     await importer.getByRole('button', { name: /request a change|replace pending request/i }).click();
     await importer.getByLabel('Business name').fill(name);
     await importer.getByRole('button', { name: /send for review/i }).click();
@@ -26,13 +26,13 @@ test('importer requests a profile change, admin approves it, profile updates', a
     await expect(admin.getByText(/approved — the profile is updated/i)).toBeVisible();
   }
 
-  await importer.goto('/dashboard/profile?tab=account');
-  const original = (await importer.locator('dt', { hasText: 'Business name' }).locator('xpath=following-sibling::dd').innerText()).trim();
+  await importer.goto('/dashboard/settings?tab=profile');
+  const original = (await importer.locator('dt', { hasText: 'Legal / company name' }).locator('xpath=following-sibling::dd').innerText()).trim();
   const changed = `${original.replace(/ E2E$/, '')} E2E`;
 
   await request(changed);
   await approve(changed);
-  await importer.goto('/dashboard/profile?tab=account');
+  await importer.goto('/dashboard/settings?tab=profile');
   await expect(importer.getByRole('heading', { level: 2 })).toBeVisible();
   await expect(importer.getByText(changed).first()).toBeVisible();
 

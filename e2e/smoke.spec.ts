@@ -52,7 +52,7 @@ test.describe('public pages', () => {
 });
 
 test.describe('guards and hardening', () => {
-  for (const path of ['/dashboard', '/dashboard/messages', '/dashboard/discover', '/supplier', '/supplier/products/import', '/admin', '/admin/users', '/admin/reconciliation', '/admin/control', '/admin/categories']) {
+  for (const path of ['/dashboard', '/dashboard/messages', '/dashboard/discover', '/dashboard/settings', '/supplier', '/supplier/products/import', '/admin', '/admin/users', '/admin/reconciliation', '/admin/control', '/admin/categories']) {
     test(`${path} requires sign-in`, async ({ page }) => {
       await page.goto(path);
       await expect(page).toHaveURL(new RegExp(`/login\\?redirectTo=${encodeURIComponent(path).replace(/%2F/g, '(%2F|/)')}`));
@@ -70,6 +70,16 @@ test.describe('guards and hardening', () => {
     await page.goto('/maintenance');
     await expect(page.getByRole('heading', { name: /doing some maintenance/i })).toBeVisible();
     await expect(page.getByRole('link', { name: /staff sign in/i })).toHaveAttribute('href', '/login');
+  });
+
+  test('2FA endpoints need a session; the challenge page sends visitors to sign in', async ({ page, request }) => {
+    for (const path of ['enroll', 'verify', 'challenge', 'disable', 'backup-codes']) {
+      expect((await request.post(`/api/auth/2fa/${path}`, { data: { code: '123456' } })).status(), path).toBe(401);
+    }
+    await page.goto('/auth/2fa');
+    await expect(page).toHaveURL(/\/login/);
+    await page.goto('/dashboard/profile?tab=security');
+    await expect(page).toHaveURL(/\/login\?redirectTo=/);
   });
 
   test('payment webhooks exist and reject unsigned calls', async ({ request }) => {
