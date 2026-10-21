@@ -20,9 +20,11 @@ type Metric = { label: string; value: string; icon: LucideIcon; tone: string; su
  * Supplier summary: colourful metric tiles (catalogue + orders), the payout
  * dial and the escrow release bar.
  */
-export default function SupplierStats({ products, orders, payouts, release }: {
+export default function SupplierStats({ products, orders, payouts, release, readyToShip }: {
   products: ProductCounts;
   orders: OrderCounts;
+  /** Paid orders waiting to be dispatched (fulfillment_status = pending_fulfillment, migration 018). */
+  readyToShip?: { count: number; goodsCents: number };
   payouts?: ReturnType<typeof payoutSummary>;
   release?: ReturnType<typeof releaseSplit>;
 }) {
@@ -36,7 +38,9 @@ export default function SupplierStats({ products, orders, payouts, release }: {
 
   const orderStats: Metric[] = [
     { label: 'Total orders', value: String(orders.total), icon: Package, tone: 'tone-active' },
-    { label: 'Awaiting payment', value: String(orders.awaiting), icon: Clock, tone: 'tone-pending' },
+    readyToShip
+      ? { label: 'Paid, ready to ship', value: String(readyToShip.count), icon: Clock, tone: 'tone-pending', sub: formatUSD(readyToShip.goodsCents) }
+      : { label: 'Awaiting payment', value: String(orders.awaiting), icon: Clock, tone: 'tone-pending' },
     { label: 'In escrow', value: String(orders.escrow), icon: Lock, tone: 'tone-transit', sub: formatUSD(orders.escrowCents) },
     { label: 'Completed', value: String(orders.completed), icon: BadgeCheck, tone: 'tone-escrow' },
   ];
@@ -97,7 +101,7 @@ export default function SupplierStats({ products, orders, payouts, release }: {
               <dl className="mt-3 grid grid-cols-3 gap-2 text-xs">
                 <div><dt className="flex items-center gap-1 text-neutral-500"><span className="h-1.5 w-1.5 rounded-full bg-emerald-500" aria-hidden />Released</dt><dd className="font-semibold tabular-nums text-neutral-900">{formatUSD(release.released)}</dd></div>
                 <div><dt className="flex items-center gap-1 text-neutral-500"><span className="h-1.5 w-1.5 rounded-full bg-cyan-500" aria-hidden />Held</dt><dd className="font-semibold tabular-nums text-neutral-900">{formatUSD(release.held)}</dd></div>
-                <div><dt className="flex items-center gap-1 text-neutral-500"><span className="h-1.5 w-1.5 rounded-full bg-amber-400" aria-hidden />Unpaid</dt><dd className="font-semibold tabular-nums text-neutral-900">{formatUSD(release.awaiting)}</dd></div>
+                {release.awaiting > 0 && <div><dt className="flex items-center gap-1 text-neutral-500"><span className="h-1.5 w-1.5 rounded-full bg-amber-400" aria-hidden />Unpaid</dt><dd className="font-semibold tabular-nums text-neutral-900">{formatUSD(release.awaiting)}</dd></div>}
               </dl>
             </>
           ) : (

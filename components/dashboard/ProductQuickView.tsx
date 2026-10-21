@@ -93,7 +93,7 @@ export default function ProductQuickView({ product, quantity = 1, onClose, actio
         {/* Details */}
         <div className="flex flex-col p-6 sm:p-8 md:max-h-[calc(100dvh-2rem)] md:overflow-y-auto">
           <div className="flex flex-wrap items-center gap-1.5">
-            <span className="pill">$500 Trial Batch</span>
+            <span className="pill">Trial Batch</span>
             {product.is_demo && <span className="pill border-amber-200 bg-amber-50 text-amber-800">Sample</span>}
           </div>
           <h2 id={`qv-title-${product.id}`} className="mt-4 pr-8 text-2xl font-semibold leading-tight text-neutral-900">{product.title}</h2>

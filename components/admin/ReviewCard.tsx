@@ -42,7 +42,7 @@ function hoursSince(iso: string) {
   return Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 3_600_000));
 }
 
-export default function ReviewCard({ product }: { product: PendingProduct }) {
+export default function ReviewCard({ product, minCents = TRIAL_BATCH_MIN_CENTS }: { product: PendingProduct; minCents?: number }) {
   const [approveState, approveAction, approving] = useActionState<ReviewState, FormData>(approveProduct, null);
   const [rejectState, rejectAction, rejecting] = useActionState<ReviewState, FormData>(rejectProduct, null);
   const [freight, setFreight] = useState('');
@@ -54,7 +54,7 @@ export default function ReviewCard({ product }: { product: PendingProduct }) {
   const activeImage = images.find((i) => i.id === active) ?? images[0];
 
   const landed = product.trial_goods_cents + toCents(freight) + toCents(customs);
-  const meetsMinimum = landed >= TRIAL_BATCH_MIN_CENTS;
+  const meetsMinimum = landed >= minCents;
   const quoted = freight.trim() !== '' && customs.trim() !== '';
   const waited = hoursSince(product.updated_at);
   const busy = approving || rejecting;
@@ -168,7 +168,7 @@ export default function ReviewCard({ product }: { product: PendingProduct }) {
               <span className="text-lg font-semibold tabular-nums text-slate-900">{formatUSD(landed, true)}</span>
             </div>
             {!meetsMinimum && quoted && (
-              <p className="mt-1 text-[11px] text-red-700">Below the {formatUSD(TRIAL_BATCH_MIN_CENTS)} Trial Batch minimum.</p>
+              <p className="mt-1 text-[11px] text-red-700">Below the {formatUSD(minCents)} Trial Batch minimum.</p>
             )}
           </div>
 

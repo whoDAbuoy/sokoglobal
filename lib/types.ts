@@ -33,6 +33,8 @@ export interface Profile {
   /** Migration 016. */
   avatar_url?: string | null;
   two_factor_enabled?: boolean;
+  /** Migration 017: platform KYC ('unsubmitted' | 'pending' | 'approved' | 'rejected'). */
+  kyc_status?: 'unsubmitted' | 'pending' | 'approved' | 'rejected';
 }
 
 export interface ProductMedia {

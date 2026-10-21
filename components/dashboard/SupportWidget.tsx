@@ -20,7 +20,7 @@ import { OPEN_SUPPORT_EVENT, type OpenSupportDetail } from '@/lib/support-events
 /* -------------------------------------------------------------------------- */
 const FAQ_ITEMS: { q: string; a: ReactNode }[] = [
   {
-    q: 'How does escrow protect my $500 Trial Batch?',
+    q: 'How does escrow protect my Trial Batch?',
     a: <>Your payment goes to a licensed escrow account, <strong>not to the supplier</strong>. It stays there while the goods are
       made, flown and cleared. The supplier is paid only after <em>you</em> confirm the goods are right at your door. If they aren&apos;t,
       open a dispute and the funds stay frozen until it&apos;s resolved — including a full refund where the supplier is at fault.</>,
@@ -244,7 +244,7 @@ function HelpPanel({ onOpenFaq, onChat, onDispute }: { onOpenFaq: () => void; on
         <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-brand-700" aria-hidden />
         <span>
           <span className="block text-sm font-semibold text-slate-900">How escrow protects you</span>
-          <span className="block text-xs text-slate-500">$500 Trial Batches, landed cost, delivery timelines, refunds</span>
+          <span className="block text-xs text-slate-500">Trial Batches, landed cost, delivery timelines, refunds</span>
         </span>
       </button>
       <button type="button" onClick={onChat} className="flex w-full items-start gap-3 rounded-xl border border-slate-200 p-3 text-left hover:border-brand-300 hover:bg-brand-50/40">

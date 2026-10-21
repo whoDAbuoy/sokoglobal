@@ -3,6 +3,7 @@ import {
   ArrowRight, BadgeCheck, ClipboardCheck, Globe2, Lock, PackageCheck, Plane, ShieldCheck, Ship, Store, Wallet,
 } from 'lucide-react';
 import Globe from '@/components/motion/Globe';
+import { formatUSD } from '@/lib/format';
 import RotatingWord from '@/components/motion/RotatingWord';
 import WaveBackground from '@/components/motion/WaveBackground';
 
@@ -23,7 +24,8 @@ const STEPS = [
 ];
 
 /** Public landing page (signed-out visitors). Always rendered in the midnight theme. */
-export default function Landing() {
+/** minTrialCents: current trial batch minimum (system_configs, migration 018). */
+export default function Landing({ minTrialCents = 50_000 }: { minTrialCents?: number }) {
   return (
     <div className="dark min-h-screen bg-midnight text-neutral-900">
       <header className="sticky top-3 z-50 px-3 sm:top-4 sm:px-4">
@@ -65,7 +67,7 @@ export default function Landing() {
                 <Link href="/signup?role=supplier" className="btn-secondary border-neutral-300 bg-white/40 px-5 py-3 backdrop-blur"><Ship className="h-4 w-4" aria-hidden /> Sell as a supplier</Link>
               </div>
               <dl className="mt-10 grid max-w-lg grid-cols-3 gap-4 border-t border-neutral-200 pt-6">
-                {[['$500', 'Trial Batch to test a supplier'], ['100%', 'of payments held in escrow'], ['1 price', 'goods, freight and customs']].map(([v, l]) => (
+                {[[formatUSD(minTrialCents), 'Trial Batch to test a supplier'], ['100%', 'of payments held in escrow'], ['1 price', 'goods, freight and customs']].map(([v, l]) => (
                   <div key={l}>
                     <dt className="sr-only">{l}</dt>
                     <dd className="text-2xl font-semibold tabular-nums">{v}</dd>

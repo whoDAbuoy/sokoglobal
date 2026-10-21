@@ -26,18 +26,26 @@ export default async function SupplierHome() {
   const products = (productRows ?? []) as unknown as SupplierProduct[];
 
   const productIds = products.map((p) => p.id);
+  // Only paid orders reach suppliers: RLS hides unpaid ones (migration 018). Before 018 the
+  // fulfillment_status column is missing, so fall back and drop unpaid orders here.
+  const orderQuery = async () => {
+    if (!productIds.length) return { data: [] as Record<string, unknown>[] };
+    const cols = 'id, product_id, escrow_status, total_cents, goods_cents, created_at, batches, current_status, eta_timestamp';
+    const withStatus = await supabase.from('orders').select(`${cols}, fulfillment_status`).in('product_id', productIds).order('created_at', { ascending: false });
+    if (!withStatus.error) return withStatus;
+    const legacy = await supabase.from('orders').select(cols).in('product_id', productIds).order('created_at', { ascending: false });
+    return { data: (legacy.data ?? []).filter((o) => o.escrow_status !== 'pending_payment') };
+  };
   const [{ data: orderRows }, { data: payoutRows }] = await Promise.all([
-    productIds.length
-      ? supabase.from('orders')
-        .select('id, product_id, escrow_status, total_cents, created_at, batches, current_status, eta_timestamp')
-        .in('product_id', productIds).order('created_at', { ascending: false })
-      : Promise.resolve({ data: [] }),
+    orderQuery(),
     supabase.from('payouts').select('id, status, amount_cents, currency, reference, completed_at').eq('supplier_id', user.id).order('created_at', { ascending: false }),
   ]);
-  const orders = (orderRows ?? []) as {
-    id: string; product_id: string; escrow_status: EscrowStatus; total_cents: number; created_at: string;
-    batches: number | null; current_status: string | null; eta_timestamp: string | null;
+  const orders = (orderRows ?? []) as unknown as {
+    id: string; product_id: string; escrow_status: EscrowStatus; total_cents: number; goods_cents: number; created_at: string;
+    batches: number | null; current_status: string | null; eta_timestamp: string | null; fulfillment_status?: string;
   }[];
+  const toShip = orders.filter((o) => o.fulfillment_status === 'pending_fulfillment' || (!o.fulfillment_status && o.escrow_status === 'funded' && o.current_status === 'awaiting_dispatch'));
+  const readyToShip = { count: toShip.length, goodsCents: toShip.reduce((n, o) => n + (o.goods_cents ?? 0), 0) };
   const titleOf = new Map(products.map((p) => [p.id, p.title]));
   const pipeline: FulfilmentOrder[] = orders.map((o) => ({
     id: o.id, escrow_status: o.escrow_status, total_cents: o.total_cents, created_at: o.created_at,
@@ -89,7 +97,7 @@ export default async function SupplierHome() {
         </div>
       </div>
       <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
-        <SupplierStats products={productCounts} orders={totals} payouts={payouts} release={release} />
+        <SupplierStats products={productCounts} orders={totals} payouts={payouts} release={release} readyToShip={readyToShip} />
 
         <div className="mt-10"><FulfilmentPipeline orders={pipeline} /></div>
 

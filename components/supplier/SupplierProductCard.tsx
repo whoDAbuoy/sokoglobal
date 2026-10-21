@@ -117,7 +117,7 @@ function OrderProgress({ orders }: { orders: OrderCounts }) {
   if (orders.total === 0) {
     return <p className="mt-3 text-xs text-neutral-400">No orders yet</p>;
   }
-  const chips: OrderStage[] = ['awaiting', 'escrow', 'completed'];
+  const chips: OrderStage[] = ['escrow', 'completed'];   // unpaid orders are not visible to suppliers
   return (
     <div className="mt-3">
       <div className="flex items-baseline justify-between text-xs">

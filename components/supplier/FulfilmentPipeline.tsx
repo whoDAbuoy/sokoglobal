@@ -10,6 +10,9 @@ import {
 import { formatUSD } from '@/lib/format';
 import { filterPipeline, laneCounts, laneOf, LANES, type PipelineLane, type PipelineOrder, type PipelineSort } from '@/lib/supplier-pipeline';
 
+/** Unpaid orders never reach suppliers (RLS, migration 018), so the "Awaiting payment" lane is not shown. */
+const SUPPLIER_LANES = LANES.filter((l) => l.id !== 'awaiting');
+
 export interface FulfilmentOrder extends PipelineOrder {
   batches: number;
   current_status: string | null;
@@ -61,7 +64,7 @@ export default function FulfilmentPipeline({ orders }: { orders: FulfilmentOrder
 
       <div role="group" aria-label="Filter by stage" className="no-scrollbar mt-4 flex gap-2 overflow-x-auto pb-1">
         <button type="button" aria-pressed={lane === 'all'} onClick={() => setLane('all')} className={chip(lane === 'all')}>All <span className="tabular-nums opacity-70">{orders.length}</span></button>
-        {LANES.map((l) => {
+        {SUPPLIER_LANES.map((l) => {
           const Icon = LANE_ICON[l.id];
           return (
             <button key={l.id} type="button" aria-pressed={lane === l.id} onClick={() => setLane(l.id)} className={chip(lane === l.id)}>

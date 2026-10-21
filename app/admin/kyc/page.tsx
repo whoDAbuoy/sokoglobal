@@ -4,6 +4,7 @@ import { getSessionProfile } from '@/lib/supabase/server';
 import DashboardHeader from '@/components/dashboard/DashboardHeader';
 import KycReviewCard, { type KycCase } from './KycReviewCard';
 import { isAdmin } from '@/lib/auth/admin-access';
+import IdentityQueue, { KycTabs } from './IdentityQueue';
 
 export const metadata = { title: 'Supplier KYC · SokoGlobal Ops', robots: { index: false, follow: false } };
 export const dynamic = 'force-dynamic';
@@ -16,10 +17,12 @@ const one = <T,>(v: T | T[] | null | undefined): T | null => (Array.isArray(v) ?
  * the private `kyc-documents` bucket and are exposed only via short-lived
  * signed URLs generated with the admin's own session (storage RLS).
  */
-export default async function KycAdminPage() {
+export default async function KycAdminPage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
   const { supabase, user, profile } = await getSessionProfile();
   if (!user) redirect('/login?redirectTo=/admin/kyc');
   if (!isAdmin(profile)) notFound();
+  // Identity verifications (migration 017) are reviewed by super admins only.
+  if ((await searchParams).tab === 'identity') return <IdentityQueue profile={profile} supabase={supabase} />;
 
   const [queueRes, recentRes] = await Promise.all([
     supabase.from('supplier_kyc')
@@ -76,6 +79,7 @@ export default async function KycAdminPage() {
       <DashboardHeader profile={profile} />
       <main className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
         <p className="eyebrow">Internal · Compliance</p>
+        <KycTabs active="suppliers" />
         <h1 className="mt-2 text-3xl font-semibold text-neutral-900">Supplier KYC review</h1>
         <p className="mt-1 text-sm text-slate-500">Check the Tax ID, business registration and director ID against the details provided, then verify the payout account.</p>
 

@@ -178,7 +178,7 @@ export default function TrialBatchCard({ product }: { product: TrialProductView 
         <ProductGallery images={images} media={product.media} alt={product.title} category={product.category} className="aspect-square" arrows="hover"
           dotsClassName="group-hover:-translate-y-12 group-focus-within:-translate-y-12 [@media(hover:none)]:-translate-y-12" />
         <div className="pointer-events-none absolute left-3 top-3 flex flex-wrap gap-1.5">
-          <span className="pill border-transparent bg-blue-600 text-snow shadow">$500 Trial Batch</span>
+          <span className="pill border-transparent bg-blue-600 text-snow shadow">Trial Batch</span>
           {product.is_featured && <span className="pill border-transparent bg-violet-600 text-snow shadow">Featured</span>}
           {product.is_demo && <span className="pill border-amber-200 bg-amber-50 text-amber-800">Sample</span>}
         </div>

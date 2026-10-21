@@ -11,6 +11,7 @@ import { TRACKING_RE, parseUsdToCents, planRefund, validateLandedCost, validateR
 import { processPayout, type PayoutResult } from '@/lib/payments/payouts';
 import { PaystackError, refundTransaction } from '@/lib/payments/paystack';
 import { financialOverrideBlock } from '@/lib/security/two-factor-gate';
+import { parseTrialConfigInput } from '@/lib/trial-batch';
 import { twoFactorState } from '@/lib/security/two-factor-server';
 
 /** 2FA gate for money-moving overrides, checked BEFORE any provider call (Postgres re-checks on insert). */
@@ -199,4 +200,25 @@ export async function overrideLandedCost(orderId: string, goods: string, freight
   });
   if (error) return { ok: false, message: friendlyError(error.message) };
   return done('Landed cost updated. The buyer sees the new total at checkout.', orderId);
+}
+
+/* ── Marketplace rules (migration 018 system_configs; super admins; audited) ── */
+
+async function saveConfig(key: 'trial_batch_config' | 'kyc_requirements', value: Record<string, unknown>): Promise<ControlResult> {
+  const ctx = await caller('super');
+  if (!ctx) return { ok: false, message: 'Super admin access required.' };
+  const { error } = await ctx.supabase.rpc('super_set_system_config', { p_key: key, p_value: value, p_ip: ctx.fp.ip, p_ua: ctx.fp.ua });
+  if (error) return { ok: false, message: friendlyError(error.message) };
+  revalidatePath('/', 'layout');
+  return { ok: true, message: 'Saved. New orders and listings follow it immediately.' };
+}
+
+export async function saveTrialBatchConfig(enabled: boolean, minimum: string): Promise<ControlResult> {
+  const v = parseTrialConfigInput({ enabled, minimum });
+  if (!v.ok) return { ok: false, message: v.error };
+  return saveConfig('trial_batch_config', { ...v.value });
+}
+
+export async function saveKycRequirements(listings: boolean, orders: boolean): Promise<ControlResult> {
+  return saveConfig('kyc_requirements', { listings: !!listings, orders: !!orders });
 }
