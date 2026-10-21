@@ -4,6 +4,22 @@ import { buildCsp, createNonce, cspHeaderName, cspMode, reportingEndpointsHeader
 import { clientIp, limitFor } from '@/lib/security/rate-limit-core';
 import { rateLimit, rateLimitHeaders } from '@/lib/security/rate-limit';
 import { maintenanceDecision } from '@/lib/platform';
+import { twoFactorGate } from '@/lib/security/two-factor-gate';
+import type { SupabaseClient } from '@supabase/supabase-js';
+
+/**
+ * Ban + 2FA state in one round trip (my_security_state, migration 016). Before 016 the RPC
+ * is missing: fall back to the ban flag alone; if that column is missing too, nobody is banned.
+ */
+async function loadSecurityState(supabase: SupabaseClient, userId: string) {
+  const { data, error } = await supabase.rpc('my_security_state');
+  if (!error && data) {
+    const s = data as { is_banned?: boolean; two_factor_enabled?: boolean; two_factor_ok?: boolean };
+    return { is_banned: !!s.is_banned, two_factor_enabled: !!s.two_factor_enabled, two_factor_ok: s.two_factor_ok !== false };
+  }
+  const { data: flags } = await supabase.from('profiles').select('is_banned').eq('id', userId).maybeSingle<{ is_banned: boolean }>();
+  return { is_banned: !!flags?.is_banned, two_factor_enabled: false, two_factor_ok: true };
+}
 
 // Maintenance flag (platform_settings, migration 014), cached per instance so pages don't each pay a query.
 const MAINTENANCE_TTL_MS = 15_000;
@@ -102,16 +118,19 @@ export async function middleware(request: NextRequest) {
   if (!user && PROTECTED.some((p) => path.startsWith(p))) {
     const url = request.nextUrl.clone();
     url.pathname = '/login';
-    url.searchParams.set('redirectTo', path);
+    url.search = '';   // keep the page's own query inside redirectTo, not on /login
+    url.searchParams.set('redirectTo', `${path}${request.nextUrl.search}`);
     return NextResponse.redirect(url);
   }
 
   // Banned accounts (profiles.is_banned, set from /admin/users) are signed out on any private page.
   // Supabase Auth also refuses their sign-in and token refresh; this catches sessions issued before the ban.
-  // If migration 012 is not applied the column is missing, the query errors and nobody is treated as banned.
-  if (user && PROTECTED.some((p) => path.startsWith(p))) {
-    const { data: flags } = await supabase.from('profiles').select('is_banned').eq('id', user.id).maybeSingle<{ is_banned: boolean }>();
-    if (flags?.is_banned) {
+  // Two-factor (migration 016): a session that has not passed the code is sent to /auth/2fa (pages)
+  // or refused (API / server actions). Postgres enforces the same for audited admin actions.
+  const isProtectedPage = PROTECTED.some((p) => path.startsWith(p));
+  if (user && (isProtectedPage || path.startsWith('/api/'))) {
+    const security = await loadSecurityState(supabase, user.id);
+    if (security.is_banned && isProtectedPage) {
       await supabase.auth.signOut({ scope: 'local' }).catch(() => undefined);
       const url = request.nextUrl.clone();
       url.pathname = '/login';
@@ -122,6 +141,19 @@ export async function middleware(request: NextRequest) {
       for (const c of request.cookies.getAll()) {
         if (c.name.startsWith('sb-')) redirect.cookies.set(c.name, '', { path: '/', maxAge: 0 });
       }
+      return redirect;
+    }
+    const gate = twoFactorGate({ path, isServerAction: request.headers.has('next-action'), enabled: security.two_factor_enabled, ok: security.two_factor_ok });
+    if (gate === 'api') {
+      return NextResponse.json({ error: 'Two-factor verification required', twoFactor: true }, { status: 401 });
+    }
+    if (gate === 'challenge') {
+      const url = request.nextUrl.clone();
+      url.pathname = '/auth/2fa';
+      url.search = '';
+      url.searchParams.set('redirectTo', `${path}${request.nextUrl.search}`);
+      const redirect = NextResponse.redirect(url);
+      response.cookies.getAll().forEach((c) => redirect.cookies.set(c));
       return redirect;
     }
   }

@@ -10,6 +10,13 @@ import { isPermanentAdmin, isSuperAdmin, requestFingerprint } from '@/lib/auth/a
 import { TRACKING_RE, parseUsdToCents, planRefund, validateLandedCost, validateReason } from '@/lib/admin-overrides';
 import { processPayout, type PayoutResult } from '@/lib/payments/payouts';
 import { PaystackError, refundTransaction } from '@/lib/payments/paystack';
+import { financialOverrideBlock } from '@/lib/security/two-factor-gate';
+import { twoFactorState } from '@/lib/security/two-factor-server';
+
+/** 2FA gate for money-moving overrides, checked BEFORE any provider call (Postgres re-checks on insert). */
+async function moneyGate(ctx: { supabase: Parameters<typeof twoFactorState>[0] }): Promise<string | null> {
+  return financialOverrideBlock(await twoFactorState(ctx.supabase));
+}
 
 export type ControlResult = { ok: boolean; message: string };
 
@@ -73,6 +80,8 @@ async function runPayout(ctx: NonNullable<Awaited<ReturnType<typeof caller>>>, o
 export async function forceRelease(orderId: string, reason: string): Promise<ControlResult> {
   const ctx = await caller('super');
   if (!ctx) return { ok: false, message: 'Super admin access required.' };
+  const blocked = await moneyGate(ctx);
+  if (blocked) return { ok: false, message: blocked };
   if (!UUID_RE.test(orderId)) return { ok: false, message: 'Invalid order.' };
   const r = validateReason(reason);
   if (!r.ok) return { ok: false, message: r.error };
@@ -85,6 +94,8 @@ export async function forceRelease(orderId: string, reason: string): Promise<Con
 export async function startPayout(orderId: string, reason: string): Promise<ControlResult> {
   const ctx = await caller('super');
   if (!ctx) return { ok: false, message: 'Super admin access required.' };
+  const blocked = await moneyGate(ctx);
+  if (blocked) return { ok: false, message: blocked };
   if (!UUID_RE.test(orderId)) return { ok: false, message: 'Invalid order.' };
   const r = validateReason(reason);
   if (!r.ok) return { ok: false, message: r.error };
@@ -99,6 +110,8 @@ export async function startPayout(orderId: string, reason: string): Promise<Cont
 export async function refundOrder(orderId: string, mode: 'full' | 'partial', amountUsd: string, reason: string): Promise<ControlResult> {
   const ctx = await caller('super');
   if (!ctx) return { ok: false, message: 'Super admin access required.' };
+  const blocked = await moneyGate(ctx);
+  if (blocked) return { ok: false, message: blocked };
   if (!UUID_RE.test(orderId) || (mode !== 'full' && mode !== 'partial')) return { ok: false, message: 'Invalid request.' };
   const r = validateReason(reason);
   if (!r.ok) return { ok: false, message: r.error };
@@ -172,6 +185,8 @@ export async function setTrackingReference(orderId: string, trackingNumber: stri
 export async function overrideLandedCost(orderId: string, goods: string, freight: string, customs: string, reason: string): Promise<ControlResult> {
   const ctx = await caller('super');
   if (!ctx) return { ok: false, message: 'Super admin access required.' };
+  const blocked = await moneyGate(ctx);
+  if (blocked) return { ok: false, message: blocked };
   if (!UUID_RE.test(orderId)) return { ok: false, message: 'Invalid order.' };
   const r = validateReason(reason);
   if (!r.ok) return { ok: false, message: r.error };

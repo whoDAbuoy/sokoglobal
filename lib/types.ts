@@ -30,6 +30,9 @@ export interface Profile {
   is_banned?: boolean;
   /** Resolved server-side by getSessionProfile() (my_admin_access RPC). */
   admin_access?: AdminAccess | null;
+  /** Migration 016. */
+  avatar_url?: string | null;
+  two_factor_enabled?: boolean;
 }
 
 export interface ProductMedia {

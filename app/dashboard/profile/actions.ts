@@ -20,6 +20,7 @@ export async function requestProfileChange(_prev: ProfileChangeState, form: Form
   const { error } = await supabase.rpc('submit_profile_change', { p_full_name: v.full_name, p_company_name: v.company_name, p_note: v.note });
   if (error) return { ok: false, message: friendlyError(error.message) };
   revalidatePath('/dashboard/profile');
+  revalidatePath('/dashboard/settings');
   return { ok: true, message: 'Sent for review. Your profile updates once an admin approves it.' };
 }
 
@@ -28,4 +29,5 @@ export async function cancelProfileChange(): Promise<void> {
   if (!user) return;
   await supabase.rpc('cancel_profile_change');
   revalidatePath('/dashboard/profile');
+  revalidatePath('/dashboard/settings');
 }

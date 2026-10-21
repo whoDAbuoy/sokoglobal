@@ -4,7 +4,7 @@
  * limiter is the per-instance fallback for local dev or a missing Redis config.
  */
 
-export type LimitName = 'checkout' | 'payment' | 'upload' | 'moderation' | 'action';
+export type LimitName = 'checkout' | 'payment' | 'upload' | 'moderation' | 'action' | 'twofactor';
 
 export const LIMIT_RULES: Record<LimitName, { limit: number; windowSec: number }> = {
   checkout: { limit: 10, windowSec: 60 },     // creating orders / carts / pool pledges
@@ -12,6 +12,7 @@ export const LIMIT_RULES: Record<LimitName, { limit: number; windowSec: number }
   upload: { limit: 30, windowSec: 60 },       // signed upload URLs
   moderation: { limit: 30, windowSec: 60 },   // admin server actions (ban, delete, approve, reconcile)
   action: { limit: 60, windowSec: 60 },       // other server actions (profile change requests, replies)
+  twofactor: { limit: 6, windowSec: 60 },     // 2FA codes and password changes (brute-force guard)
 };
 
 /** Which limit (if any) applies to a request. Only state-changing methods are limited. */
@@ -22,6 +23,7 @@ export function limitFor(method: string, path: string, isServerAction: boolean):
   if (path.startsWith('/api/webhooks') || path.startsWith('/api/cron') || path === '/api/csp-report') return null;
   if (/^\/api\/(payments\/|orders\/[^/]+\/(mpesa|checkout|confirm)|checkout\/[^/]+\/(card|mpesa))/.test(path)) return 'payment';
   if (path.startsWith('/api/uploads')) return 'upload';
+  if (path.startsWith('/api/auth/2fa')) return 'twofactor';
   if (path.startsWith('/api/orders') || path.startsWith('/api/checkout') || path.startsWith('/api/pools')) return 'checkout';
   return null;
 }

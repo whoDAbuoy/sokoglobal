@@ -12,6 +12,9 @@ test('which routes are limited', () => {
   assert.equal(limitFor('POST', '/api/checkout/abc/card', false), 'payment');
   assert.equal(limitFor('POST', '/api/payments/card/confirm', false), 'payment');
   assert.equal(limitFor('POST', '/api/uploads/sign', false), 'upload');
+  assert.equal(limitFor('POST', '/api/auth/2fa/challenge', false), 'twofactor');
+  assert.equal(limitFor('POST', '/api/auth/2fa/verify', false), 'twofactor');
+  assert.equal(LIMIT_RULES.twofactor.limit <= 10, true);
   assert.equal(limitFor('POST', '/api/webhooks/card', false), null);
   assert.equal(limitFor('POST', '/api/cron/retry-webhooks', false), null);
   assert.equal(limitFor('POST', '/admin/users', true), 'moderation');

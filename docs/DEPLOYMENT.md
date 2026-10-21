@@ -35,6 +35,7 @@ Set in Vercel → Settings → Environment Variables. **Production** values must
 | `NEXT_PUBLIC_SUPABASE_URL` | Prod, Preview | no | `https://<ref>.supabase.co`. Also whitelists the Storage host for `<Image />` |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Prod, Preview | no | Supabase anon key (RLS protects data) |
 | `SUPABASE_SERVICE_ROLE_KEY` | Prod, Preview | **yes** | Server only; webhooks, cron, payouts |
+| `TWO_FACTOR_ENCRYPTION_KEY` | Prod, Preview | **yes** | `openssl rand -base64 32`. Encrypts TOTP secrets (migration 016). Different per environment; rotating it disables every enrolled device |
 | `NEXT_PUBLIC_SITE_URL` | Prod, Preview | no | `https://<your-domain>` (checkout redirects, transfer callbacks, Slack links) |
 | `PAYSTACK_SECRET_KEY` | Prod, Preview | **yes** | `sk_live_…` (Prod) / `sk_test_…` (Preview). Also verifies webhook signatures |
 | `PAYSTACK_CURRENCY` | Prod, Preview | no | Settlement currency of the Paystack account (default `USD`) |

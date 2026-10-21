@@ -113,7 +113,7 @@ export default function DashboardHeader({ profile }: { profile: Profile }) {
           <button type="button" aria-label="Notifications" className="hidden rounded-md p-2 text-neutral-600 transition-colors hover:text-neutral-900 sm:block">
             <Bell className="h-5 w-5" strokeWidth={1.75} />
           </button>
-          <Link href="/dashboard/profile" aria-label="Profile & settings" title="Profile & settings"
+          <Link href="/dashboard/settings" aria-label="Profile & settings" title="Profile & settings"
             className="ml-1 flex items-center gap-3 rounded-md border-l border-neutral-200 py-1 pl-2 pr-1 transition-colors hover:bg-neutral-50 sm:ml-2 sm:pl-4">
             <div className="hidden text-right sm:block">
               <p className="flex items-center justify-end gap-1 text-sm font-medium text-neutral-900">
@@ -129,7 +129,12 @@ export default function DashboardHeader({ profile }: { profile: Profile }) {
                 )}
               </p>
             </div>
-            <span className="grid h-8 w-8 place-items-center rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 text-xs font-semibold text-snow shadow-[0_4px_14px_-4px_rgb(59_130_246/0.7)]">{initials}</span>
+            <span className="grid h-8 w-8 place-items-center overflow-hidden rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 text-xs font-semibold text-snow shadow-[0_4px_14px_-4px_rgb(59_130_246/0.7)]">
+              {profile.avatar_url
+                // eslint-disable-next-line @next/next/no-img-element -- the user's own 512 px avatar from the public avatars bucket
+                ? <img src={profile.avatar_url} alt="" width={32} height={32} className="h-full w-full object-cover" />
+                : initials}
+            </span>
           </Link>
           <button type="button" onClick={() => void signOut()} aria-label="Sign out" className="rounded-md p-2 text-neutral-600 transition-colors hover:text-neutral-900">
             <LogOut className="h-5 w-5" strokeWidth={1.75} />

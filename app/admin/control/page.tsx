@@ -12,6 +12,8 @@ import type { EscrowStatus } from '@/lib/types';
 import DashboardHeader from '@/components/dashboard/DashboardHeader';
 import PlatformSwitches from '@/components/admin/control/PlatformSwitches';
 import OrderOverrides from '@/components/admin/control/OrderOverrides';
+import { financialOverrideBlock } from '@/lib/security/two-factor-gate';
+import { twoFactorState } from '@/lib/security/two-factor-server';
 
 export const metadata = { title: 'Control room · SokoGlobal Ops', robots: { index: false, follow: false } };
 export const dynamic = 'force-dynamic';
@@ -34,6 +36,7 @@ export default async function ControlPage({ searchParams }: { searchParams: Prom
   const orderId = sp.order?.trim().toLowerCase() ?? '';
   const auditFilter = AUDIT_FILTERS.some(([v]) => v === sp.audit) ? sp.audit ?? '' : '';
   const superAdmin = isSuperAdmin(profile);
+  const moneyBlocked = superAdmin ? financialOverrideBlock(await twoFactorState(supabase)) : null;
 
   let auditQ = supabase.from('admin_audit_logs').select('id, actor_id, actor_level, action, target_type, target_id, detail, ip, created_at')
     .order('created_at', { ascending: false }).limit(60);
@@ -92,6 +95,13 @@ export default async function ControlPage({ searchParams }: { searchParams: Prom
               <p className="mt-2 text-sm text-neutral-600">Only super admins can force-release escrow, refund, start payouts or edit landed cost.</p>
             ) : (
               <>
+                {moneyBlocked && (
+                  <p role="note" className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3.5 py-3 text-sm text-amber-900">
+                    {moneyBlocked}{' '}
+                    <Link href="/dashboard/settings?tab=security" className="font-medium underline underline-offset-4">Open security settings</Link>
+                    <span className="block text-xs">Tracking numbers still work; force release, refunds, payouts and landed cost need it.</span>
+                  </p>
+                )}
                 <form className="mt-3 flex gap-2" action="/admin/control">
                   <label htmlFor="order-id" className="sr-only">Order ID</label>
                   <input id="order-id" name="order" defaultValue={orderId} placeholder="Order ID (UUID)" className="input font-mono text-xs" autoComplete="off" />

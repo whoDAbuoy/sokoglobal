@@ -33,11 +33,12 @@ export async function getSessionProfile() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { supabase, user: null, profile: null } as const;
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('id, role, full_name, company_name, country_code, kyc_verified')
-    .eq('id', user.id)
-    .single<Profile>();
+  // avatar_url / two_factor_enabled arrive with migration 016; before it, fall back to the base columns.
+  const base = 'id, role, full_name, company_name, country_code, kyc_verified';
+  let { data: profile, error } = await supabase.from('profiles').select(`${base}, avatar_url, two_factor_enabled`).eq('id', user.id).single<Profile>();
+  if (error && /avatar_url|two_factor_enabled|column/i.test(error.message)) {
+    ({ data: profile } = await supabase.from('profiles').select(base).eq('id', user.id).single<Profile>());
+  }
 
   if (profile) profile.admin_access = await resolveAdminAccess(supabase, profile);
   return { supabase, user, profile } as const;
