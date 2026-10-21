@@ -26,7 +26,6 @@ const DOCS: { type: DocType; label: string; hint: string }[] = [
   { type: 'identity', label: 'Director ID', hint: 'Passport or national ID of a director or owner' },
 ];
 const DOC_MIMES: Record<string, string> = { 'application/pdf': 'pdf', 'image/jpeg': 'jpg', 'image/png': 'png' };
-const MAX_DOC_BYTES = 10 * 1024 * 1024;
 const BUCKET = 'kyc-documents';
 
 export default function KycWorkspace({ userId, defaultCountry, initial }: { userId: string; defaultCountry: string; initial: KycState }) {
@@ -56,7 +55,7 @@ export default function KycWorkspace({ userId, defaultCountry, initial }: { user
       <BusinessDetails userId={userId} initial={initial.kyc} editable={editable} />
 
       <section className="card p-6">
-        <SectionTitle icon={FileText} title="Documents" subtitle="PDF, JPG or PNG up to 10 MB. Stored privately — only our compliance team can view them." />
+        <SectionTitle icon={FileText} title="Documents" subtitle="PDF, JPG or PNG. Stored privately — only our compliance team can view them." />
         <ul className="mt-5 space-y-4">
           {DOCS.map((d) => (
             <DocumentSlot key={d.type} userId={userId} spec={d} editable={editable}
@@ -178,7 +177,6 @@ function DocumentSlot({ userId, spec, files, editable, onAdded, onRemoved }: {
     setError(null);
     const ext = DOC_MIMES[file.type];
     if (!ext) return setError('Upload a PDF, JPG or PNG');
-    if (file.size > MAX_DOC_BYTES) return setError('File is larger than 10 MB');
     setBusy(true);
     // Storage RLS: suppliers may only write under their own {uid}/ folder.
     const path = `${userId}/${spec.type}/${crypto.randomUUID()}.${ext}`;

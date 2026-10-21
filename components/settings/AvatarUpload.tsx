@@ -6,7 +6,6 @@ import { toast } from 'sonner';
 import { Camera, Loader2, Trash2, X } from 'lucide-react';
 import { removeAvatar, uploadAvatar } from '@/app/dashboard/settings/actions';
 
-const MAX_INPUT_BYTES = 10 * 1024 * 1024;
 const SIZE = 512;
 
 /**
@@ -27,7 +26,6 @@ export default function AvatarUpload({ url, initials, disabled }: { url: string 
     setError(null);
     if (!file) return;
     if (!['image/png', 'image/jpeg'].includes(file.type)) return setError('Use a PNG or JPEG image.');
-    if (file.size > MAX_INPUT_BYTES) return setError('Choose an image under 10 MB.');
     try {
       const blob = await squareJpeg(file);
       setPreview({ blob, src: URL.createObjectURL(blob) });

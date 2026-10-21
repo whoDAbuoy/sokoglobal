@@ -7,6 +7,7 @@ import { DEMO_POOLS, DEMO_PRODUCTS } from '@/lib/demo-data';
 import { formatUSD } from '@/lib/format';
 import { getSystemConfigs } from '@/lib/system-config-server';
 import { minimumCents } from '@/lib/trial-batch';
+import { checklist, type KycDoc } from '@/lib/kyc';
 import KycBanner from '@/components/kyc/KycBanner';
 import DashboardHeader from '@/components/dashboard/DashboardHeader';
 import EscrowProtectionBanner from '@/components/dashboard/EscrowProtectionBanner';
@@ -69,6 +70,13 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   ]);
 
   const configs = await getSystemConfigs(supabase);
+  // Banner state comes from profiles.kyc_status (the column every guard reads); documents only refine its copy.
+  const showKycBanner = profile.role === 'importer' && configs.kyc.orders && !!profile.kyc_status && profile.kyc_status !== 'approved';
+  const kycDocs = showKycBanner
+    ? ((await supabase.from('kyc_verifications').select('document_type, status').eq('user_id', user.id)).data ?? []) as KycDoc[]
+    : [];
+  const kycChecklist = checklist(kycDocs);
+  const kycApproved = (['identity', 'business'] as const).filter((g) => kycChecklist[g] === 'approved');
   const minTrialCents = minimumCents(configs.trial);
   const myPools = new Map((myPoolsRes.data ?? []).map((m) => [m.pool_id as string, m as { contribution_cents: number; payment_status: EscrowStatus }]));
 
@@ -163,8 +171,8 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8 lg:py-16">
           <p className="eyebrow">Welcome back, {profile.full_name.split(' ')[0]}</p>
           <div className="mt-4"><EscrowProtectionBanner /></div>
-          {profile.role === 'importer' && configs.kyc.orders && profile.kyc_status && profile.kyc_status !== 'approved' && (
-            <div className="mt-4"><KycBanner status={profile.kyc_status} /></div>
+          {showKycBanner && profile.kyc_status && profile.kyc_status !== 'approved' && (
+            <div className="mt-4"><KycBanner status={profile.kyc_status} approved={kycApproved} /></div>
           )}
           {!configs.trial.enabled && (
             <p role="status" className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">New trial batches are paused right now. Trend Pools and orders already placed are not affected.</p>
