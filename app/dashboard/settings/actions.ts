@@ -45,7 +45,7 @@ export async function saveProfileDetails(_prev: SettingsResult | null, form: For
 
 /**
  * Avatar upload: the browser crops/resizes to a 512 px JPEG first; here the bytes are
- * re-checked (magic number, size), content-hashed into avatars/<uid>/<sha256>.jpg, written
+ * re-checked (magic number, non-empty), content-hashed into avatars/<uid>/<sha256>.jpg, written
  * with the user's own storage policy, linked on the profile, and older files removed.
  */
 export async function uploadAvatar(form: FormData): Promise<SettingsResult & { url?: string }> {

@@ -2,7 +2,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  AVATAR_MAX_BYTES, avatarObjectPath, checkAvatarFile, isNotificationPref, normalizeDesignation, normalizePhone, parseSettingsTab, sniffImageType,
+  avatarObjectPath, checkAvatarFile, isNotificationPref, normalizeDesignation, normalizePhone, parseSettingsTab, sniffImageType,
 } from './settings.ts';
 
 const PNG = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0]);
@@ -39,7 +39,7 @@ test('avatar files: magic bytes decide the type, not the browser label', () => {
   assert.equal(sniffImageType(SVG), null);
   assert.deepEqual(checkAvatarFile({ size: 2048, type: 'image/png' }, JPG), { ok: true, type: 'image/jpeg' });
   assert.equal(checkAvatarFile({ size: 2048, type: 'image/png' }, SVG).ok, false, 'SVG renamed to .png is refused');
-  assert.equal(checkAvatarFile({ size: AVATAR_MAX_BYTES + 1, type: 'image/jpeg' }, JPG).ok, false);
+  assert.equal(checkAvatarFile({ size: 50 * 1024 * 1024, type: 'image/jpeg' }, JPG).ok, true, 'no size cap');
   assert.equal(checkAvatarFile({ size: 0, type: 'image/jpeg' }, JPG).ok, false);
 });
 

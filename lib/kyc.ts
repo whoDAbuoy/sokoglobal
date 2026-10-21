@@ -17,7 +17,6 @@ export const KYC_LABEL = Object.fromEntries(KYC_DOCUMENTS.map((d) => [d.type, d.
 export const isKycDocumentType = (v: string): v is KycDocumentType => KYC_DOCUMENTS.some((d) => d.type === v);
 export const groupOf = (t: KycDocumentType) => KYC_DOCUMENTS.find((d) => d.type === t)!.group;
 
-export const KYC_MAX_BYTES = 10 * 1024 * 1024;
 export const KYC_MIME: Record<string, 'pdf' | 'jpg' | 'png'> = { 'application/pdf': 'pdf', 'image/jpeg': 'jpg', 'image/png': 'png' };
 
 /** Mirrors submit_kyc_verification(): upper-cased, 3–40 letters / digits / space / . / - */

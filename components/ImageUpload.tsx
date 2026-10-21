@@ -98,11 +98,6 @@ export default function ImageUpload({ productId, allowVideo = true, maxFiles = 1
         rejected.push(`${file.name}: unsupported format`);
         continue;
       }
-      const rules = UPLOAD_RULES[mediaType];
-      if (file.size > rules.maxBytes) {
-        rejected.push(`${file.name}: exceeds ${Math.round(rules.maxBytes / 1024 / 1024)} MB`);
-        continue;
-      }
       let dims: { width: number; height: number } | undefined;
       if (mediaType === 'image') {
         try {

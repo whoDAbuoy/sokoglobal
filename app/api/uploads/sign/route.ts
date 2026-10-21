@@ -20,8 +20,9 @@ export async function POST(request: Request) {
   const rules = body.mediaType ? UPLOAD_RULES[body.mediaType] : undefined;
   const ext = rules && body.mimeType ? rules.mimes[body.mimeType] : undefined;
   if (!rules || !ext) return NextResponse.json({ error: 'Unsupported file type' }, { status: 415 });
-  if (typeof body.size !== 'number' || body.size <= 0 || body.size > rules.maxBytes) {
-    return NextResponse.json({ error: 'File is too large' }, { status: 413 });
+  // No upper size cap: only a positive byte count is required (the storage project limit still applies).
+  if (typeof body.size !== 'number' || !(body.size > 0)) {
+    return NextResponse.json({ error: 'Invalid file size' }, { status: 400 });
   }
 
   // RLS only returns products this supplier owns.
