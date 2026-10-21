@@ -22,7 +22,7 @@ const toCents = (v: string) => {
  * SKU / MOQ / unit and volume price tiers. Validated here with the same rules
  * the database enforces, then inserted as a draft under the supplier's RLS.
  */
-export default function NewListingForm({ categories, supplierId, defaultOrigin }: { categories: CategoryRow[]; supplierId: string; defaultOrigin: string }) {
+export default function NewListingForm({ categories, supplierId, defaultOrigin, minTrialCents = TRIAL_BATCH_MIN_CENTS }: { categories: CategoryRow[]; supplierId: string; defaultOrigin: string; minTrialCents?: number }) {
   const router = useRouter();
   const tree = useMemo(() => buildCategoryTree(categories.filter((c) => c.is_active)), [categories]);
   const [path, setPath] = useState<string[]>([]);              // selected ids, root → leaf
@@ -197,7 +197,7 @@ export default function NewListingForm({ categories, supplierId, defaultOrigin }
           <Info className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
           <p>
             Trial batch goods value: <strong>{formatUSD(goodsCents, true)}</strong>. Our logistics team adds consolidated freight and customs to
-            create the buyer&apos;s Guaranteed Landed Cost (min {formatUSD(TRIAL_BATCH_MIN_CENTS)}). You&apos;re paid the goods value from escrow on verified delivery.
+            create the buyer&apos;s Guaranteed Landed Cost (min {formatUSD(minTrialCents)}). You&apos;re paid the goods value from escrow on verified delivery.
           </p>
         </div>
       </section>

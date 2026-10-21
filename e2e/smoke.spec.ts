@@ -52,7 +52,7 @@ test.describe('public pages', () => {
 });
 
 test.describe('guards and hardening', () => {
-  for (const path of ['/dashboard', '/dashboard/messages', '/dashboard/discover', '/dashboard/settings', '/supplier', '/supplier/products/import', '/admin', '/admin/users', '/admin/reconciliation', '/admin/control', '/admin/categories']) {
+  for (const path of ['/dashboard', '/dashboard/messages', '/dashboard/discover', '/dashboard/settings', '/dashboard/kyc', '/supplier/orders', '/supplier', '/supplier/products/import', '/admin', '/admin/users', '/admin/reconciliation', '/admin/control', '/admin/categories']) {
     test(`${path} requires sign-in`, async ({ page }) => {
       await page.goto(path);
       await expect(page).toHaveURL(new RegExp(`/login\\?redirectTo=${encodeURIComponent(path).replace(/%2F/g, '(%2F|/)')}`));

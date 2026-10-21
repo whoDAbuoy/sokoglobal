@@ -6,7 +6,8 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { processPayout } from '@/lib/payments/payouts';
 import { friendlyError } from '@/lib/format';
 import { UUID_RE } from '@/lib/uploads';
-import { isAdmin } from '@/lib/auth/admin-access';
+import { headers } from 'next/headers';
+import { isAdmin, isSuperAdmin, requestFingerprint } from '@/lib/auth/admin-access';
 
 export type KycActionState = { ok: boolean; message: string } | null;
 
@@ -73,4 +74,20 @@ export async function rejectKyc(_prev: KycActionState, form: FormData): Promise<
   if (error) return { ok: false, message: friendlyError(error.message) };
   revalidatePath('/admin/kyc');
   return { ok: true, message: 'Sent back to the supplier with your notes.' };
+}
+
+/** Super admin decision on one identity / business document (super_review_kyc_verification, audited with IP). */
+export async function reviewIdentityDocument(id: string, approve: boolean, reason: string): Promise<{ ok: boolean; message: string }> {
+  const ctx = await getSessionProfile();
+  if (!ctx.user || !isSuperAdmin(ctx.profile)) return { ok: false, message: 'Super admin access required.' };
+  if (!UUID_RE.test(id)) return { ok: false, message: 'Invalid submission.' };
+  if (!approve && reason.trim().length < 5) return { ok: false, message: 'Tell the user what to fix (5+ characters).' };
+  const fp = requestFingerprint(await headers());
+  const { data, error } = await ctx.supabase.rpc('super_review_kyc_verification', {
+    p_id: id, p_approve: approve, p_reason: reason.trim().slice(0, 1000) || null, p_ip: fp.ip, p_ua: fp.ua,
+  });
+  if (error) return { ok: false, message: friendlyError(error.message) };
+  revalidatePath('/admin/kyc');
+  const status = (data as { account_status?: string } | null)?.account_status;
+  return { ok: true, message: approve ? (status === 'approved' ? 'Accepted. The account is now verified.' : 'Accepted. The account still needs its other document.') : 'Rejected. The user can see your note and resubmit.' };
 }

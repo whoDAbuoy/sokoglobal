@@ -4,6 +4,8 @@ import { getSessionProfile } from '@/lib/supabase/server';
 import { formatUSD } from '@/lib/format';
 import DashboardHeader from '@/components/dashboard/DashboardHeader';
 import ReviewCard, { type PendingProduct } from '@/components/admin/ReviewCard';
+import { getSystemConfigs } from '@/lib/system-config-server';
+import { minimumCents } from '@/lib/trial-batch';
 import DeleteProductButton from '@/components/admin/DeleteProductButton';
 import { isAdmin } from '@/lib/auth/admin-access';
 
@@ -72,6 +74,7 @@ export default async function AdminPage() {
       .sort((a, b) => a.sort_order - b.sort_order),
   }));
 
+  const minTrialCents = minimumCents((await getSystemConfigs(supabase)).trial);
   const stats = [
     { label: 'Awaiting review', value: pending.length, icon: Inbox },
     { label: 'Approved today', value: todayCount.count ?? 0, icon: ClipboardCheck },
@@ -112,7 +115,7 @@ export default async function AdminPage() {
               <p className="mt-1 text-sm text-slate-500">New submissions from suppliers will appear here.</p>
             </div>
           ) : (
-            pending.map((p) => <ReviewCard key={p.id} product={p} />)
+            pending.map((p) => <ReviewCard key={p.id} product={p} minCents={minTrialCents} />)
           )}
         </section>
 

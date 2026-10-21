@@ -16,7 +16,7 @@ import { ADMIN_LEVEL_LABEL, adminLevel, formatTimeLeft, homePathFor, roleAdminLe
 const ADMIN_NAV: [string, string][] = [['Overview', '/admin'], ['Review queue', '/admin/review'], ['Catalogue', '/admin/products'], ['Shipments', '/admin/orders'], ['Supplier KYC', '/admin/kyc'], ['Users', '/admin/users'], ['Support', '/admin/support']];
 const NAV: Record<Profile['role'], [string, string][]> = {
   importer: [['Discover', '/dashboard'], ['Catalog', '/dashboard/discover'], ['Trend Pools', '/dashboard#pools'], ['Messages', '/dashboard/messages']],
-  supplier: [['Catalogue', '/supplier'], ['Messages', '/supplier/messages'], ['New product', '/supplier/products/new'], ['Verification', '/supplier/verification']],
+  supplier: [['Catalogue', '/supplier'], ['Orders', '/supplier/orders'], ['Messages', '/supplier/messages'], ['New product', '/supplier/products/new'], ['Verification', '/supplier/verification']],
   admin: ADMIN_NAV,
   super_admin: ADMIN_NAV,
 };
@@ -35,7 +35,7 @@ const NAV_ICON: Record<string, LucideIcon> = {
   Discover: Compass, 'Trend Pools': Users, Messages: MessageSquare, Catalogue: Store, 'New product': PackagePlus,
   Verification: FileCheck2, Overview: LayoutDashboard, 'Review queue': ClipboardCheck, Shipments: Truck,
   'Supplier KYC': BadgeCheck, Users: UserCog, Support: Headphones, Catalog: LayoutGrid, Control: Gauge, Admin: ShieldHalf,
-  'My portal': Undo2,
+  'My portal': Undo2, Orders: Truck,
 };
 
 export default function DashboardHeader({ profile }: { profile: Profile }) {
@@ -47,6 +47,8 @@ export default function DashboardHeader({ profile }: { profile: Profile }) {
   const pathname = usePathname() ?? '';
   const level = adminLevel(profile);
   const wideNav = (level !== null && pathname.startsWith('/admin')) || roleAdminLevel(profile.role) !== null;
+  // Five supplier links only fit beside the account block from lg up; below that they scroll in the second row.
+  const midNav = !wideNav && profile.role === 'supplier';
   const links = navLinks(profile, pathname).map(([label, href]) => {
     const Icon = NAV_ICON[label];
     return (
@@ -72,7 +74,7 @@ export default function DashboardHeader({ profile }: { profile: Profile }) {
             <ShieldCheck className="h-5 w-5 text-blue-600 dark:text-cyan-400" strokeWidth={2.25} aria-hidden />
             <span className="text-base font-semibold tracking-tight text-neutral-900">SokoGlobal</span>
           </Link>
-          <nav className={wideNav ? 'hidden items-center gap-5 xl:flex' : 'hidden items-center gap-7 md:flex'}>{links}</nav>
+          <nav className={wideNav ? 'hidden items-center gap-5 xl:flex' : midNav ? 'hidden items-center gap-6 lg:flex' : 'hidden items-center gap-7 md:flex'}>{links}</nav>
         </div>
 
         <div className="flex items-center gap-1">
@@ -142,7 +144,7 @@ export default function DashboardHeader({ profile }: { profile: Profile }) {
         </div>
       </div>
       {/* Small screens: the same links as a scrollable row. */}
-      <nav className={`no-scrollbar flex gap-6 overflow-x-auto border-t border-black/[0.06] px-4 py-2.5 dark:border-snow/[0.08] sm:px-5 ${wideNav ? 'xl:hidden' : 'md:hidden'}`}>{links}</nav>
+      <nav className={`no-scrollbar flex gap-6 overflow-x-auto border-t border-black/[0.06] px-4 py-2.5 dark:border-snow/[0.08] sm:px-5 ${wideNav ? 'xl:hidden' : midNav ? 'lg:hidden' : 'md:hidden'}`}>{links}</nav>
       </div>
     </header>
   );

@@ -11,6 +11,8 @@ import { UUID_RE } from '@/lib/uploads';
 import type { EscrowStatus } from '@/lib/types';
 import DashboardHeader from '@/components/dashboard/DashboardHeader';
 import PlatformSwitches from '@/components/admin/control/PlatformSwitches';
+import MarketplaceRules from '@/components/admin/control/MarketplaceRules';
+import { getSystemConfigs } from '@/lib/system-config-server';
 import OrderOverrides from '@/components/admin/control/OrderOverrides';
 import { financialOverrideBlock } from '@/lib/security/two-factor-gate';
 import { twoFactorState } from '@/lib/security/two-factor-server';
@@ -20,7 +22,7 @@ export const dynamic = 'force-dynamic';
 
 const TONE: Record<Tone, string> = { warning: 'tone-pending', escrow: 'tone-escrow', success: 'tone-active', danger: 'tone-danger', muted: 'tone-muted' };
 const one = <T,>(v: T | T[] | null | undefined): T | null => (Array.isArray(v) ? v[0] ?? null : v ?? null);
-const AUDIT_FILTERS = [['', 'Everything'], ['escrow.', 'Escrow & refunds'], ['payout.', 'Payouts'], ['order.', 'Orders'], ['product.', 'Catalogue'], ['admin.', 'Admin grants'], ['account.', 'Freezes'], ['user.', 'User moderation'], ['platform.', 'Platform switches'], ['category.', 'Categories']] as const;
+const AUDIT_FILTERS = [['', 'Everything'], ['config.', 'Marketplace rules'], ['kyc.', 'KYC reviews'], ['escrow.', 'Escrow & refunds'], ['payout.', 'Payouts'], ['order.', 'Orders'], ['product.', 'Catalogue'], ['admin.', 'Admin grants'], ['account.', 'Freezes'], ['user.', 'User moderation'], ['platform.', 'Platform switches'], ['category.', 'Categories']] as const;
 
 interface AuditRow { id: number; actor_id: string | null; actor_level: string | null; action: string; target_type: string | null; target_id: string | null; detail: Record<string, unknown>; ip: string | null; created_at: string }
 
@@ -43,13 +45,14 @@ export default async function ControlPage({ searchParams }: { searchParams: Prom
   if (auditFilter) auditQ = auditQ.like('action', `${auditFilter}%`);
   if (UUID_RE.test(orderId)) auditQ = auditQ.eq('target_id', orderId);
 
-  const [settings, auditRes, orderRes] = await Promise.all([
+  const [settings, auditRes, orderRes, configs] = await Promise.all([
     getPlatformSettings(supabase),
     auditQ,
     superAdmin && UUID_RE.test(orderId)
       ? supabase.from('orders').select(`id, escrow_status, total_cents, goods_cents, freight_cents, customs_cents, checkout_group_id, tracking_number, carrier, created_at,
           product:products ( title ), buyer:profiles!orders_buyer_id_fkey ( company_name ), payout:payouts ( status )`).eq('id', orderId).maybeSingle()
       : Promise.resolve({ data: null, error: null }),
+    getSystemConfigs(supabase),
   ]);
   const migrationMissing = !!auditRes.error;
   const audit = (auditRes.data ?? []) as AuditRow[];
@@ -89,7 +92,15 @@ export default async function ControlPage({ searchParams }: { searchParams: Prom
             <PlatformSwitches settings={settings} canEdit={isPermanentAdmin(profile) && !migrationMissing} />
           </section>
 
-          <section aria-labelledby="overrides" className="card p-5">
+          {configs.available && (
+            <section aria-labelledby="rules" className="card p-5 lg:col-start-1">
+              <h2 id="rules" className="mb-4 font-semibold text-neutral-900">Marketplace rules</h2>
+              <MarketplaceRules trial={configs.trial} kyc={configs.kyc} canEdit={superAdmin}
+                updatedAt={[configs.updatedAt.trial_batch_config, configs.updatedAt.kyc_requirements].filter(Boolean).sort().pop()} />
+            </section>
+          )}
+
+          <section aria-labelledby="overrides" className="card p-5 lg:col-start-2 lg:row-span-2 lg:row-start-1">
             <h2 id="overrides" className="font-semibold text-neutral-900">Order &amp; escrow overrides</h2>
             {!superAdmin ? (
               <p className="mt-2 text-sm text-neutral-600">Only super admins can force-release escrow, refund, start payouts or edit landed cost.</p>

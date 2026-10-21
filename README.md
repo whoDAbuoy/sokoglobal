@@ -51,7 +51,7 @@ MVP built with Next.js 15 (App Router) + Tailwind + Supabase (Postgres, Auth, St
 | Super admin, temporary admins, kill switch, audit log | `supabase/migrations/014_super_admin.sql`, `lib/auth/admin-access.ts`, `lib/platform.ts`, `app/admin/control`, `app/admin/view-as/[userId]`, `middleware.ts` (maintenance mode) |
 | Multi-commodity catalogue | `supabase/migrations/015_catalog.sql`, `lib/catalog.ts`, `lib/catalog-import.ts`, `app/dashboard/discover`, `app/supplier/products/{new,import}`, `app/admin/categories` |
 | Settings hub, avatars, 2FA | `supabase/migrations/016_profiles_and_security.sql`, `app/dashboard/settings`, `app/api/auth/2fa`, `app/auth/2fa`, `lib/security/two-factor*.ts`, `lib/settings.ts`, `components/settings` |
-| Tests (`npm test`) | `lib/**/*.test.mts`, `tests/*.test.mts` (196 tests) |
+| Tests (`npm test`) | `lib/**/*.test.mts`, `tests/*.test.mts` (205 tests) |
 
 ## How the trust rules are enforced (server-side, not just UI)
 
@@ -105,6 +105,26 @@ update public.profiles set role = 'super_admin' where id = '<your auth user id>'
   `/supplier/products/import` (CSV or Excel `.xlsx`, up to 500 rows, preview then import as drafts; template download).
 - Buyers: `/dashboard/discover` (category tree, full-text search, attribute facets, featured first).
 - Regulated categories (`requires_compliance`) show a notice to suppliers and a review warning to admins.
+
+## KYC, trial batch controls & paid-order visibility (migrations 017, 018)
+
+Run `017_kyc_system.sql`, then `018_system_settings.sql`.
+
+- **KYC (017)**: `profiles.kyc_status` (`unsubmitted | pending | approved | rejected`) is the flag every guard reads; it stays in sync
+  with the older `kyc_verified` boolean used by payouts and badges. Suppliers keep `/supplier/verification` (business KYC +
+  payout account); buyers use `/dashboard/kyc` (`kyc_verifications`: one identity document + one business document, files in the
+  private `kyc-documents` bucket under `<uid>/verification/`). Super admins review them at `/admin/kyc?tab=identity`.
+- **Guards**: creating listings and placing new escrow orders need `kyc_status = 'approved'`, enforced by insert triggers in
+  Postgres and by middleware (listing pages redirect to verification; order APIs return 403). Payouts already require supplier
+  KYC. Each guard can be switched off in **Control room → Marketplace rules** (`system_configs.kyc_requirements`).
+- **Trial batches (018)**: `system_configs.trial_batch_config` (`enabled`, `minimum_amount` in USD). `trial_batch_min_cents()` and
+  `check_trial_batch_validity()` read it, so approval, buy-now and cart checkout all follow the control-room switch; the old
+  hard-coded $500 CHECK constraints are now config-aware triggers. Changes are audited (`config.*` in the audit log).
+- **Paid-order visibility (018)**: `orders.fulfillment_status` is derived from escrow + shipment state. Suppliers can no longer
+  read unpaid orders (RLS); an order becomes `pending_fulfillment` only when the service-role payment functions fund it after
+  Paystack / M-Pesa verification, and a trigger refuses any user session that tries to move an order out of `pending_payment`.
+  `/supplier/orders` shows one card per listing (`get_supplier_grouped_catalog()`): quantity and value waiting to ship, with
+  each buyer's delivery details.
 
 ## Settings, avatars & two-factor authentication (migration 016)
 

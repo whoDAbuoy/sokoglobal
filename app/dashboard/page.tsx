@@ -4,6 +4,10 @@ import { PAID_ORDER_STATUSES } from '@/lib/order-status';
 import { getSessionProfile } from '@/lib/supabase/server';
 import type { EscrowStatus, GalleryMedia, OrderView, ProductCategory, TrendPoolView, TrialProductView } from '@/lib/types';
 import { DEMO_POOLS, DEMO_PRODUCTS } from '@/lib/demo-data';
+import { formatUSD } from '@/lib/format';
+import { getSystemConfigs } from '@/lib/system-config-server';
+import { minimumCents } from '@/lib/trial-batch';
+import KycBanner from '@/components/kyc/KycBanner';
 import DashboardHeader from '@/components/dashboard/DashboardHeader';
 import EscrowProtectionBanner from '@/components/dashboard/EscrowProtectionBanner';
 import TrendPoolCard from '@/components/dashboard/TrendPoolCard';
@@ -64,6 +68,8 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     supabase.from('pool_members').select('pool_id, contribution_cents, payment_status').eq('buyer_id', user.id),
   ]);
 
+  const configs = await getSystemConfigs(supabase);
+  const minTrialCents = minimumCents(configs.trial);
   const myPools = new Map((myPoolsRes.data ?? []).map((m) => [m.pool_id as string, m as { contribution_cents: number; payment_status: EscrowStatus }]));
 
   const pools: TrendPoolView[] = (poolsRes.data ?? []).map((p) => {
@@ -157,10 +163,16 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8 lg:py-16">
           <p className="eyebrow">Welcome back, {profile.full_name.split(' ')[0]}</p>
           <div className="mt-4"><EscrowProtectionBanner /></div>
+          {profile.role === 'importer' && configs.kyc.orders && profile.kyc_status && profile.kyc_status !== 'approved' && (
+            <div className="mt-4"><KycBanner status={profile.kyc_status} /></div>
+          )}
+          {!configs.trial.enabled && (
+            <p role="status" className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">New trial batches are paused right now. Trend Pools and orders already placed are not affected.</p>
+          )}
           <QuickActions className="mt-10" actions={[
             { href: '/dashboard/orders', label: 'My Orders', hint: 'Escrow & shipment tracking', icon: Package, tone: 'tone-escrow', badge: orders.length || undefined },
             { href: '/dashboard/discover', label: 'Catalogue', hint: 'Every category, filters & search', icon: Compass, tone: 'tone-muted' },
-            { href: '/dashboard#batches', label: 'Trial Batches', hint: 'Test a supplier for $500', icon: Plane, tone: 'tone-transit' },
+            { href: '/dashboard#batches', label: 'Trial Batches', hint: `Test a supplier from ${formatUSD(minTrialCents)}`, icon: Plane, tone: 'tone-transit' },
             { href: '/dashboard#pools', label: 'Trend Pools', hint: 'Split freight with boutiques', icon: Users, tone: 'tone-active' },
             { href: '/dashboard/messages', label: 'Messages', hint: 'Chat with suppliers', icon: MessageSquare, tone: 'tone-pending' },
             { href: '/dashboard/wishlist', label: 'Wishlist', hint: 'Saved products', icon: Heart, tone: 'tone-danger' },
@@ -182,7 +194,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         <section id="batches" className="scroll-mt-24">
           <SectionHeader
             icon={Plane}
-            title="Test a supplier with a $500 Trial Batch"
+            title={`Test a supplier with a ${formatUSD(minTrialCents)} Trial Batch`}
             subtitle="One fixed price covering the product, consolidated air freight and customs clearance — delivered to your door."
             aside={
               <div className="flex flex-wrap items-center gap-2">

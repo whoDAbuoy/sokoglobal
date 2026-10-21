@@ -7,10 +7,11 @@ import { Building2, Globe2, Loader2, Save, UserRound, Wallet } from 'lucide-reac
 import type { Profile } from '@/lib/types';
 import { countryName, flag } from '@/lib/format';
 import { dialCode } from '@/lib/countries';
-import { isPermanentAdmin } from '@/lib/auth/admin-access';
+import { isPermanentAdmin, roleAdminLevel } from '@/lib/auth/admin-access';
 import { saveProfileDetails, type SettingsResult } from '@/app/dashboard/settings/actions';
 import ProfileChangeRequest, { type LatestChangeRequest } from '@/components/profile/ProfileChangeRequest';
 import AvatarUpload from './AvatarUpload';
+import { KYC_STATUS_META, kycHome } from '@/lib/kyc';
 
 export interface ProfileDetails { designation: string | null; phone_number: string | null; avatar_url: string | null }
 export interface Regional { escrowCurrency: string; cardCurrency: string; mpesaEnabled: boolean }
@@ -35,6 +36,9 @@ export default function ProfilePanel({ profile, details, memberSince, regional, 
         <Row label="Full name" value={profile.full_name} />
         <Row label="Legal / company name" value={profile.company_name} />
         <Row label="Member since" value={memberSince ? new Date(memberSince).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }) : '—'} />
+        {profile.kyc_status && !roleAdminLevel(profile.role) && (
+          <Row label="Verification (KYC)" value={<span>{KYC_STATUS_META[profile.kyc_status].label} · <Link href={kycHome(profile.role)} className="underline underline-offset-4">{profile.kyc_status === 'approved' ? 'details' : 'complete verification'}</Link></span>} />
+        )}
         <div className="sm:col-span-2">
           {!isPermanentAdmin(profile)
             ? <div className="pt-4"><ProfileChangeRequest profile={profile} latest={changeRequest} /></div>

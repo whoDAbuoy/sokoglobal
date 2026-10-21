@@ -6,10 +6,11 @@ import KycWorkspace, { type KycState } from './KycWorkspace';
 export const metadata = { title: 'Verification · SokoGlobal' };
 
 /** Supplier KYC: business details, documents (private bucket), payout account. */
-export default async function VerificationPage() {
+export default async function VerificationPage({ searchParams }: { searchParams: Promise<{ next?: string }> }) {
   const { supabase, user, profile } = await getSessionProfile();
   if (!user || !profile) redirect('/login?redirectTo=/supplier/verification');
   if (profile.role !== 'supplier') redirect('/dashboard');
+  const { next } = await searchParams;
 
   const [kyc, docs, account] = await Promise.all([
     supabase.from('supplier_kyc')
@@ -36,6 +37,11 @@ export default async function VerificationPage() {
         <p className="mt-1 text-sm text-slate-500">
           Verified suppliers get the “KYC verified” badge and automated payouts when buyers confirm delivery.
         </p>
+        {next?.startsWith('/supplier/products') && profile.kyc_status !== 'approved' && (
+          <p role="status" className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            Finish business verification to create listings. You can keep editing existing drafts while we review it.
+          </p>
+        )}
         <div className="mt-6">
           <KycWorkspace userId={user.id} defaultCountry={profile.country_code} initial={initial} />
         </div>

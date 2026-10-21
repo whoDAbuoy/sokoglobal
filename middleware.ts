@@ -5,6 +5,7 @@ import { clientIp, limitFor } from '@/lib/security/rate-limit-core';
 import { rateLimit, rateLimitHeaders } from '@/lib/security/rate-limit';
 import { maintenanceDecision } from '@/lib/platform';
 import { twoFactorGate } from '@/lib/security/two-factor-gate';
+import { kycGate, parseKycStatus, type KycRequirements } from '@/lib/kyc';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 /**
@@ -14,11 +15,16 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 async function loadSecurityState(supabase: SupabaseClient, userId: string) {
   const { data, error } = await supabase.rpc('my_security_state');
   if (!error && data) {
-    const s = data as { is_banned?: boolean; two_factor_enabled?: boolean; two_factor_ok?: boolean };
-    return { is_banned: !!s.is_banned, two_factor_enabled: !!s.two_factor_enabled, two_factor_ok: s.two_factor_ok !== false };
+    const s = data as { is_banned?: boolean; two_factor_enabled?: boolean; two_factor_ok?: boolean; kyc_status?: unknown; kyc_required?: Partial<KycRequirements> };
+    return {
+      is_banned: !!s.is_banned, two_factor_enabled: !!s.two_factor_enabled, two_factor_ok: s.two_factor_ok !== false,
+      // Migration 017+: KYC state for the listing / order gate (null before it → no gate).
+      kyc_status: parseKycStatus(s.kyc_status),
+      kyc_required: { listings: s.kyc_required?.listings !== false, orders: s.kyc_required?.orders !== false },
+    };
   }
   const { data: flags } = await supabase.from('profiles').select('is_banned').eq('id', userId).maybeSingle<{ is_banned: boolean }>();
-  return { is_banned: !!flags?.is_banned, two_factor_enabled: false, two_factor_ok: true };
+  return { is_banned: !!flags?.is_banned, two_factor_enabled: false, two_factor_ok: true, kyc_status: null, kyc_required: { listings: false, orders: false } };
 }
 
 // Maintenance flag (platform_settings, migration 014), cached per instance so pages don't each pay a query.
@@ -152,6 +158,21 @@ export async function middleware(request: NextRequest) {
       url.pathname = '/auth/2fa';
       url.search = '';
       url.searchParams.set('redirectTo', `${path}${request.nextUrl.search}`);
+      const redirect = NextResponse.redirect(url);
+      response.cookies.getAll().forEach((c) => redirect.cookies.set(c));
+      return redirect;
+    }
+    // KYC (migration 017): new listings and new escrow orders need an approved verification.
+    const kyc = kycGate({
+      path, method: request.method, isServerAction: request.headers.has('next-action'),
+      role: path.startsWith('/supplier') ? 'supplier' : null, status: security.kyc_status, required: security.kyc_required,
+    });
+    if (kyc.kind === 'forbid') return NextResponse.json({ error: kyc.error, kyc: true }, { status: 403 });
+    if (kyc.kind === 'redirect') {
+      const url = request.nextUrl.clone();
+      const [pathname, query] = kyc.to.split('?');
+      url.pathname = pathname;
+      url.search = query ? `?${query}` : '';
       const redirect = NextResponse.redirect(url);
       response.cookies.getAll().forEach((c) => redirect.cookies.set(c));
       return redirect;

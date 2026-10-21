@@ -5,6 +5,8 @@ import { getSessionProfile } from '@/lib/supabase/server';
 import type { CategoryRow } from '@/lib/catalog';
 import DashboardHeader from '@/components/dashboard/DashboardHeader';
 import NewListingForm from './NewListingForm';
+import { getSystemConfigs } from '@/lib/system-config-server';
+import { minimumCents } from '@/lib/trial-batch';
 import LegacyListingForm from './LegacyListingForm';
 
 export const metadata = { title: 'New listing · SokoGlobal' };
@@ -32,7 +34,7 @@ export default async function NewProductPage() {
           </div>
           <Link href="/supplier/products/import" className="btn-secondary px-3 py-2 text-sm"><FileSpreadsheet className="h-4 w-4" aria-hidden /> Bulk import (CSV / Excel)</Link>
         </div>
-        <NewListingForm categories={categories as CategoryRow[]} supplierId={user.id} defaultOrigin={profile.country_code} />
+        <NewListingForm categories={categories as CategoryRow[]} supplierId={user.id} defaultOrigin={profile.country_code} minTrialCents={minimumCents((await getSystemConfigs(supabase)).trial)} />
       </main>
     </>
   );
