@@ -232,12 +232,21 @@ export function categoryOptions(rows: readonly { id: string; parent_id: string |
 
 // ── Deletion & sharing (migration 022) ─────────────────────────────────────
 
-/** Mirrors the delete policies: the buyer while undecided, a super admin always — never once a quote became an order. */
-export function canDeleteRfq(r: { status: RfqStatus; hasOrder: boolean }, who: { isOwner: boolean; isSuperAdmin: boolean }): boolean {
-  if (r.hasOrder) return false;
-  if (who.isSuperAdmin) return true;
-  return who.isOwner && (r.status === 'open' || r.status === 'quoted');
+/** Who sees a Delete button on a request: its buyer and super admins (migrations 022, 023). */
+export const showsRfqDelete = (who: { isOwner: boolean; isSuperAdmin: boolean }) => who.isOwner || who.isSuperAdmin;
+
+/**
+ * Why a request can't be deleted right now (null = it can). Mirrors the delete policies: the buyer
+ * while no quote is accepted, a super admin always — and nobody once a quote became an escrow order.
+ */
+export function rfqDeleteBlock(r: { status: RfqStatus; hasOrder: boolean }, who: { isOwner: boolean; isSuperAdmin: boolean }): string | null {
+  if (!showsRfqDelete(who)) return 'Only the buyer who posted this request can delete it.';
+  if (r.hasOrder) return 'This request became an escrow order, so it is kept with the order. Cancel or refund the order instead.';
+  if (!who.isSuperAdmin && r.status === 'accepted') return 'A quote on this request was accepted, so it can no longer be deleted.';
+  return null;
 }
+
+export const canDeleteRfq = (r: { status: RfqStatus; hasOrder: boolean }, who: { isOwner: boolean; isSuperAdmin: boolean }) => rfqDeleteBlock(r, who) === null;
 
 /** Link that opens a request directly (signed-in users; RLS shows live requests to everyone). */
 export function rfqShareUrl(origin: string, rfqId: string): string {

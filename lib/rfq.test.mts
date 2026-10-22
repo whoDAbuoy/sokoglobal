@@ -2,7 +2,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  canAcceptQuote, canDeleteRfq, categoryOptions, categoryWithin, rfqShareUrl, effectiveRfqStatus, parseAmount, parseTiers, quoteOrderLine, rfqTransition, unitPriceForQuantity,
+  canAcceptQuote, canDeleteRfq, categoryOptions, categoryWithin, rfqDeleteBlock, rfqShareUrl, showsRfqDelete, effectiveRfqStatus, parseAmount, parseTiers, quoteOrderLine, rfqTransition, unitPriceForQuantity,
   validateQuoteDraft, validateRfqDraft, validateTiers, type RfqStatus,
 } from './rfq.ts';
 
@@ -124,7 +124,12 @@ test('deletion rules mirror the 022 policies; share links point at /rfqs/<id>', 
   const other = { isOwner: false, isSuperAdmin: false };
   assert.equal(canDeleteRfq({ status: 'open', hasOrder: false }, owner), true);
   assert.equal(canDeleteRfq({ status: 'quoted', hasOrder: false }, owner), true);
-  for (const s of ['accepted', 'rejected', 'expired'] as RfqStatus[]) assert.equal(canDeleteRfq({ status: s, hasOrder: false }, owner), false, s);
+  // 023: closed and expired requests can be deleted by their buyer too; accepted ones cannot.
+  for (const s of ['rejected', 'expired'] as RfqStatus[]) assert.equal(canDeleteRfq({ status: s, hasOrder: false }, owner), true, s);
+  assert.equal(canDeleteRfq({ status: 'accepted', hasOrder: false }, owner), false);
+  assert.match(rfqDeleteBlock({ status: 'accepted', hasOrder: true }, owner)!, /escrow order/);
+  assert.equal(showsRfqDelete(owner), true);
+  assert.equal(showsRfqDelete(other), false);
   assert.equal(canDeleteRfq({ status: 'rejected', hasOrder: false }, admin), true);
   assert.equal(canDeleteRfq({ status: 'accepted', hasOrder: true }, admin), false);
   assert.equal(canDeleteRfq({ status: 'open', hasOrder: false }, other), false);

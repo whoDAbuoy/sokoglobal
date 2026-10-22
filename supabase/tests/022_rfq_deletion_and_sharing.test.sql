@@ -77,18 +77,18 @@ select pg_temp.ok(pg_temp.deleted(:'r_open') = 0, 'another buyer cannot delete i
 select pg_temp.as_user('a1111111-1111-4111-8111-111111111111');
 select pg_temp.ok(pg_temp.deleted(:'r_quoted') = 0, 'a supplier cannot delete it');
 select pg_temp.as_user('a2222222-2222-4222-8222-222222222222');
-select pg_temp.ok(pg_temp.deleted(:'r_closed') = 0, 'buyer cannot delete a closed request');
 select pg_temp.ok(pg_temp.deleted(:'r_accepted') = 0, 'buyer cannot delete an accepted request');
+select pg_temp.ok(pg_temp.deleted(:'r_closed') = 1, 'buyer deletes own closed request (023)');
 select pg_temp.ok(pg_temp.deleted(:'r_open') = 1, 'buyer deletes own open request');
-select pg_temp.ok(pg_temp.deleted(:'r_quoted') = 1, 'buyer deletes own quoted request');
 reset role;
-select pg_temp.ok(not exists (select 1 from public.rfq_quotes where id = :'q_quoted'), 'its pending quotes are removed with it');
 
 set role authenticated;
 select pg_temp.as_user('a5555555-5555-4555-8555-555555555555');
-select pg_temp.ok(pg_temp.deleted(:'r_closed') = 1, 'super admin deletes a closed request');
+select pg_temp.ok(pg_temp.deleted(:'r_quoted') = 1, 'super admin deletes someone else''s quoted request');
 select pg_temp.fails(format($q$select pg_temp.deleted(%L)$q$, :'r_accepted'), 'became order');
 reset role;
-select pg_temp.ok(exists (select 1 from public.admin_audit_logs where action = 'rfq.delete' and target_id = :'r_closed'), 'admin delete is audited');
+select pg_temp.ok(not exists (select 1 from public.rfq_quotes where id = :'q_quoted'), 'its pending quotes are removed with it');
+select pg_temp.ok(exists (select 1 from public.admin_audit_logs where action = 'rfq.delete' and target_id = :'r_quoted'), 'admin delete is audited');
+select pg_temp.ok(not exists (select 1 from public.admin_audit_logs where action = 'rfq.delete' and target_id in (:'r_open', :'r_closed')), 'buyer deletes are not admin-audited');
 select pg_temp.ok(exists (select 1 from public.orders where id = :'acc_order' and rfq_quote_id = :'q_acc'), 'the escrow order keeps its quote');
 select 'ALL 022 CHECKS PASSED' as result;
