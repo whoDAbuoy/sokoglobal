@@ -22,3 +22,22 @@ test('init script uses the same storage key and only toggles the dark class', ()
   assert.ok(THEME_INIT_SCRIPT.includes("classList.toggle('dark'"));
   assert.ok(!/<\/?script/i.test(THEME_INIT_SCRIPT));   // safe to inline
 });
+
+test('init script: stored choice wins, system follows the OS, blocked storage still applies the OS theme', async () => {
+  const { runInNewContext } = await import('node:vm');
+  const run = (stored: string | null | 'throws', osDark: boolean) => {
+    const classes = new Set<string>(['font']);
+    const root = { classList: { toggle: (c: string, on: boolean) => (on ? classes.add(c) : classes.delete(c)) }, style: { colorScheme: '' } };
+    runInNewContext(THEME_INIT_SCRIPT, {
+      localStorage: { getItem: (k: string) => { if (stored === 'throws') throw new Error('SecurityError'); return k === THEME_KEY ? stored : null; } },
+      window: { matchMedia: (q: string) => ({ matches: q.includes('dark') && osDark }) },
+      document: { documentElement: root },
+    });
+    return { dark: classes.has('dark'), scheme: root.style.colorScheme, kept: classes.has('font') };
+  };
+  assert.deepEqual(run('dark', false), { dark: true, scheme: 'dark', kept: true });
+  assert.deepEqual(run('light', true), { dark: false, scheme: 'light', kept: true });
+  assert.deepEqual(run('system', true), { dark: true, scheme: 'dark', kept: true });
+  assert.deepEqual(run(null, false), { dark: false, scheme: 'light', kept: true });
+  assert.deepEqual(run('throws', true), { dark: true, scheme: 'dark', kept: true });   // used to abort the whole script
+});

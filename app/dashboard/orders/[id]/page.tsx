@@ -10,6 +10,7 @@ import SupportWidget from '@/components/dashboard/SupportWidget';
 import OrderActions from './OrderActions';
 import { exceedsMpesaLimit } from '@/lib/payments/mpesa';
 import MessageSupplierButton from '@/components/chat/MessageSupplierButton';
+import OrderChatPanel from '@/components/chat/OrderChatPanel';
 import AnimatedShipmentMap from '@/components/tracking/AnimatedShipmentMap';
 import { invoiceAvailable } from '@/lib/documents/model';
 import { milestoneEligible, paymentStep, type PaymentStructure } from '@/lib/milestone';
@@ -130,6 +131,11 @@ export default async function OrderPage({ params, searchParams }: {
               destination_label: order.destination_label,
             }}
           />
+        )}
+
+        {/* Order chat opens once the order is paid (same rule as supplier visibility, migration 018 / 024). */}
+        {view.escrow_status !== 'pending_payment' && !(view.escrow_status === 'cancelled' && !order.funded_at) && (
+          <OrderChatPanel orderId={order.id} counterpart="the supplier" />
         )}
 
         <section className="mt-10 border-t border-neutral-200 pt-8">

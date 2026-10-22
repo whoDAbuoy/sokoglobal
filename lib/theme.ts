@@ -15,5 +15,11 @@ export function resolveTheme(pref: ThemePreference, systemPrefersDark: boolean):
 /**
  * Inline script for <head>: sets the class before first paint so there is no
  * light flash for dark-mode users. Keep it tiny and dependency-free.
+ *  - Storage is read in its own try: if it is blocked (privacy mode, embedded
+ *    browsers) the OS preference still applies instead of the whole script failing.
+ *  - It also sets the root `color-scheme`, so the browser canvas, scrollbars and
+ *    form controls are dark from the very first frame, before the stylesheet applies.
  */
-export const THEME_INIT_SCRIPT = `(function(){try{var p=localStorage.getItem('${THEME_KEY}');var d=p==='dark'||((p===null||p==='system')&&window.matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.classList.toggle('dark',d);}catch(e){}})();`;
+export const THEME_INIT_SCRIPT = `(function(){var p=null;try{p=localStorage.getItem('${THEME_KEY}')}catch(e){}`
+  + `try{var d=p==='dark'||(p!=='light'&&!!(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches));`
+  + `var r=document.documentElement;r.classList.toggle('dark',d);r.style.colorScheme=d?'dark':'light';}catch(e){}})();`;

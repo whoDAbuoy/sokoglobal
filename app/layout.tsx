@@ -10,6 +10,7 @@ import CartDrawer from '@/components/cart/CartDrawer';
 import AmbientBackdrop from '@/components/motion/AmbientBackdrop';
 import PlatformBanner from '@/components/platform/PlatformBanner';
 import ThemedToaster from '@/components/platform/ThemedToaster';
+import ThemeSync from '@/components/platform/ThemeSync';
 import { THEME_INIT_SCRIPT } from '@/lib/theme';
 import './globals.css';
 
@@ -26,13 +27,18 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   // carry no nonce). Pass `nonce` to any third-party <Script nonce={nonce} />.
   const [nonce, money] = await Promise.all([headers().then((h) => h.get('x-nonce') ?? undefined), getCurrencyState()]);
   return (
-    // suppressHydrationWarning: the theme script may add class="dark" before React hydrates.
-    <html lang="en" className={inter.variable} suppressHydrationWarning>
+    // suppressHydrationWarning: the theme script adds class="dark" and color-scheme before React hydrates.
+    // <html> gets no className prop on purpose: React then never owns (or resets) its class attribute,
+    // so only the theme script, ThemeSync and Settings change it. The font variable lives on <body>.
+    <html lang="en" suppressHydrationWarning>
       <head>
+        {/* Lets the browser paint its canvas and controls in the right scheme before any CSS arrives. */}
+        <meta name="color-scheme" content="light dark" />
         {/* Applies the saved light/dark theme before first paint (no flash). Nonce-allowed under the CSP. */}
         <script nonce={nonce} dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
       </head>
-      <body className="min-h-screen font-sans">
+      <body className={`${inter.variable} min-h-screen font-sans`}>
+        <ThemeSync />
         <AmbientBackdrop />
         <PlatformBanner />
         <CurrencyProvider initialCurrency={money.currency} rates={money.rates} ratesUpdatedAt={money.ratesUpdatedAt}>

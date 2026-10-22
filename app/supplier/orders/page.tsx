@@ -6,6 +6,7 @@ import { groupPaidOrders, parseGroupedCatalog, type ListingGroup, type RawOrder 
 import DashboardHeader from '@/components/dashboard/DashboardHeader';
 import OrderCatalog from '@/components/supplier/OrderCatalog';
 import ShipOrderDialog, { type ExistingShipment } from '@/components/supplier/ShipOrderDialog';
+import OrderChatButton from '@/components/chat/OrderChatButton';
 import { SHIPMENT_STAGE_LABEL, trackingLink } from '@/lib/shipping';
 
 type ShipmentRow = ExistingShipment & {
@@ -95,7 +96,8 @@ export default async function SupplierOrdersPage() {
                         {o?.escrow_status === 'deposit_paid' ? ' · waiting for the buyer’s 70% balance' : ''}
                       </p>
                     </div>
-                    <div className="sm:text-right">
+                    <div className="flex flex-wrap gap-2 sm:justify-end">
+                      <OrderChatButton orderId={r.order_id} label="Message buyer" title={`Order #${r.order_id.slice(0, 8).toUpperCase()} · ${title}`} />
                       <ShipOrderDialog orderId={r.order_id} existing={r} orderLabel={`${title} (#${r.order_id.slice(0, 8).toUpperCase()})`} />
                     </div>
                   </li>

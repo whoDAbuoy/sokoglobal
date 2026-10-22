@@ -34,6 +34,8 @@ create table storage.buckets (id text primary key, name text, public boolean def
 create table storage.objects (id uuid primary key default gen_random_uuid(), bucket_id text references storage.buckets (id), name text, owner uuid,
   metadata jsonb, created_at timestamptz default now(), updated_at timestamptz default now(), last_accessed_at timestamptz);
 alter table storage.objects enable row level security;
+-- Supabase grants the API roles table access to storage; RLS policies decide per object.
+grant all on storage.objects, storage.buckets to anon, authenticated, service_role;
 create function storage.foldername(name text) returns text[] language sql immutable as $$
   select (string_to_array(name, '/'))[1:array_length(string_to_array(name, '/'), 1) - 1] $$;
 create function storage.extension(name text) returns text language sql immutable as $$ select reverse(split_part(reverse(name), '.', 1)) $$;

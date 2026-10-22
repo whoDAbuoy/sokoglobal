@@ -137,6 +137,24 @@ Run `021_enterprise_features.sql` after 020, **before** deploying the app code t
   `queue_restock_reminders()` runs daily (pg_cron when available, plus `/api/cron/restock-reminders`) and emails buyers 30 and 60
   days after an order completes, unless they already reordered. Expired RFQs are closed by pg_cron and the expire-orders cron.
 
+## Order chat with media (migration 024)
+
+Run `024_order_chat_and_media.sql` after 023 (it also creates the private `chat-attachments` bucket).
+
+- Extends the buyer ↔ supplier chat from migration 009 (same tables, Realtime, unread counts and inbox): `chat_threads.order_id`
+  gives each **paid** order its own thread between its buyer and the product's supplier (`start_order_chat`). Unpaid orders get
+  none — suppliers can't see them (018).
+- `chat_messages.message_type` (`text | image | video | document | voice_note`) + `metadata`. Attachments upload from the browser
+  to `chat-attachments/<order_id>/<sender_id>/<file>` (private, 50 MB, PNG/JPG/WebP, MP4/WebM, PDF/XLSX/DOCX, WebM/Ogg/MP4 audio);
+  a trigger checks the path, that the file exists, and takes size and type from Storage. The browser also checks file headers.
+- UI: `components/chat/{ChatInput,ChatMessageItem,VoiceRecorder,VoicePlayer,EmojiPicker}.tsx` — emoji picker, attachments (also by
+  drag and drop), voice notes with pause / cancel and a waveform, lightbox for photos and videos, document cards with download.
+  Buyers chat inline on the order page; suppliers use **Message buyer** on `/supplier/orders`; all threads appear in Messages.
+- `Permissions-Policy` now allows `microphone=(self)` for voice notes.
+
+**Theme:** `THEME_INIT_SCRIPT` sets the `dark` class and `color-scheme` before first paint (also when storage is blocked);
+`<html>` has no React-owned class, and `components/platform/ThemeSync.tsx` keeps the choice in sync (OS changes, other tabs).
+
 ## RFQ deletion, open visibility & share links (migration 022)
 
 Run `022_rfq_deletion_and_sharing.sql` after 021.
