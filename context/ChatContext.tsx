@@ -13,6 +13,8 @@ interface ChatState {
   refreshUnread: () => Promise<void>;
   /** Get-or-create the caller's thread about a product, then open it in the drawer. */
   openForProduct: (productId: string, productTitle: string) => Promise<void>;
+  /** Get-or-create the chat for a paid order (buyer or supplier, migration 024), then open it. */
+  openForOrder: (orderId: string, title: string) => Promise<void>;
   openThread: (threadId: string, title?: string, counterpartName?: string) => void;
   close: () => void;
   activeThreadId: string | null;
@@ -107,14 +109,32 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     }
   }, [supabase, openThread]);
 
+  const openForOrder = useCallback(async (orderId: string, orderTitle: string) => {
+    setStarting(true);
+    setError(null);
+    try {
+      const { data, error: rpcError } = await supabase.rpc('start_order_chat', { p_order_id: orderId });
+      if (rpcError) throw rpcError;
+      const thread = (Array.isArray(data) ? data[0] : data) as { id?: string } | null;
+      if (!thread?.id) throw new Error('Could not open the order chat');
+      openThread(thread.id, orderTitle);
+    } catch (err) {
+      const message = errorMessage(err, 'Could not open the order chat');
+      setError(message);
+      toast.error(message);
+    } finally {
+      setStarting(false);
+    }
+  }, [supabase, openThread]);
+
   const close = useCallback(() => setOpen(false), []);
 
   const value = useMemo<ChatState>(() => ({
     unreadCount: enabled ? unreadCount : 0,
-    refreshUnread, openForProduct, openThread, close,
+    refreshUnread, openForProduct, openForOrder, openThread, close,
     activeThreadId: open ? activeThreadId : null,
     starting, error,
-  }), [enabled, unreadCount, refreshUnread, openForProduct, openThread, close, open, activeThreadId, starting, error]);
+  }), [enabled, unreadCount, refreshUnread, openForProduct, openForOrder, openThread, close, open, activeThreadId, starting, error]);
 
   return (
     <ChatContext.Provider value={value}>

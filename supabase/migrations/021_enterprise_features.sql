@@ -527,6 +527,8 @@ begin
 end $$;
 
 -- Supplier lane: open requests matching the caller's live listings, with what the supplier may know about the buyer.
+-- Return type changes in 022 (+ can_quote): drop first so this file can be re-run after 022 (else 42P13).
+drop function if exists public.supplier_rfq_feed();
 create or replace function public.supplier_rfq_feed()
 returns table (
   id uuid, title text, description text, quantity integer, unit_of_measure text, target_price_kes numeric,

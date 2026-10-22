@@ -548,6 +548,8 @@ end $$;
 
 -- Claim a batch of refunds. SKIP LOCKED + 'processing' state = no double refunds
 -- even with overlapping cron runs.
+-- Return type changes in 011 (+ provider): drop first so this file can be re-run after 011 (else 42P13).
+drop function if exists public.claim_pool_refunds(integer);
 create or replace function public.claim_pool_refunds(p_limit integer default 25)
 returns table (pool_id uuid, buyer_id uuid, transaction_id text, amount_cents integer, attempt integer)
 language plpgsql security definer set search_path = public as $$

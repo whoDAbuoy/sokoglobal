@@ -3,6 +3,7 @@ import { catalogTotals, type ListingGroup } from '@/lib/supplier-orders';
 import { countryName, flag, formatUSD } from '@/lib/format';
 import ProductVisual from '@/components/dashboard/ProductVisual';
 import ShipOrderDialog, { type ExistingShipment } from './ShipOrderDialog';
+import OrderChatButton from '@/components/chat/OrderChatButton';
 
 const DAY = 86_400_000;
 const date = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '—');
@@ -97,7 +98,9 @@ export default function OrderCatalog({ groups, shipments = {}, now = Date.now() 
                           <p className="tabular-nums text-neutral-900 sm:text-right">
                             {o.quantity.toLocaleString('en-US')} {g.unit_of_measure ?? 'units'}<span className="block text-xs text-neutral-600">{formatUSD(o.goods_cents, true)}</span>
                           </p>
-                          <div className="sm:text-right">
+                          <div className="flex flex-wrap gap-2 sm:justify-end">
+                            <OrderChatButton orderId={o.order_id} label="Message buyer"
+                              title={`Order #${o.order_id.slice(0, 8).toUpperCase()} · ${g.title}`} />
                             <ShipOrderDialog orderId={o.order_id} existing={shipments[o.order_id] ?? null}
                               orderLabel={`${g.title} · ${o.quantity.toLocaleString('en-US')} ${g.unit_of_measure ?? 'units'} for ${o.buyer_company ?? 'buyer'} (#${o.order_id.slice(0, 8).toUpperCase()})`}
                               milestoneBalanceDue={o.escrow_status === 'deposit_paid'} />

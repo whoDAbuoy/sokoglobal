@@ -185,6 +185,8 @@ begin
 end $$;
 
 -- ── 5. Directory (joins auth.users for e-mail) ──────────────────────────────
+-- Return type changes in 014: drop first so this file can be re-run after 014 (else 42P13).
+drop function if exists public.admin_list_users(text, text, text, integer, integer);
 create or replace function public.admin_list_users(
   p_query text default null, p_role text default null, p_status text default null,
   p_limit integer default 20, p_offset integer default 0)

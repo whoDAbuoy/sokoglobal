@@ -5,7 +5,23 @@
 
 export const MAX_MESSAGE_LENGTH = 4000;
 
-/** A row of public.chat_messages as the client selects it. */
+/** Columns the chat UI selects (message_type / metadata: migration 024). */
+export const CHAT_MESSAGE_COLUMNS = 'id, thread_id, sender_id, content, created_at, read_at, message_type, metadata';
+
+/** message_type (migration 024). Attachments are only allowed in order chats. */
+export type ChatMessageType = 'text' | 'image' | 'video' | 'document' | 'voice_note';
+
+/** Attachment details, rebuilt server-side from the stored object (migration 024). */
+export interface ChatMessageMetadata {
+  size?: number;
+  mime_type?: string;
+  file_name?: string;
+  duration_seconds?: number;
+  /** Voice notes: up to 64 peaks, 0–100. */
+  waveform?: number[];
+}
+
+/** A row of public.chat_messages as the client selects it. For attachments, content is the storage path. */
 export interface ChatMessage {
   id: string;
   thread_id: string;
@@ -13,6 +29,9 @@ export interface ChatMessage {
   content: string;
   created_at: string;
   read_at: string | null;
+  /** Absent on rows from before migration 024 (= text). */
+  message_type?: ChatMessageType;
+  metadata?: ChatMessageMetadata | null;
 }
 
 /** A row returned by the my_chat_threads() RPC. */
@@ -28,6 +47,8 @@ export interface ChatThreadSummary {
   last_sender_id: string | null;
   unread_count: number;
   updated_at: string;
+  /** Set for order chats (migration 024). */
+  order_id?: string | null;
 }
 
 export type MessageValidation = { ok: true; content: string } | { ok: false; error: string };
