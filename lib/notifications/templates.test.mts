@@ -55,3 +55,12 @@ test('milestone, dispatch, RFQ and restock notifications', () => {
     assert.notEqual(renderNotification(key, ORDER, 'https://x.test').subject, 'Update from SokoGlobal', key);
   }
 });
+
+test('admin chat messages link to the right inbox and quote the preview', () => {
+  const buyer = renderNotification('support.admin_message', { kind: 'order', order_id: ORDER.order_id, preview: 'Your goods cleared customs', role: 'importer' }, 'https://x.test');
+  assert.equal(buyer.subject, 'New message from SokoGlobal');
+  assert.match(buyer.text, /about order 3F2A9C1E/);
+  assert.match(buyer.text, /“Your goods cleared customs”/);
+  assert.match(buyer.text, /\/dashboard\/messages/);
+  assert.match(renderNotification('support.admin_message', { kind: 'direct', role: 'supplier' }, 'https://x.test').text, /\/supplier\/messages/);
+});

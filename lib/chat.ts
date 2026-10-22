@@ -6,7 +6,7 @@
 export const MAX_MESSAGE_LENGTH = 4000;
 
 /** Columns the chat UI selects (message_type / metadata: migration 024). */
-export const CHAT_MESSAGE_COLUMNS = 'id, thread_id, sender_id, content, created_at, read_at, message_type, metadata';
+export const CHAT_MESSAGE_COLUMNS = 'id, thread_id, sender_id, content, created_at, read_at, message_type, metadata, from_admin';
 
 /** message_type (migration 024). Attachments are only allowed in order chats. */
 export type ChatMessageType = 'text' | 'image' | 'video' | 'document' | 'voice_note';
@@ -32,14 +32,20 @@ export interface ChatMessage {
   /** Absent on rows from before migration 024 (= text). */
   message_type?: ChatMessageType;
   metadata?: ChatMessageMetadata | null;
+  /** Sent by a SokoGlobal super admin (set by the database, migration 025). */
+  from_admin?: boolean;
 }
+
+/** product: about a listing (009) · order: about one order (024) · direct: SokoGlobal support ↔ one user (025). */
+export type ChatThreadKind = 'product' | 'order' | 'direct';
 
 /** A row returned by the my_chat_threads() RPC. */
 export interface ChatThreadSummary {
   thread_id: string;
   product_id: string | null;
   product_title: string;
-  my_role: 'buyer' | 'supplier';
+  /** 'user' / 'admin' in direct support threads (migration 025). */
+  my_role: 'buyer' | 'supplier' | 'user' | 'admin';
   counterpart_id: string;
   counterpart_name: string;
   last_message: string | null;
@@ -49,6 +55,10 @@ export interface ChatThreadSummary {
   updated_at: string;
   /** Set for order chats (migration 024). */
   order_id?: string | null;
+  /** Migration 025. */
+  kind?: ChatThreadKind;
+  /** The latest message came from a SokoGlobal admin. */
+  last_from_admin?: boolean;
 }
 
 export type MessageValidation = { ok: true; content: string } | { ok: false; error: string };

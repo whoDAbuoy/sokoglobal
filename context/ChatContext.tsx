@@ -8,8 +8,10 @@ import { pickChannelName, type ChatThreadSummary } from '@/lib/chat';
 import ChatDrawer from '@/components/chat/ChatDrawer';
 
 interface ChatState {
-  /** Total unread messages for the signed-in importer/supplier (0 otherwise). */
+  /** Total unread messages for the signed-in importer / supplier (super admins: unread support replies). */
   unreadCount: number;
+  /** Of those, how many came from SokoGlobal admins ("System / Admin message", migration 025). */
+  adminUnreadCount: number;
   refreshUnread: () => Promise<void>;
   /** Get-or-create the caller's thread about a product, then open it in the drawer. */
   openForProduct: (productId: string, productTitle: string) => Promise<void>;
@@ -34,9 +36,10 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   const { user, profile } = useAuth();
   const userId = user?.id ?? null;
   const role = profile?.role ?? null;
-  const enabled = !!userId && (role === 'importer' || role === 'supplier');
+  const enabled = !!userId && (role === 'importer' || role === 'supplier' || role === 'super_admin');
 
   const [unreadCount, setUnreadCount] = useState(0);
+  const [adminUnreadCount, setAdminUnreadCount] = useState(0);
   const [open, setOpen] = useState(false);
   const [activeThreadId, setActiveThreadId] = useState<string | null>(null);
   const [title, setTitle] = useState<string | null>(null);
@@ -49,7 +52,15 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   activeRef.current = activeThreadId;
 
   const refreshUnread = useCallback(async () => {
-    if (!enabledRef.current) { setUnreadCount(0); return; }
+    if (!enabledRef.current) { setUnreadCount(0); setAdminUnreadCount(0); return; }
+    const summary = await supabase.rpc('chat_unread_summary');
+    if (!summary.error && enabledRef.current) {
+      const s = (summary.data ?? {}) as { total?: number; from_admin?: number };
+      setUnreadCount(Number(s.total ?? 0));
+      setAdminUnreadCount(Number(s.from_admin ?? 0));
+      return;
+    }
+    // Before migration 025: total only.
     const { data, error: rpcError } = await supabase.rpc('chat_unread_count');
     if (!rpcError && enabledRef.current) setUnreadCount(typeof data === 'number' ? data : 0);
   }, [supabase]);
@@ -131,10 +142,11 @@ export function ChatProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo<ChatState>(() => ({
     unreadCount: enabled ? unreadCount : 0,
+    adminUnreadCount: enabled ? adminUnreadCount : 0,
     refreshUnread, openForProduct, openForOrder, openThread, close,
     activeThreadId: open ? activeThreadId : null,
     starting, error,
-  }), [enabled, unreadCount, refreshUnread, openForProduct, openForOrder, openThread, close, open, activeThreadId, starting, error]);
+  }), [enabled, unreadCount, adminUnreadCount, refreshUnread, openForProduct, openForOrder, openThread, close, open, activeThreadId, starting, error]);
 
   return (
     <ChatContext.Provider value={value}>
@@ -145,7 +157,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
           threadId={activeThreadId}
           title={title}
           counterpartName={counterpartName}
-          inboxPath={role === 'supplier' ? '/supplier/messages' : '/dashboard/messages'}
+          inboxPath={role === 'super_admin' ? '/admin/messages' : role === 'supplier' ? '/supplier/messages' : '/dashboard/messages'}
           onClose={close}
           onRead={refreshUnread}
         />

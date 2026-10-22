@@ -185,7 +185,12 @@ export default function MessagingHub({ basePath, role, initialThreadId = null }:
                   <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-gradient-to-br from-blue-500/15 to-cyan-500/15 text-xs font-semibold text-neutral-800 ring-1 ring-neutral-200">{initials(t.counterpart_name)}</span>
                   <span className="min-w-0 flex-1">
                     <span className="flex items-center justify-between gap-2">
-                      <span className={clsx('truncate text-sm', unread ? 'font-semibold text-neutral-900' : 'font-medium text-neutral-900')}>{t.counterpart_name}</span>
+                      <span className="flex min-w-0 items-center gap-1.5">
+                        <span className={clsx('truncate text-sm', unread ? 'font-semibold text-neutral-900' : 'font-medium text-neutral-900')}>{t.counterpart_name}</span>
+                        {(t.kind === 'direct' || t.last_from_admin) && (
+                          <span className="shrink-0 rounded-full border px-1.5 text-[10px] font-semibold uppercase tone-active" title="System / Admin message">Admin</span>
+                        )}
+                      </span>
                       <span className="shrink-0 text-[11px] text-neutral-500">{formatChatTime(t.last_message_at ?? t.updated_at)}</span>
                     </span>
                     <span className="mt-0.5 block truncate text-xs font-semibold text-neutral-800">{t.product_title}</span>

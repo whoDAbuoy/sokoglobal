@@ -1,8 +1,9 @@
 'use client';
 
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
+import { toast } from 'sonner';
 import clsx from 'clsx';
-import { AlertCircle, Download, FileSpreadsheet, FileText, Loader2, Maximize2, X } from 'lucide-react';
+import { AlertCircle, Download, FileSpreadsheet, FileText, Loader2, Maximize2, ShieldCheck, Trash2, X } from 'lucide-react';
 import { formatChatTime, type ChatMessage } from '@/lib/chat';
 import { extensionOf, formatBytes } from '@/lib/chat-media';
 import { useSignedUrl } from './useSignedUrl';
@@ -92,12 +93,31 @@ function MediaBody({ m, mine }: { m: ChatMessage; mine: boolean }) {
   return <VoicePlayer src={url} durationSeconds={meta.duration_seconds} waveform={meta.waveform} mine={mine} />;
 }
 
-/** One chat bubble: text, or an image / video / document / voice note from the private chat-attachments bucket. */
-export default function ChatMessageItem({ message: m, mine, showRead }: { message: ChatMessage; mine: boolean; showRead: boolean }) {
+/**
+ * One chat bubble: text, or an image / video / document / voice note from the private chat-attachments bucket.
+ * Messages from SokoGlobal admins carry a badge; super admins get a delete control (`onDelete`).
+ */
+export default function ChatMessageItem({ message: m, mine, showRead, onDelete }: {
+  message: ChatMessage; mine: boolean; showRead: boolean; onDelete?: (id: string) => Promise<void>;
+}) {
   const media = (m.message_type ?? 'text') !== 'text';
   const bare = m.message_type === 'image' || m.message_type === 'video';
+  const [deleting, setDeleting] = useState(false);
+  async function remove() {
+    if (!onDelete || !window.confirm('Delete this message for everyone? This cannot be undone.')) return;
+    setDeleting(true);
+    try { await onDelete(m.id); toast.success('Message deleted'); } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not delete the message');
+      setDeleting(false);
+    }
+  }
   return (
-    <li className={clsx('flex flex-col', mine ? 'items-end' : 'items-start')}>
+    <li className={clsx('group/msg flex flex-col', mine ? 'items-end' : 'items-start')}>
+      {m.from_admin && (
+        <span className="mb-1 inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide tone-active">
+          <ShieldCheck className="h-3 w-3" aria-hidden /> System / Admin message
+        </span>
+      )}
       <div className={clsx('max-w-[85%] break-words text-sm',
         bare ? '' : clsx('rounded-2xl', media ? 'p-2' : 'whitespace-pre-wrap px-3.5 py-2',
           mine ? 'rounded-br-md bg-neutral-900 text-white' : 'rounded-bl-md bg-neutral-100 text-neutral-900'))}>
@@ -106,6 +126,12 @@ export default function ChatMessageItem({ message: m, mine, showRead }: { messag
       <span className="mt-1 px-1 text-[11px] text-neutral-400">
         <time dateTime={m.created_at} title={new Date(m.created_at).toLocaleString('en-GB')}>{formatChatTime(m.created_at)}</time>
         {showRead && <> · Read</>}
+        {onDelete && (
+          <button type="button" onClick={() => void remove()} disabled={deleting} aria-label="Delete message"
+            className="ml-2 inline-flex items-center gap-0.5 text-neutral-400 opacity-0 transition-opacity hover:text-red-600 focus-visible:opacity-100 group-hover/msg:opacity-100">
+            {deleting ? <Loader2 className="h-3 w-3 animate-spin" aria-hidden /> : <Trash2 className="h-3 w-3" aria-hidden />} Delete
+          </button>
+        )}
       </span>
     </li>
   );

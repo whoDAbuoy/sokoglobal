@@ -6,6 +6,7 @@ import { AlertCircle, ChevronDown, Loader2, MessageCircle } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { createClient } from '@/lib/supabase/client';
 import { CHAT_MESSAGE_COLUMNS, mergeMessages, pickChannelName, type ChatMessage } from '@/lib/chat';
+import { attachmentScope } from '@/lib/chat-admin';
 import ChatInput from './ChatInput';
 import ChatMessageItem from './ChatMessageItem';
 
@@ -31,11 +32,13 @@ export default function ChatThread({ threadId, className, onRead, collapseAfter,
   composerExtra?: ReactNode;
 }) {
   const supabase = createClient();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const myId = user?.id ?? null;
+  // Super admins can read every thread and remove messages (migration 025).
+  const canModerate = profile?.role === 'super_admin';
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [orderId, setOrderId] = useState<string | null>(null);
+  const [scope, setScope] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -54,7 +57,7 @@ export default function ChatThread({ threadId, className, onRead, collapseAfter,
     if (!myId) return;
     let active = true;
     setMessages([]);
-    setOrderId(null);
+    setScope(null);
     setLoading(true);
     setLoadError(null);
 
@@ -73,16 +76,21 @@ export default function ChatThread({ threadId, className, onRead, collapseAfter,
         if (!active || m.thread_id !== threadId) return;
         setMessages((prev) => (prev.some((p) => p.id === m.id) ? mergeMessages(prev, [m]) : prev));
       })
+      // Under RLS a DELETE event carries only the row id, so it can't be filtered by thread: drop the id if it is shown.
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'chat_messages' }, (payload) => {
+        const id = (payload.old as { id?: string } | null)?.id;
+        if (active && id) setMessages((prev) => prev.filter((p) => p.id !== id));
+      })
       .subscribe();
 
     (async () => {
       const [{ data, error }, { data: thread }] = await Promise.all([
         supabase.from('chat_messages').select(CHAT_MESSAGE_COLUMNS).eq('thread_id', threadId)
           .order('created_at', { ascending: false }).limit(HISTORY_LIMIT),
-        supabase.from('chat_threads').select('order_id').eq('id', threadId).maybeSingle(),
+        supabase.from('chat_threads').select('id, order_id').eq('id', threadId).maybeSingle(),
       ]);
       if (!active) return;
-      setOrderId((thread?.order_id as string | null) ?? null);
+      setScope(thread ? attachmentScope(thread as { id: string; order_id: string | null }) : null);
       if (error) setLoadError(errorMessage(error, 'Could not load messages'));
       // Merge (not replace) so realtime messages that arrived during the fetch are kept.
       else setMessages((prev) => mergeMessages(prev, (data ?? []) as ChatMessage[]));
@@ -103,6 +111,11 @@ export default function ChatThread({ threadId, className, onRead, collapseAfter,
   messages.forEach((m, i) => { if (m.sender_id === myId && m.read_at) lastReadMine = i; });
   const hiddenCount = collapseAfter && !showEarlier ? Math.max(0, messages.length - collapseAfter) : 0;
   const onSent = useCallback((m: ChatMessage) => setMessages((prev) => mergeMessages(prev, [m])), []);
+  const onDelete = useCallback(async (id: string) => {
+    const { data, error } = await supabase.from('chat_messages').delete().eq('id', id).select('id');
+    if (error || !data?.length) throw new Error(error?.message ?? 'Could not delete the message');
+    setMessages((prev) => prev.filter((p) => p.id !== id));
+  }, [supabase]);
 
   return (
     <div className={clsx('flex min-h-0 flex-col', className)}>
@@ -116,7 +129,7 @@ export default function ChatThread({ threadId, className, onRead, collapseAfter,
             <MessageCircle className="h-8 w-8 text-neutral-300" strokeWidth={1.5} />
             <p className="mt-3 font-medium text-neutral-900">No messages yet</p>
             <p className="mt-1 max-w-xs text-sm text-neutral-500">
-              {orderId ? 'Coordinate this order: share photos, documents or a quick voice note.' : 'Ask about minimum order quantities, lead times, materials or anything else.'}
+              Share details, photos, documents or a quick voice note.
             </p>
           </div>
         ) : (
@@ -131,12 +144,13 @@ export default function ChatThread({ threadId, className, onRead, collapseAfter,
               </li>
             )}
             {messages.map((m, i) => (i < hiddenCount ? null
-              : <ChatMessageItem key={m.id} message={m} mine={m.sender_id === myId} showRead={i === lastReadMine} />))}
+              : <ChatMessageItem key={m.id} message={m} mine={m.sender_id === myId} showRead={i === lastReadMine}
+                  onDelete={canModerate ? onDelete : undefined} />))}
           </ul>
         )}
       </div>
 
-      <ChatInput threadId={threadId} orderId={orderId} myId={myId} onSent={onSent} composerExtra={composerExtra} />
+      <ChatInput threadId={threadId} attachmentScope={scope} myId={myId} onSent={onSent} composerExtra={composerExtra} />
     </div>
   );
 }

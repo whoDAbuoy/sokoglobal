@@ -11,6 +11,8 @@ import OrderActions from './OrderActions';
 import { exceedsMpesaLimit } from '@/lib/payments/mpesa';
 import MessageSupplierButton from '@/components/chat/MessageSupplierButton';
 import OrderChatPanel from '@/components/chat/OrderChatPanel';
+import OrderChatButton from '@/components/chat/OrderChatButton';
+import { orderChatOpen } from '@/lib/chat-admin';
 import AnimatedShipmentMap from '@/components/tracking/AnimatedShipmentMap';
 import { invoiceAvailable } from '@/lib/documents/model';
 import { milestoneEligible, paymentStep, type PaymentStructure } from '@/lib/milestone';
@@ -69,6 +71,8 @@ export default async function OrderPage({ params, searchParams }: {
   const dueCents = step.kind === 'pay_full' || step.kind === 'pay_deposit' || step.kind === 'pay_balance' ? step.amountCents : 0;
   const milestone = order.payment_structure === 'milestone_30_70';
   const kycApproved = profile.kyc_status === 'approved' || (!profile.kyc_status && profile.kyc_verified);
+  // Paid orders, and accepted quotes from the moment they are accepted (migration 025).
+  const chatOpen = orderChatOpen({ ...order, escrow_status: view.escrow_status });
   const canChoose = view.escrow_status === 'pending_payment' && !order.checkout_group_id && !order.rfq_quote_id && order.order_type !== 'pool';
 
   return (
@@ -84,7 +88,10 @@ export default async function OrderPage({ params, searchParams }: {
           </p>
           <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
             <h1 className="text-3xl font-semibold text-neutral-900">{view.product_title}</h1>
-            <MessageSupplierButton productId={order.product_id} productTitle={view.product_title} />
+            <div className="flex flex-wrap items-center gap-2">
+              {chatOpen && <OrderChatButton orderId={order.id} title={`Order #${order.id.slice(0, 8).toUpperCase()} · ${view.product_title}`} label="Chat with Supplier" className="btn-primary px-3.5 py-2" />}
+              <MessageSupplierButton productId={order.product_id} productTitle={view.product_title} />
+            </div>
           </div>
         </div>
 
@@ -133,10 +140,7 @@ export default async function OrderPage({ params, searchParams }: {
           />
         )}
 
-        {/* Order chat opens once the order is paid (same rule as supplier visibility, migration 018 / 024). */}
-        {view.escrow_status !== 'pending_payment' && !(view.escrow_status === 'cancelled' && !order.funded_at) && (
-          <OrderChatPanel orderId={order.id} counterpart="the supplier" />
-        )}
+        {chatOpen && <OrderChatPanel orderId={order.id} counterpart="the supplier" />}
 
         <section className="mt-10 border-t border-neutral-200 pt-8">
           <h2 className="eyebrow">Escrow audit trail</h2>

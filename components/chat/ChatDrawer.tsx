@@ -11,7 +11,7 @@ export default function ChatDrawer({ open, threadId, title, counterpartName, inb
   threadId: string | null;
   title: string | null;
   counterpartName: string | null;
-  inboxPath: '/dashboard/messages' | '/supplier/messages';
+  inboxPath: '/dashboard/messages' | '/supplier/messages' | '/admin/messages';
   onClose: () => void;
   onRead?: () => void | Promise<void>;
 }) {

@@ -62,6 +62,12 @@ function copyFor(key: string, p: Payload): Copy {
       const days = typeof p.days === 'number' ? p.days : 30;
       return { subject: `Time to restock ${title}?`, lines: [`It has been ${days} days since your order of ${title} was completed.`, 'You can reorder the same batch in one click from your orders page — prices are confirmed at checkout.'], sms: `SokoGlobal: ${days} days since your ${title} order. Reorder in one click from My Orders.`, cta: { label: 'Reorder', path: '/dashboard/orders#reorder' } };
     }
+    case 'support.admin_message': {
+      const where = p.kind === 'order' ? ` about order ${ref}` : p.kind === 'product' ? ' in one of your product conversations' : '';
+      const preview = str(p.preview);
+      return { subject: 'New message from SokoGlobal', lines: [`The SokoGlobal team sent you a message${where}.`, ...(preview ? [`“${preview}”`] : [])],
+        sms: `SokoGlobal: new message from our team${where}. Open Messages to reply.`, cta: { label: 'Open messages', path: p.role === 'supplier' ? '/supplier/messages' : '/dashboard/messages' } };
+    }
     case 'supplier.order_funded':
       return { subject: `New paid order: ${title}`, lines: [`A buyer paid ${amount} for ${title} (order ${ref}). Funds are in escrow; please prepare it for dispatch.`], sms: `SokoGlobal: new paid order ${ref} for ${title}. Prepare for dispatch.`, cta: { label: 'Open orders', path: '/supplier/orders' } };
     case 'kyc.approved':
