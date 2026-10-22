@@ -2,7 +2,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  canAcceptQuote, categoryOptions, categoryWithin, effectiveRfqStatus, parseAmount, parseTiers, quoteOrderLine, rfqTransition, unitPriceForQuantity,
+  canAcceptQuote, canDeleteRfq, categoryOptions, categoryWithin, rfqShareUrl, effectiveRfqStatus, parseAmount, parseTiers, quoteOrderLine, rfqTransition, unitPriceForQuantity,
   validateQuoteDraft, validateRfqDraft, validateTiers, type RfqStatus,
 } from './rfq.ts';
 
@@ -116,4 +116,17 @@ test('category matching walks up the tree; options read as breadcrumbs', () => {
     { id: 'spices', parent_id: 'agri', name: 'Spices' }, { id: 'agri', parent_id: null, name: 'Agriculture' },
     { id: 'vanilla', parent_id: 'spices', name: 'Vanilla' }, { id: 'apparel', parent_id: null, name: 'Apparel', sort_order: -1 },
   ]).map((o) => o.label), ['Apparel', 'Agriculture', 'Agriculture › Spices', 'Agriculture › Spices › Vanilla']);
+});
+
+test('deletion rules mirror the 022 policies; share links point at /rfqs/<id>', () => {
+  const owner = { isOwner: true, isSuperAdmin: false };
+  const admin = { isOwner: false, isSuperAdmin: true };
+  const other = { isOwner: false, isSuperAdmin: false };
+  assert.equal(canDeleteRfq({ status: 'open', hasOrder: false }, owner), true);
+  assert.equal(canDeleteRfq({ status: 'quoted', hasOrder: false }, owner), true);
+  for (const s of ['accepted', 'rejected', 'expired'] as RfqStatus[]) assert.equal(canDeleteRfq({ status: s, hasOrder: false }, owner), false, s);
+  assert.equal(canDeleteRfq({ status: 'rejected', hasOrder: false }, admin), true);
+  assert.equal(canDeleteRfq({ status: 'accepted', hasOrder: true }, admin), false);
+  assert.equal(canDeleteRfq({ status: 'open', hasOrder: false }, other), false);
+  assert.equal(rfqShareUrl('https://sokoglobal.com/', 'abc-123'), 'https://sokoglobal.com/rfqs/abc-123');
 });

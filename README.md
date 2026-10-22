@@ -137,6 +137,16 @@ Run `021_enterprise_features.sql` after 020, **before** deploying the app code t
   `queue_restock_reminders()` runs daily (pg_cron when available, plus `/api/cron/restock-reminders`) and emails buyers 30 and 60
   days after an order completes, unless they already reordered. Expired RFQs are closed by pg_cron and the expire-orders cron.
 
+## RFQ deletion, open visibility & share links (migration 022)
+
+Run `022_rfq_deletion_and_sharing.sql` after 021.
+
+- **Delete**: buyers can delete their own request while it is open or quoted (pending quotes go with it); super admins can delete any
+  request (audited as `rfq.delete`). A request whose quote became an escrow order can't be deleted — cancel or refund the order.
+- **Visibility**: every signed-in user can read live requests (open or quoted, before the deadline); `/supplier/rfqs` lists them
+  all, matching categories first. Quoting still needs a live listing in the category, and quotes stay private.
+- **Share links**: `/rfqs/<id>` opens a request directly (sign-in required); the Share button uses the Web Share API or copies the link.
+
 ## KYC, trial batch controls & paid-order visibility (migrations 017, 018)
 
 Run `017_kyc_system.sql`, then `018_system_settings.sql`.

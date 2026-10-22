@@ -4,13 +4,15 @@ import clsx from 'clsx';
 import { BadgeCheck, CalendarClock, FileQuestion, MapPin, Package } from 'lucide-react';
 import { getSessionProfile } from '@/lib/supabase/server';
 import { countryName, flag } from '@/lib/format';
-import { RFQ_STATUS_LABEL, categoryOptions, effectiveRfqStatus, parseTiers, type QuoteStatus, type RfqStatus } from '@/lib/rfq';
+import { RFQ_STATUS_LABEL, canDeleteRfq, categoryOptions, effectiveRfqStatus, parseTiers, type QuoteStatus, type RfqStatus } from '@/lib/rfq';
 import { PAYMENT_STRUCTURE_LABEL, type PaymentStructure } from '@/lib/milestone';
 import { UUID_RE } from '@/lib/uploads';
 import DashboardHeader from '@/components/dashboard/DashboardHeader';
 import RfqForm, { type RfqPrefill } from '@/components/rfq/RfqForm';
 import { AcceptQuoteButton, CloseRfqButton, RejectQuoteButton } from '@/components/rfq/QuoteActions';
 import Price from '@/components/currency/Price';
+import DeleteRfqButton from '@/components/rfq/DeleteRfqButton';
+import ShareRFQButton from '@/components/rfq/ShareRFQButton';
 
 export const metadata = { title: 'Requests for quote · SokoGlobal', robots: { index: false, follow: false } };
 export const dynamic = 'force-dynamic';
@@ -57,7 +59,7 @@ export default async function BuyerRfqsPage({ searchParams }: { searchParams: Pr
   if (error) throw new Error(`Could not load your requests: ${error.message}`);
 
   const rfqs = ((rfqData ?? []) as unknown as RfqRow[]).map((r) => ({
-    ...r, category: one(r.category), status: effectiveRfqStatus(r),
+    ...r, category: one(r.category), status: effectiveRfqStatus(r), dbStatus: r.status,
     quotes: (r.quotes ?? []).map((q) => ({ ...q, product: one(q.product), supplier: one(q.supplier), tiers: parseTiers(q.price_tiers) }))
       .sort((a, b) => Number(a.unit_price_kes) - Number(b.unit_price_kes)),
   }));
@@ -102,7 +104,7 @@ export default async function BuyerRfqsPage({ searchParams }: { searchParams: Pr
                         <header className="p-5">
                           <div className="flex flex-wrap items-start justify-between gap-3">
                             <div className="min-w-0">
-                              <h3 className="text-lg font-semibold text-neutral-900">{r.title}</h3>
+                              <h3 className="text-lg font-semibold text-neutral-900"><Link href={`/rfqs/${r.id}`} className="hover:underline">{r.title}</Link></h3>
                               <p className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-sm text-neutral-600">
                                 <span className="inline-flex items-center gap-1"><Package className="h-3.5 w-3.5" aria-hidden />{r.quantity.toLocaleString('en-US')} {unit}</span>
                                 <span className="inline-flex items-center gap-1"><MapPin className="h-3.5 w-3.5" aria-hidden />{r.delivery_location}</span>
@@ -117,6 +119,10 @@ export default async function BuyerRfqsPage({ searchParams }: { searchParams: Pr
                             <span className="inline-flex items-center gap-1"><CalendarClock className="h-3.5 w-3.5" aria-hidden />
                               Posted {day(r.created_at)} · {live ? `quotes close ${day(r.expires_at)}` : `closed`}</span>
                             {live && <CloseRfqButton rfqId={r.id} />}
+                            {canDeleteRfq({ status: r.dbStatus, hasOrder: !!r.order_id }, { isOwner: true, isSuperAdmin: false }) && (
+                              <DeleteRfqButton rfqId={r.id} title={r.title} quoteCount={r.quotes.length} />
+                            )}
+                            {live && <ShareRFQButton rfqId={r.id} title={r.title} className="inline-flex items-center gap-1 text-sm text-neutral-600 hover:text-neutral-900" />}
                             {r.order_id && <Link href={`/dashboard/orders/${r.order_id}`} className="font-medium text-blue-700 underline-offset-4 hover:underline dark:text-blue-400">View order</Link>}
                           </p>
                         </header>
