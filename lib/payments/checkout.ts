@@ -3,6 +3,7 @@ import type { User } from '@supabase/supabase-js';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { initializeTransaction, paystackConfig, verifyTransaction } from '@/lib/payments/paystack';
 import type { Profile } from '@/lib/types';
+import { dispatchNotificationsAfterResponse } from '@/lib/notifications/dispatch';
 
 /**
  * Absolute base URL for redirects. Taken from configuration, never from the
@@ -100,6 +101,7 @@ export async function settleCardReference(reference: string): Promise<string> {
       p_reference: reference, p_provider_ref: charge.id, p_amount_minor: charge.amountMinor, p_currency: charge.currency,
     });
     if (error) throw new Error(`apply_card_payment: ${error.message}`);
+    dispatchNotificationsAfterResponse();   // payment-received emails / SMS queued by the order trigger
     const outcome = String(data);
     if (['amount_mismatch', 'currency_mismatch', 'duplicate_payment', 'unknown_reference'].includes(outcome)) {
       console.error('[card] payment needs manual review', { outcome, reference, transaction: charge.id });

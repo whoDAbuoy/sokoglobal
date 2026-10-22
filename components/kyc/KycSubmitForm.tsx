@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { AlertCircle, Loader2, Upload } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
-import { KYC_DOCUMENTS, KYC_MIME, normalizeDocumentNumber, verificationPath, type KycDocumentType } from '@/lib/kyc';
+import { KYC_DOCUMENTS, KYC_MAX_BYTES, KYC_MIME, normalizeDocumentNumber, verificationPath, type KycDocumentType } from '@/lib/kyc';
 import { submitKycDocument, withdrawKycDocument } from '@/app/dashboard/kyc/actions';
 
 /**
@@ -28,6 +28,7 @@ export default function KycSubmitForm({ userId }: { userId: string }) {
     if (!file) return setError('Choose the document file.');
     const ext = KYC_MIME[file.type];
     if (!ext) return setError('Upload a PDF, JPG or PNG.');
+    if (file.size > KYC_MAX_BYTES) return setError('Files must be under 10 MB.');
     setBusy(true);
     try {
       const path = verificationPath(userId, crypto.randomUUID(), ext);
@@ -62,7 +63,7 @@ export default function KycSubmitForm({ userId }: { userId: string }) {
         </div>
       </div>
       <div>
-        <label htmlFor="kyc-file" className="label">File (PDF, JPG or PNG)</label>
+        <label htmlFor="kyc-file" className="label">File (PDF, JPG or PNG, up to 10 MB)</label>
         <input id="kyc-file" type="file" accept="application/pdf,image/jpeg,image/png" onChange={(e) => setFile(e.target.files?.[0] ?? null)}
           className="input file:mr-3 file:rounded-md file:border-0 file:bg-neutral-100 file:px-3 file:py-1.5 file:text-sm" />
       </div>

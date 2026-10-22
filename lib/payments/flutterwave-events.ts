@@ -3,6 +3,7 @@ import type { createAdminClient } from '@/lib/supabase/admin';
 import {
   getTransfer, isFailedTransfer, isSuccessfulCharge, isSuccessfulTransfer, verifyTransaction, type NormalizedEvent,
 } from '@/lib/payments/flutterwave';
+import { dispatchNotificationsAfterResponse } from '@/lib/notifications/dispatch';
 
 /**
  * Flutterwave event handlers, shared by the webhook route and the dead-letter
@@ -26,6 +27,7 @@ export async function handleCharge(db: Db, event: NormalizedEvent): Promise<stri
     p_tx_ref: tx.txRef, p_provider_ref: tx.id, p_amount_cents: tx.amountCents, p_currency: tx.currency,
   });
   if (error) throw new Error(`apply_flutterwave_payment: ${error.message}`);
+  dispatchNotificationsAfterResponse();
   const outcome = String(data);
   if (['amount_mismatch', 'currency_mismatch', 'unknown_reference'].includes(outcome)) {
     console.error('[flutterwave] payment needs manual review', { outcome, txRef: tx.txRef, id: tx.id });

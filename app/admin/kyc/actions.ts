@@ -8,6 +8,7 @@ import { friendlyError } from '@/lib/format';
 import { UUID_RE } from '@/lib/uploads';
 import { headers } from 'next/headers';
 import { isAdmin, isSuperAdmin, requestFingerprint } from '@/lib/auth/admin-access';
+import { dispatchNotificationsAfterResponse } from '@/lib/notifications/dispatch';
 
 export type KycActionState = { ok: boolean; message: string } | null;
 
@@ -44,6 +45,7 @@ export async function approveKyc(_prev: KycActionState, form: FormData): Promise
     console.error('[kyc] approved, but releasing held payouts failed — cron will retry', err);
   }
 
+  dispatchNotificationsAfterResponse();   // "Your business is verified" (queued by the profiles trigger)
   revalidatePath('/admin/kyc');
   return { ok: true, message: `KYC approved.${released ? ` ${released} held payout(s) sent.` : ''}` };
 }
@@ -72,6 +74,7 @@ export async function rejectKyc(_prev: KycActionState, form: FormData): Promise<
 
   const { error } = await ctx.supabase.rpc('admin_reject_kyc', { p_supplier_id: supplierId, p_notes: notes });
   if (error) return { ok: false, message: friendlyError(error.message) };
+  dispatchNotificationsAfterResponse();
   revalidatePath('/admin/kyc');
   return { ok: true, message: 'Sent back to the supplier with your notes.' };
 }
@@ -87,6 +90,7 @@ export async function reviewIdentityDocument(id: string, approve: boolean, reaso
     p_id: id, p_approve: approve, p_reason: reason.trim().slice(0, 1000) || null, p_ip: fp.ip, p_ua: fp.ua,
   });
   if (error) return { ok: false, message: friendlyError(error.message) };
+  dispatchNotificationsAfterResponse();
   revalidatePath('/admin/kyc');
   const status = (data as { account_status?: string } | null)?.account_status;
   return { ok: true, message: approve ? (status === 'approved' ? 'Accepted. The account is now verified.' : 'Accepted. The account still needs its other document.') : 'Rejected. The user can see your note and resubmit.' };

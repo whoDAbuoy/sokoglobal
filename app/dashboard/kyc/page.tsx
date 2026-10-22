@@ -10,6 +10,7 @@ import { safeReturnPath } from '@/lib/security/two-factor-gate';
 
 export const metadata = { title: 'Verification · SokoGlobal', robots: { index: false, follow: false } };
 export const dynamic = 'force-dynamic';
+export const maxDuration = 60;   // the submit action runs the OCR pre-check after responding
 
 interface Row { id: string; document_type: KycDocumentType; document_number: string; document_url: string; status: KycStatus; rejection_reason: string | null; created_at: string; reviewed_at: string | null }
 

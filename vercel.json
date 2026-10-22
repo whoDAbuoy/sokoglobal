@@ -21,6 +21,14 @@
     {
       "path": "/api/cron/reconcile-escrow",
       "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/cron/expire-orders",
+      "schedule": "0 2 * * *"
+    },
+    {
+      "path": "/api/cron/dispatch-notifications",
+      "schedule": "0 4 * * *"
     }
   ],
   "headers": [

@@ -7,10 +7,13 @@ import { CheckCircle2, ExternalLink, Loader2, Undo2 } from 'lucide-react';
 import { reviewIdentityDocument } from '@/app/admin/kyc/actions';
 import { KYC_LABEL, type KycDocumentType } from '@/lib/kyc';
 import { countryName, flag } from '@/lib/format';
+import OcrPrecheck, { type OcrResult } from './OcrPrecheck';
 
 export interface IdentityCase {
   id: string; documentType: KycDocumentType; documentNumber: string; submittedAt: string; fileUrl: string | null; fileIsPdf: boolean;
   user: { full_name: string; company_name: string; country_code: string; role: string; kyc_status: string; created_at: string } | null;
+  /** null before migration 020. */
+  ocr: OcrResult | null;
 }
 
 /** One document: preview (signed URL, 5 minutes), the number as entered, accept or reject with a note. */
@@ -48,6 +51,7 @@ export default function IdentityReviewCard({ item }: { item: IdentityCase }) {
           <div><dt className="eyebrow">Document number</dt><dd className="mt-1 font-mono text-neutral-900">{item.documentNumber}</dd></div>
           <div><dt className="eyebrow">Submitted</dt><dd className="mt-1 text-neutral-900">{new Date(item.submittedAt).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' })}</dd></div>
         </dl>
+        <OcrPrecheck ocr={item.ocr} />
         <label htmlFor={`note-${item.id}`} className="label mt-4">Note to the user (required to reject)</label>
         <textarea id={`note-${item.id}`} value={note} onChange={(e) => setNote(e.target.value)} rows={2} maxLength={1000} className="input"
           placeholder="e.g. The photo is blurred; upload a sharper scan of the photo page." />
