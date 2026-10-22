@@ -3,7 +3,7 @@ import { notFound, redirect } from 'next/navigation';
 import clsx from 'clsx';
 import { ArrowLeft, CalendarClock, MapPin, Package, Tag } from 'lucide-react';
 import { getSessionProfile } from '@/lib/supabase/server';
-import { RFQ_STATUS_LABEL, canDeleteRfq, categoryWithin, effectiveRfqStatus, parseTiers, type QuoteStatus, type RfqStatus } from '@/lib/rfq';
+import { RFQ_STATUS_LABEL, categoryWithin, rfqDeleteBlock, showsRfqDelete, effectiveRfqStatus, parseTiers, type QuoteStatus, type RfqStatus } from '@/lib/rfq';
 import { UUID_RE } from '@/lib/uploads';
 import { isSuperAdmin } from '@/lib/auth/admin-access';
 import DashboardHeader from '@/components/dashboard/DashboardHeader';
@@ -38,7 +38,7 @@ export default async function RfqDetailPage({ params }: { params: Promise<{ id: 
   const status = effectiveRfqStatus(rfq as { status: RfqStatus; expires_at: string });
   const live = status === 'open' || status === 'quoted';
   const isOwner = rfq.buyer_id === user.id;
-  const superAdmin = isSuperAdmin(profile);
+  const who = { isOwner, isSuperAdmin: isSuperAdmin(profile) };
   const unit = (rfq.unit_of_measure as string | null) ?? 'units';
   const category = (Array.isArray(rfq.category) ? rfq.category[0] : rfq.category) as { name: string } | null;
 
@@ -72,10 +72,20 @@ export default async function RfqDetailPage({ params }: { params: Promise<{ id: 
     <>
       <DashboardHeader profile={profile} />
       <main className="mx-auto max-w-3xl px-4 py-10 sm:px-6 lg:px-8">
-        <Link href={isOwner ? '/dashboard/rfqs' : profile.role === 'supplier' ? '/supplier/rfqs' : '/dashboard'}
-          className="inline-flex items-center gap-1 text-sm text-neutral-600 hover:text-neutral-900">
-          <ArrowLeft className="h-4 w-4" aria-hidden /> {isOwner ? 'My requests' : profile.role === 'supplier' ? 'Buyer requests' : 'Dashboard'}
-        </Link>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <Link href={isOwner ? '/dashboard/rfqs' : profile.role === 'supplier' ? '/supplier/rfqs' : '/dashboard'}
+            className="inline-flex items-center gap-1 text-sm text-neutral-600 hover:text-neutral-900">
+            <ArrowLeft className="h-4 w-4" aria-hidden /> {isOwner ? 'My requests' : profile.role === 'supplier' ? 'Buyer requests' : 'Dashboard'}
+          </Link>
+          <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Request actions">
+            {live && <ShareRFQButton rfqId={id} title={rfq.title} />}
+            {showsRfqDelete(who) && (
+              <DeleteRfqButton rfqId={id} title={rfq.title} variant="danger" label="Delete Request"
+                redirectTo={isOwner ? '/dashboard/rfqs' : '/admin'}
+                disabledReason={rfqDeleteBlock({ status: rfq.status as RfqStatus, hasOrder: !!rfq.order_id }, who)} />
+            )}
+          </div>
+        </div>
 
         <article className="card mt-6 p-6">
           <div className="flex flex-wrap items-start justify-between gap-3">
@@ -94,13 +104,12 @@ export default async function RfqDetailPage({ params }: { params: Promise<{ id: 
           {category && <p className="mt-3 text-sm text-neutral-600">Category: {category.name}</p>}
           <p className="mt-4 whitespace-pre-line text-sm leading-relaxed text-neutral-800">{rfq.description}</p>
 
-          <div className="mt-6 flex flex-wrap items-center gap-4 border-t border-neutral-200 pt-4">
-            {live && <ShareRFQButton rfqId={id} title={rfq.title} />}
-            {isOwner && <Link href="/dashboard/rfqs" className="btn-secondary px-3 py-1.5 text-sm">Compare quotes</Link>}
-            {canDeleteRfq({ status: rfq.status as RfqStatus, hasOrder: !!rfq.order_id }, { isOwner, isSuperAdmin: superAdmin }) && (
-              <DeleteRfqButton rfqId={id} title={rfq.title} redirectTo={isOwner ? '/dashboard/rfqs' : '/admin'} />
-            )}
-          </div>
+          {isOwner && (
+            <div className="mt-6 flex flex-wrap items-center gap-3 border-t border-neutral-200 pt-4">
+              <Link href="/dashboard/rfqs" className="btn-secondary px-3 py-1.5 text-sm">Compare quotes</Link>
+              {rfq.order_id && <Link href={`/dashboard/orders/${rfq.order_id}`} className="btn-primary px-3 py-1.5 text-sm">View order</Link>}
+            </div>
+          )}
         </article>
 
         {quoteBlock}
