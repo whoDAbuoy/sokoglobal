@@ -13,6 +13,7 @@ import UserActions from '@/components/admin/users/UserActions';
 import ChangeRequestCard, { type ChangeRequest } from '@/components/admin/users/ChangeRequestCard';
 import { formatTimeLeft, isAdmin, isSuperAdmin } from '@/lib/auth/admin-access';
 import SuperUserControls from '@/components/admin/users/SuperUserControls';
+import MessageUserButton from '@/components/admin/users/MessageUserButton';
 
 export const metadata = { title: 'Users · SokoGlobal Ops', robots: { index: false, follow: false } };
 export const dynamic = 'force-dynamic';
@@ -184,6 +185,7 @@ export default async function AdminUsersPage({ searchParams }: {
                         <td className="px-4 py-3 text-right">
                           <div className="flex flex-col items-end gap-1">
                             <UserActions userId={u.id} name={u.full_name} isBanned={u.is_banned} isAdmin={u.role === 'admin' || u.role === 'super_admin'} isSelf={u.id === user.id} />
+                            {viewerIsSuper && u.id !== user.id && <MessageUserButton userId={u.id} name={u.full_name} />}
                             {viewerIsSuper && u.id !== user.id && (
                               <SuperUserControls userId={u.id} name={u.full_name} targetIsAdmin={u.role === 'admin' || u.role === 'super_admin'}
                                 targetIsSuper={u.role === 'super_admin'} isFrozen={!!u.is_frozen} grantId={u.grant_id ?? null} grantExpiresAt={u.grant_expires_at ?? null} />

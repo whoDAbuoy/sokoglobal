@@ -19,7 +19,8 @@ const NAV: Record<Profile['role'], [string, string][]> = {
   importer: [['Discover', '/dashboard'], ['Catalog', '/dashboard/discover'], ['RFQs', '/dashboard/rfqs'], ['Trend Pools', '/dashboard#pools'], ['Messages', '/dashboard/messages']],
   supplier: [['Catalogue', '/supplier'], ['Orders', '/supplier/orders'], ['RFQs', '/supplier/rfqs'], ['Messages', '/supplier/messages'], ['New product', '/supplier/products/new'], ['Verification', '/supplier/verification']],
   admin: ADMIN_NAV,
-  super_admin: ADMIN_NAV,
+  // Super admins also run the chat center (every conversation + direct support, migration 025).
+  super_admin: [...ADMIN_NAV, ['Messages', '/admin/messages']],
 };
 
 /**
@@ -42,7 +43,7 @@ const NAV_ICON: Record<string, LucideIcon> = {
 export default function DashboardHeader({ profile }: { profile: Profile }) {
   const { signOut } = useAuth();
   const cart = useCart();
-  const { unreadCount } = useChat();
+  const { unreadCount, adminUnreadCount } = useChat();
   const saved = useWishlist().ids.length;
   const initials = profile.full_name.split(/\s+/).map((p) => p[0]).slice(0, 2).join('').toUpperCase();
   const pathname = usePathname() ?? '';
@@ -60,6 +61,13 @@ export default function DashboardHeader({ profile }: { profile: Profile }) {
       {label === 'Messages' && unreadCount > 0 && (
         <span aria-label={`${unreadCount} unread`} className="grid h-4 min-w-4 place-items-center rounded-full bg-neutral-900 px-1 text-[10px] font-semibold tabular-nums text-white">
           {unreadCount > 99 ? '99+' : unreadCount}
+        </span>
+      )}
+      {label === 'Messages' && adminUnreadCount > 0 && (
+        <span title={`${adminUnreadCount} unread message${adminUnreadCount === 1 ? '' : 's'} from SokoGlobal`}
+          className="inline-flex items-center gap-0.5 rounded-full border px-1.5 text-[10px] font-semibold uppercase tone-active">
+          <ShieldCheck className="h-3 w-3" aria-hidden /> Admin
+          <span className="sr-only">: {adminUnreadCount} unread from SokoGlobal</span>
         </span>
       )}
     </Link>

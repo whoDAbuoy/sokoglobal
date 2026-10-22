@@ -9,6 +9,7 @@ import DashboardHeader from '@/components/dashboard/DashboardHeader';
 import QuoteForm from '@/components/rfq/QuoteForm';
 import Price from '@/components/currency/Price';
 import ShareRFQButton from '@/components/rfq/ShareRFQButton';
+import OrderChatButton from '@/components/chat/OrderChatButton';
 
 export const metadata = { title: 'Buyer requests · SokoGlobal' };
 export const dynamic = 'force-dynamic';
@@ -42,6 +43,12 @@ export default async function SupplierRfqsPage() {
   ]);
   if (error) throw new Error(`Could not load buyer requests: ${error.message}`);
 
+  // Accepted quotes became orders: the supplier can message the buyer straight away (migration 025).
+  const acceptedIds = ((feed ?? []) as FeedRow[]).filter((r) => r.my_quote?.status === 'accepted').map((r) => r.id);
+  const { data: acceptedRows } = acceptedIds.length
+    ? await supabase.from('rfqs').select('id, order_id').in('id', acceptedIds)
+    : { data: [] as { id: string; order_id: string | null }[] };
+  const orderOf = new Map((acceptedRows ?? []).map((r) => [r.id as string, r.order_id as string | null]));
   const parentOf = new Map((cats ?? []).map((c) => [c.id as string, (c.parent_id as string | null) ?? null]));
   const listings = (products ?? []) as { id: string; title: string; category_id: string | null }[];
   const rows = (feed ?? []) as FeedRow[];
@@ -86,6 +93,10 @@ export default async function SupplierRfqsPage() {
                     defaults={q ? { quoteId: q.id, productId: q.product_id, unitPriceKes: Number(q.unit_price_kes), moq: q.moq, leadTimeDays: q.lead_time_days,
                                     termsNote: q.terms_note, tiers: parseTiers(q.price_tiers), allowed: q.allowed_payment_structures } : {}} />
                 : <p className="text-xs text-neutral-500">Outside your categories — share it with a supplier who can fulfil it.</p>
+            )}
+            {q?.status === 'accepted' && orderOf.get(r.id) && (
+              <OrderChatButton orderId={orderOf.get(r.id)!} label="Message buyer" className="btn-primary px-3 py-1.5 text-sm"
+                title={`Order #${orderOf.get(r.id)!.slice(0, 8).toUpperCase()} · ${r.title}`} />
             )}
             {q?.status === 'accepted' && <Link href="/supplier/orders" className="btn-secondary px-3 py-1.5 text-sm">Go to orders</Link>}
             </div>

@@ -19,16 +19,16 @@ const errorMessage = (err: unknown, fallback: string) =>
   err && typeof err === 'object' && 'message' in err && typeof err.message === 'string' && err.message ? err.message : fallback;
 
 /**
- * Chat composer: text with an emoji picker, and — in order chats — file
- * attachments (images, videos, PDF / XLSX / DOCX up to 50 MB) and voice notes.
- * Files go straight from the browser to the private chat-attachments bucket
- * under "<order>/<me>/…", then a message row points at them; Postgres checks the
- * path, that the file exists, and its real type and size (migration 024).
+ * Chat composer: text with an emoji picker, file attachments (images, videos,
+ * PDF / XLSX / DOCX up to 50 MB) and voice notes. Files go straight from the
+ * browser to the private chat-attachments bucket under "<scope>/<me>/…", then a
+ * message row points at them; Postgres checks the path, that the file exists,
+ * and its real type and size (migrations 024, 025).
  */
-export default function ChatInput({ threadId, orderId, myId, onSent, composerExtra }: {
+export default function ChatInput({ threadId, attachmentScope, myId, onSent, composerExtra }: {
   threadId: string;
-  /** Order chats allow attachments; product chats are text only. */
-  orderId: string | null;
+  /** First folder for uploads (lib/chat-admin.ts attachmentScope); null until the thread has loaded. */
+  attachmentScope: string | null;
   myId: string | null;
   onSent: (message: ChatMessage) => void;
   composerExtra?: ReactNode;
@@ -41,7 +41,7 @@ export default function ChatInput({ threadId, orderId, myId, onSent, composerExt
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
-  const media = !!orderId && !!myId;
+  const media = !!attachmentScope && !!myId;
   const busy = sending || !!uploading;
 
   async function insert(row: { content: string; message_type: ChatMessageType; metadata?: Record<string, unknown> }) {
@@ -71,8 +71,8 @@ export default function ChatInput({ threadId, orderId, myId, onSent, composerExt
 
   /** Upload to Storage, then post the message. Throws with a readable message. */
   async function sendAttachment(blob: Blob, fileName: string, mime: string, type: Exclude<ChatMessageType, 'text'>, extra: Record<string, unknown> = {}) {
-    if (!orderId || !myId) throw new Error('Attachments are available in order chats.');
-    const path = attachmentPath(orderId, myId, fileName, crypto.randomUUID());
+    if (!attachmentScope || !myId) throw new Error('Attachments are not available yet. Try again in a moment.');
+    const path = attachmentPath(attachmentScope, myId, fileName, crypto.randomUUID());
     const { error: upErr } = await supabase.storage.from(CHAT_BUCKET).upload(path, blob, { contentType: baseMime(mime), upsert: false, cacheControl: '3600' });
     if (upErr) throw new Error(/exceed|too large|413/i.test(upErr.message) ? 'That file is over the 50 MB limit.' : `Upload failed: ${upErr.message}`);
     await insert({ content: path, message_type: type, metadata: { file_name: fileName.slice(0, 200), size: blob.size, mime_type: baseMime(mime), ...extra } });

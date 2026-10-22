@@ -66,7 +66,7 @@ select pg_temp.ok((select metadata = '{"size": 48213, "mime_type": "audio/webm",
                      from public.chat_messages where message_type = 'voice_note'), 'voice note metadata rebuilt from Storage (size, type), unknown keys dropped');
 select pg_temp.fails(format($q$insert into public.chat_messages (thread_id, sender_id, content, message_type) values (%L, auth.uid(), %L, 'image')$q$, :'thread', :'paid' || '/c2222222-2222-4222-8222-222222222222/photo.gif'), 'not allowed');
 select pg_temp.fails(format($q$insert into public.chat_messages (thread_id, sender_id, content, message_type) values (%L, auth.uid(), %L, 'image')$q$, :'thread', :'paid' || '/c1111111-1111-4111-8111-111111111111/note-1.webm'), 'Invalid attachment path');
-select pg_temp.fails(format($q$insert into public.chat_messages (thread_id, sender_id, content, message_type) values (%L, auth.uid(), %L, 'voice_note')$q$, :'product_thread', :'paid' || '/c2222222-2222-4222-8222-222222222222/note-1.webm'), 'only be sent in order chats');
+select pg_temp.fails(format($q$insert into public.chat_messages (thread_id, sender_id, content, message_type) values (%L, auth.uid(), %L, 'voice_note')$q$, :'product_thread', :'paid' || '/c2222222-2222-4222-8222-222222222222/note-1.webm'), 'Invalid attachment path');   -- 025: product threads use their own thread-id scope
 select pg_temp.fails(format($q$update public.chat_messages set content = 'edited' where thread_id = %L$q$, :'thread'), 'permission denied');
 
 -- Reading: participants only.

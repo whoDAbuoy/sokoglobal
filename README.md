@@ -137,6 +137,20 @@ Run `021_enterprise_features.sql` after 020, **before** deploying the app code t
   `queue_restock_reminders()` runs daily (pg_cron when available, plus `/api/cron/restock-reminders`) and emails buyers 30 and 60
   days after an order completes, unless they already reordered. Expired RFQs are closed by pg_cron and the expire-orders cron.
 
+## Admin messaging & direct support (migration 025)
+
+Run `025_admin_and_order_chat.sql` after 024.
+
+- `chat_threads.kind`: `product` · `order` · `direct`. A direct thread is SokoGlobal support ↔ one user (one per user, shared by all
+  super admins; `start_direct_thread`). Super admins can read and post in every thread and delete messages; their messages get
+  `from_admin` (set by the database) and show a **System / Admin message** badge, and the recipients get an email / SMS
+  (`support.admin_message`, at most one per thread per hour). Admins observing a buyer ↔ supplier thread never mark it read.
+- `/admin/messages` (super admins): every conversation, filtered by Order / Product / Direct and searchable; find any user by name,
+  company or email to message them. **Message user** on `/admin/users` opens the same thread.
+- Order chat now also opens when a quote is accepted (before payment); buyers get **Chat with Supplier** on the order page,
+  suppliers **Message buyer** on accepted quotes and on `/supplier/orders`. Attachments and voice notes work in every thread
+  (paths are `<order or thread id>/<sender>/<file>`).
+
 ## Order chat with media (migration 024)
 
 Run `024_order_chat_and_media.sql` after 023 (it also creates the private `chat-attachments` bucket).
