@@ -2,6 +2,7 @@ import 'server-only';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { siteUrl } from '@/lib/payments/checkout';
 import { MpesaError, describeResult, mpesaConfig, parseStkCallback, stkPush, stkQuery } from '@/lib/payments/mpesa';
+import { dispatchNotificationsAfterResponse } from '@/lib/notifications/dispatch';
 
 type Db = ReturnType<typeof createAdminClient>;
 
@@ -109,6 +110,7 @@ export async function settle(db: Db, checkoutRequestId: string, resultCode: numb
     p_amount_kes: resultCode === 0 ? cb?.amountKes ?? null : null,
   });
   if (error) throw new Error(`apply_mpesa_payment: ${error.message}`);
+  dispatchNotificationsAfterResponse();
   const outcome = String(data);
   if (['amount_mismatch', 'duplicate_payment', 'unknown_reference'].includes(outcome)) {
     console.error('[mpesa] payment needs manual review', { outcome, checkoutRequestId });

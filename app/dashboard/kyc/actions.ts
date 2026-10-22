@@ -1,11 +1,13 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { after } from 'next/server';
 import { getSessionProfile } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { friendlyError } from '@/lib/format';
 import { UUID_RE } from '@/lib/uploads';
 import { isKycDocumentType, normalizeDocumentNumber, type KycDocumentType } from '@/lib/kyc';
+import { runKycOcr } from '@/lib/kyc-ocr-server';
 
 export type KycResult = { ok: boolean; message: string };
 const BUCKET = 'kyc-documents';
@@ -19,7 +21,8 @@ async function removeOwnFile(uid: string, path: string) {
 
 /**
  * Submit one uploaded document for review. submit_kyc_verification() re-checks that the
- * file exists in the caller's own folder and recomputes profiles.kyc_status.
+ * file exists in the caller's own folder and recomputes profiles.kyc_status. The OCR
+ * pre-check (lib/kyc-ocr-server.ts) runs after the response so the user never waits on it.
  */
 export async function submitKycDocument(documentType: KycDocumentType, documentNumber: string, path: string): Promise<KycResult> {
   const { supabase, user } = await getSessionProfile();
@@ -28,11 +31,13 @@ export async function submitKycDocument(documentType: KycDocumentType, documentN
   const number = normalizeDocumentNumber(documentNumber);
   if (!number) return { ok: false, message: 'Enter the document number as printed (3–40 letters or digits).' };
   if (!OWN_PATH(user.id).test(path)) return { ok: false, message: 'Upload the document again.' };
-  const { error } = await supabase.rpc('submit_kyc_verification', { p_document_type: documentType, p_document_number: number, p_document_url: path });
+  const { data, error } = await supabase.rpc('submit_kyc_verification', { p_document_type: documentType, p_document_number: number, p_document_url: path });
   if (error) {
     await removeOwnFile(user.id, path);
     return { ok: false, message: friendlyError(error.message) };
   }
+  const id = (data as { id?: string } | null)?.id;
+  if (id) after(() => runKycOcr(id));
   revalidatePath('/dashboard/kyc');
   return { ok: true, message: 'Submitted. We usually review documents within one business day.' };
 }

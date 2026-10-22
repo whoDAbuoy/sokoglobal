@@ -7,8 +7,20 @@ import { isSuperAdmin } from '@/lib/auth/admin-access';
 import { KYC_LABEL, KYC_STATUS_META, type KycDocumentType, type KycStatus } from '@/lib/kyc';
 import DashboardHeader from '@/components/dashboard/DashboardHeader';
 import IdentityReviewCard, { type IdentityCase } from '@/components/kyc/IdentityReviewCard';
+import type { OcrResult } from '@/components/kyc/OcrPrecheck';
 
 const one = <T,>(v: T | T[] | null | undefined): T | null => (Array.isArray(v) ? v[0] ?? null : v ?? null);
+
+const PENDING_COLS = 'id, user_id, document_type, document_number, document_url, created_at, user:profiles!kyc_verifications_user_id_fkey ( full_name, company_name, country_code, role, kyc_status, created_at )';
+const OCR_COLS = 'ocr_status, ocr_confidence_score, ocr_extracted_data';
+
+/** Pending documents, with the OCR pre-check when migration 020 is applied. */
+async function pendingVerifications(supabase: SupabaseClient) {
+  const q = (cols: string) => supabase.from('kyc_verifications').select(cols).eq('status', 'pending').order('created_at', { ascending: true }).limit(40)
+    .returns<Record<string, unknown>[]>();
+  const withOcr = await q(`${PENDING_COLS}, ${OCR_COLS}`);
+  return withOcr.error && /column/i.test(withOcr.error.message) ? q(PENDING_COLS) : withOcr;
+}
 
 export function KycTabs({ active }: { active: 'suppliers' | 'identity' }) {
   const tab = (id: 'suppliers' | 'identity', label: string, href: string) => (
@@ -25,9 +37,7 @@ export default async function IdentityQueue({ profile, supabase }: { profile: Pr
   const superAdmin = isSuperAdmin(profile);
   const [pendingRes, recentRes] = superAdmin
     ? await Promise.all([
-        supabase.from('kyc_verifications')
-          .select('id, user_id, document_type, document_number, document_url, created_at, user:profiles!kyc_verifications_user_id_fkey ( full_name, company_name, country_code, role, kyc_status, created_at )')
-          .eq('status', 'pending').order('created_at', { ascending: true }).limit(40),
+        pendingVerifications(supabase),
         supabase.from('kyc_verifications')
           .select('id, document_type, status, reviewed_at, rejection_reason, user:profiles!kyc_verifications_user_id_fkey ( company_name )')
           .neq('status', 'pending').order('reviewed_at', { ascending: false }).limit(10),
@@ -44,6 +54,9 @@ export default async function IdentityQueue({ profile, supabase }: { profile: Pr
     submittedAt: p.created_at as string, fileUrl: urlFor.get(p.document_url as string) ?? null,
     fileIsPdf: String(p.document_url).endsWith('.pdf'),
     user: one(p.user as unknown as IdentityCase['user']),
+    ocr: typeof p.ocr_status === 'string'
+      ? { status: p.ocr_status as OcrResult['status'], score: p.ocr_confidence_score == null ? null : Number(p.ocr_confidence_score), data: (p.ocr_extracted_data ?? null) as OcrResult['data'] }
+      : null,
   }));
 
   return (

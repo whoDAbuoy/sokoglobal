@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { Camera, Expand, Loader2, Minimize, RotateCw, Trash2, Undo2, X, ZoomIn, ZoomOut } from 'lucide-react';
 import { removeAvatar, uploadAvatar } from '@/app/dashboard/settings/actions';
+import { AVATAR_MAX_BYTES } from '@/lib/settings';
 import {
   clampOffset, fillScale, fitScale, initialCrop, rotateCw, rotated, scaleToSlider, sliderToScale, zoomTo,
   type CropImage, type CropState,
@@ -35,6 +36,7 @@ export default function AvatarUpload({ url, initials, disabled }: { url: string 
     setError(null);
     if (!file) return;
     if (!['image/png', 'image/jpeg'].includes(file.type)) return setError('Use a PNG or JPEG image.');
+    if (file.size > AVATAR_MAX_BYTES) return setError('Choose an image under 5 MB.');
     try {
       const bitmap = await createImageBitmap(file);
       const img = { width: bitmap.width, height: bitmap.height };
@@ -101,7 +103,7 @@ export default function AvatarUpload({ url, initials, disabled }: { url: string 
             </div>
           )}
           <p className="text-xs text-neutral-600">
-            {source ? 'Drag to position, zoom to resize. The circle shows what others will see.' : 'PNG or JPEG. You can crop, zoom and rotate before saving; shown to suppliers, buyers and support.'}
+            {source ? 'Drag to position, zoom to resize. The circle shows what others will see.' : 'PNG or JPEG up to 5 MB. You can crop, zoom and rotate before saving; shown to suppliers, buyers and support.'}
           </p>
           {error && <p role="alert" className="text-sm text-rose-700 dark:text-rose-400">{error}</p>}
         </div>

@@ -33,11 +33,10 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   experimental: {
-    // Effectively no Server Action body cap (avatars go through a Server Action). It must be
-    // finite: Next validates it with parseInt(), so Infinity / 'Infinity' abort startup.
-    // Vercel still caps any function request body at 4.5 MB; large media uploads go
-    // browser → Supabase Storage directly via signed URLs and never pass through here.
-    serverActions: { bodySizeLimit: Number.MAX_SAFE_INTEGER },
+    // Avatars are the only file sent through a Server Action (a ≤ 5 MB original, re-encoded to
+    // a small 512 px JPEG first). Product media and KYC files go browser → Supabase Storage.
+    // Vercel caps function request bodies at 4.5 MB regardless.
+    serverActions: { bodySizeLimit: '6mb' },
   },
   async headers() {
     return [{ source: '/:path*', headers: securityHeaders }];

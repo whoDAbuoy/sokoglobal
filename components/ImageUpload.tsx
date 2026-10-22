@@ -6,7 +6,9 @@ import {
   AlertCircle, Camera, CheckCircle2, Film, ImagePlus, Loader2, RotateCw, ShieldCheck, UploadCloud, X,
 } from 'lucide-react';
 import type { MediaType, ProductMedia } from '@/lib/types';
-import { MIN_IMAGE_EDGE_PX, UPLOAD_RULES, mediaTypeForMime } from '@/lib/uploads';
+import { MEDIA_BUCKET, MIN_IMAGE_EDGE_PX, UPLOAD_RULES, mediaTypeForMime } from '@/lib/uploads';
+import { RESUMABLE_THRESHOLD, uploadLargeFileResumable } from '@/lib/resumable-upload';
+import { createClient } from '@/lib/supabase/client';
 
 type Status = 'ready' | 'uploading' | 'done' | 'error';
 
@@ -98,6 +100,11 @@ export default function ImageUpload({ productId, allowVideo = true, maxFiles = 1
         rejected.push(`${file.name}: unsupported format`);
         continue;
       }
+      const rules = UPLOAD_RULES[mediaType];
+      if (file.size > rules.maxBytes) {
+        rejected.push(`${file.name}: exceeds ${Math.round(rules.maxBytes / 1024 / 1024)} MB`);
+        continue;
+      }
       let dims: { width: number; height: number } | undefined;
       if (mediaType === 'image') {
         try {
@@ -124,14 +131,26 @@ export default function ImageUpload({ productId, allowVideo = true, maxFiles = 1
   async function uploadOne(item: UploadItem) {
     patch(item.id, { status: 'uploading', progress: 0, error: undefined });
     try {
-      // 1. Ask our API for a signed URL (verifies auth, ownership, type & size server-side).
-      const { signedUrl, path } = await postJSON<{ signedUrl: string; path: string }>('/api/uploads/sign', {
-        productId, mediaType: item.mediaType, mimeType: item.file.type, size: item.file.size,
+      // 1. Ask our API for a path (+ signed URL) — verifies auth, ownership, type & size server-side.
+      const resumable = item.file.size > RESUMABLE_THRESHOLD;
+      const { signedUrl, path } = await postJSON<{ signedUrl?: string; path: string }>('/api/uploads/sign', {
+        productId, mediaType: item.mediaType, mimeType: item.file.type, size: item.file.size, resumable,
       });
-      // 2. Upload bytes directly to storage — bypasses serverless body-size limits.
+      // 2. Upload bytes directly to storage — bypasses serverless body-size limits. Large files go
+      //    in 6 MB resumable chunks so a dropped connection resumes instead of starting over.
       //    Cloudinary alternative: swap this for a signed POST to
       //    https://api.cloudinary.com/v1_1/<cloud>/auto/upload with the signature from step 1.
-      await putWithProgress(signedUrl, item.file, (progress) => patch(item.id, { progress }));
+      if (resumable) {
+        const { data: { session } } = await createClient().auth.getSession();
+        if (!session) throw new Error('Your session expired — sign in again to upload');
+        await uploadLargeFileResumable(item.file, {
+          supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL!, anonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+          accessToken: session.access_token, bucket: MEDIA_BUCKET, objectName: path, contentType: item.file.type,
+          onProgress: (progress) => patch(item.id, { progress }),
+        });
+      } else {
+        await putWithProgress(signedUrl!, item.file, (progress) => patch(item.id, { progress }));
+      }
       // 3. Confirm — server verifies the stored object and records it in product_media.
       const media = await postJSON<ProductMedia>('/api/uploads/complete', {
         productId, path, mediaType: item.mediaType, width: item.width, height: item.height,

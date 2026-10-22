@@ -1,6 +1,6 @@
 /**
  * Settings hub rules (pure). Mirrors the profile constraints in migration 016:
- * E.164 phone, 2–80 character designation, avatars PNG/JPEG (no size cap)
+ * E.164 phone, 2–80 character designation, avatars PNG/JPEG ≤ AVATAR_MAX_BYTES
  * stored as avatars/<user id>/<content hash>.<ext>.
  */
 import { dialCode } from './countries';
@@ -43,6 +43,8 @@ export function normalizeDesignation(input: string): { ok: true; value: string |
 
 /* ── Avatars ─────────────────────────────────────────────────────────────── */
 
+/** Original photo cap (the browser re-encodes to a 512 px JPEG, normally well under 200 KB). */
+export const AVATAR_MAX_BYTES = 5 * 1024 * 1024;
 export const AVATAR_TYPES = ['image/png', 'image/jpeg'] as const;
 export type AvatarType = (typeof AVATAR_TYPES)[number];
 
@@ -61,6 +63,7 @@ export function avatarObjectPath(userId: string, sha256Hex: string, type: Avatar
 export type AvatarCheck = { ok: true; type: AvatarType } | { ok: false; error: string };
 export function checkAvatarFile(file: { size: number; type: string }, head: Uint8Array): AvatarCheck {
   if (file.size === 0) return { ok: false, error: 'Choose an image.' };
+  if (file.size > AVATAR_MAX_BYTES) return { ok: false, error: 'Images must be under 5 MB.' };
   const sniffed = sniffImageType(head);
   if (!sniffed) return { ok: false, error: 'Use a PNG or JPEG image.' };
   return { ok: true, type: sniffed };
