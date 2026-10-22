@@ -36,3 +36,22 @@ test('money formatting tolerates bad input', () => {
   assert.match(formatMoney(123456, 'KES'), /^KES\s1,234\.56$/);   // Intl uses a no-break space
   assert.equal(formatMoney('oops', 'nope'), '$0.00');
 });
+
+test('milestone, dispatch, RFQ and restock notifications', () => {
+  const deposit = renderNotification('order.deposit_paid', { ...ORDER, deposit_cents: 34_200, balance_cents: 79_800 }, 'https://x.test');
+  assert.match(deposit.text, /\$342\.00/);
+  assert.match(deposit.text, /\$798\.00/);
+  const due = renderNotification('order.balance_due', { ...ORDER, total_cents: 79_800, carrier: 'DHL Express', tracking_number: 'JD014600006' }, 'https://x.test');
+  assert.match(due.subject, /pay the balance/);
+  assert.match(due.text, /via DHL Express \(waybill JD014600006\)/);
+  assert.match(due.text, /\$798\.00/);
+  assert.match(renderNotification('order.in_transit', { ...ORDER, carrier: 'Sendy', tracking_number: 'S-1' }, 'https://x.test').sms, /via Sendy/);
+  assert.match(renderNotification('rfq.quote_received', { rfq_title: 'Cotton tees' }, 'https://x.test').text, /\/dashboard\/rfqs/);
+  assert.match(renderNotification('supplier.rfq_accepted', { ...ORDER, rfq_title: 'Cotton tees' }, 'https://x.test').subject, /Quote accepted: Cotton tees/);
+  const restock = renderNotification('retention.restock_reminder', { ...ORDER, days: 60 }, 'https://x.test');
+  assert.match(restock.text, /60 days/);
+  assert.match(restock.text, /\/dashboard\/orders#reorder/);
+  for (const key of ['supplier.order_deposit', 'supplier.order_balance_paid']) {
+    assert.notEqual(renderNotification(key, ORDER, 'https://x.test').subject, 'Update from SokoGlobal', key);
+  }
+});

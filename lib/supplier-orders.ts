@@ -9,6 +9,8 @@ export interface BuyerLine {
   order_id: string; quantity: number; batches: number; goods_cents: number; paid_at: string | null;
   buyer_company: string | null; buyer_country: string | null; destination: string | null; eta: string | null;
   shipment_status: string | null; tracking_number: string | null; carrier: string | null;
+  /** Migration 021: milestone orders arrive with only the 30% deposit paid; quoted orders come from an RFQ. */
+  payment_structure?: string | null; escrow_status?: string | null; is_rfq?: boolean;
 }
 
 export interface ListingGroup {
@@ -48,6 +50,7 @@ export function parseGroupedCatalog(rows: unknown): ListingGroup[] {
       order_id: String(o.order_id), quantity: num(o.quantity), batches: num(o.batches) || 1, goods_cents: num(o.goods_cents), paid_at: str(o.paid_at),
       buyer_company: str(o.buyer_company), buyer_country: str(o.buyer_country), destination: str(o.destination), eta: str(o.eta),
       shipment_status: str(o.shipment_status), tracking_number: str(o.tracking_number), carrier: str(o.carrier),
+      payment_structure: str(o.payment_structure), escrow_status: str(o.escrow_status), is_rfq: o.is_rfq === true,
     })),
   }));
 }

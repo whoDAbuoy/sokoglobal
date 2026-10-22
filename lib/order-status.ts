@@ -7,6 +7,7 @@ export type Tone = 'warning' | 'escrow' | 'success' | 'danger' | 'muted';
 export function statusMeta(status: EscrowStatus): { label: string; tone: Tone } {
   switch (status) {
     case 'pending_payment': return { label: 'Awaiting payment', tone: 'warning' };
+    case 'deposit_paid': return { label: '30% deposit in escrow', tone: 'escrow' };
     case 'funded':
     case 'in_transit':
     case 'customs_cleared': return { label: 'Held in escrow', tone: 'escrow' };
@@ -36,6 +37,7 @@ export function orderAction(order: { id: string; escrow_status: EscrowStatus }):
   switch (order.escrow_status) {
     case 'pending_payment': return { kind: 'link', label: 'Complete payment', href: page, primary: true };
     case 'delivered_pending_verification': return { kind: 'link', label: 'Verify goods', href: page, primary: true };
+    case 'deposit_paid': return { kind: 'link', label: 'View milestones', href: page, primary: false };
     case 'funded':
     case 'in_transit':
     case 'customs_cleared': return { kind: 'link', label: 'View escrow', href: page, primary: false };
@@ -52,7 +54,7 @@ export function orderAction(order: { id: string; escrow_status: EscrowStatus }):
  * paid into escrow. Unpaid (pending_payment) checkouts stay off the list.
  */
 export const PAID_ORDER_STATUSES: EscrowStatus[] = [
-  'funded', 'in_transit', 'customs_cleared', 'delivered_pending_verification',
+  'deposit_paid', 'funded', 'in_transit', 'customs_cleared', 'delivered_pending_verification',
   'released', 'disputed', 'refunded', 'cancelled',
 ];
 
@@ -60,7 +62,7 @@ export const PAID_ORDER_STATUSES: EscrowStatus[] = [
 export type OrderGroup = 'action' | 'escrow' | 'completed' | 'closed';
 export function orderGroup(status: EscrowStatus): OrderGroup {
   if (status === 'pending_payment' || status === 'delivered_pending_verification' || status === 'disputed') return 'action';
-  if (status === 'funded' || status === 'in_transit' || status === 'customs_cleared') return 'escrow';
+  if (status === 'deposit_paid' || status === 'funded' || status === 'in_transit' || status === 'customs_cleared') return 'escrow';
   if (status === 'released') return 'completed';
   return 'closed';
 }

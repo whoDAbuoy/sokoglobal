@@ -10,6 +10,8 @@ export type OrderType = 'trial' | 'pool' | 'standard';
 
 export type EscrowStatus =
   | 'pending_payment'
+  /** Milestone escrow: 30% deposit held, 70% balance due once dispatched (migration 021). */
+  | 'deposit_paid'
   | 'funded'
   | 'in_transit'
   | 'customs_cleared'
@@ -127,4 +129,8 @@ export interface OrderView {
   total_cents: number;
   created_at: string;
   product_title: string;
+  /** Migration 021; absent = paid in full. */
+  payment_structure?: string | null;
+  /** Set for orders created from an accepted RFQ quote. */
+  is_rfq?: boolean;
 }

@@ -3,6 +3,7 @@ import { notFound, redirect } from 'next/navigation';
 import { ArrowLeft, ArrowRight, CheckCircle2, ShieldCheck } from 'lucide-react';
 import { getSessionProfile } from '@/lib/supabase/server';
 import { formatUSD } from '@/lib/format';
+import Price, { LocalPreview } from '@/components/currency/Price';
 import { UUID_RE } from '@/lib/uploads';
 import type { ProductCategory } from '@/lib/types';
 import DashboardHeader from '@/components/dashboard/DashboardHeader';
@@ -85,7 +86,7 @@ export default async function CheckoutPage({ params, searchParams }: {
                         </span>
                       </p>
                     </div>
-                    <span className="text-sm font-semibold tabular-nums text-neutral-900">{formatUSD(o.total_cents, true)}</span>
+                    <Price cents={o.total_cents} className="text-sm font-semibold tabular-nums text-neutral-900" />
                     <ArrowRight className="h-4 w-4 text-neutral-400" />
                   </Link>
                 </li>
@@ -113,6 +114,7 @@ export default async function CheckoutPage({ params, searchParams }: {
                   <dt className="font-medium">{unpaid.length && unpaid.length < orders.length ? 'Left to pay' : 'Total'}</dt>
                   <dd className="text-xl font-semibold tabular-nums">{formatUSD(unpaid.length ? due : total, true)}</dd>
                 </div>
+                <LocalPreview cents={unpaid.length ? due : total} className="block text-right text-xs tabular-nums text-neutral-500" />
               </dl>
               <p className="mt-4 flex items-start gap-1.5 text-xs text-neutral-500">
                 <ShieldCheck className="mt-px h-3.5 w-3.5 shrink-0 text-emerald-600" />

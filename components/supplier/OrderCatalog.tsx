@@ -2,6 +2,7 @@ import { ChevronDown, Clock, Lock, MapPin, PackageCheck, Truck } from 'lucide-re
 import { catalogTotals, type ListingGroup } from '@/lib/supplier-orders';
 import { countryName, flag, formatUSD } from '@/lib/format';
 import ProductVisual from '@/components/dashboard/ProductVisual';
+import ShipOrderDialog, { type ExistingShipment } from './ShipOrderDialog';
 
 const DAY = 86_400_000;
 const date = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '—');
@@ -12,7 +13,12 @@ const waiting = (iso: string | null, now: number) => {
 };
 
 /** Listing Catalog Cards: one per listing with paid orders to ship; buyers in a collapsible list (server-rendered, no JS). */
-export default function OrderCatalog({ groups, now = Date.now() }: { groups: ListingGroup[]; now?: number }) {
+export default function OrderCatalog({ groups, shipments = {}, now = Date.now() }: {
+  groups: ListingGroup[];
+  /** Waybills already saved (label created, not yet handed over), by order id. */
+  shipments?: Record<string, ExistingShipment>;
+  now?: number;
+}) {
   const totals = catalogTotals(groups);
   return (
     <>
@@ -69,10 +75,18 @@ export default function OrderCatalog({ groups, now = Date.now() }: { groups: Lis
                     </summary>
                     <ul className="divide-y divide-neutral-200 border-t border-neutral-200">
                       {g.orders.map((o) => (
-                        <li key={o.order_id} className="grid gap-2 px-4 py-3 text-sm sm:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_auto] sm:items-center sm:px-5">
+                        <li key={o.order_id} className="grid gap-2 px-4 py-3 text-sm sm:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_auto_auto] sm:items-center sm:px-5">
                           <div className="min-w-0">
                             <p className="truncate font-medium text-neutral-900">{o.buyer_company ?? 'Buyer'} {o.buyer_country && <span className="font-normal text-neutral-600">· {flag(o.buyer_country)} {countryName(o.buyer_country)}</span>}</p>
                             <p className="font-mono text-xs text-neutral-600">#{o.order_id.slice(0, 8).toUpperCase()} · paid {date(o.paid_at)}</p>
+                            {(o.is_rfq || o.payment_structure === 'milestone_30_70') && (
+                              <p className="mt-1 flex flex-wrap gap-1.5">
+                                {o.is_rfq && <span className="pill tone-muted">Quoted order</span>}
+                                {o.payment_structure === 'milestone_30_70' && (
+                                  <span className="pill tone-transit">{o.escrow_status === 'deposit_paid' ? '30% deposit paid · 70% due on dispatch' : 'Milestone escrow'}</span>
+                                )}
+                              </p>
+                            )}
                           </div>
                           <div className="min-w-0 text-neutral-700">
                             <p className="flex items-center gap-1.5 truncate"><MapPin className="h-3.5 w-3.5 shrink-0 text-neutral-500" aria-hidden />{o.destination ?? (o.buyer_country ? countryName(o.buyer_country) : 'Destination set at booking')}</p>
@@ -83,6 +97,11 @@ export default function OrderCatalog({ groups, now = Date.now() }: { groups: Lis
                           <p className="tabular-nums text-neutral-900 sm:text-right">
                             {o.quantity.toLocaleString('en-US')} {g.unit_of_measure ?? 'units'}<span className="block text-xs text-neutral-600">{formatUSD(o.goods_cents, true)}</span>
                           </p>
+                          <div className="sm:text-right">
+                            <ShipOrderDialog orderId={o.order_id} existing={shipments[o.order_id] ?? null}
+                              orderLabel={`${g.title} · ${o.quantity.toLocaleString('en-US')} ${g.unit_of_measure ?? 'units'} for ${o.buyer_company ?? 'buyer'} (#${o.order_id.slice(0, 8).toUpperCase()})`}
+                              milestoneBalanceDue={o.escrow_status === 'deposit_paid'} />
+                          </div>
                         </li>
                       ))}
                     </ul>

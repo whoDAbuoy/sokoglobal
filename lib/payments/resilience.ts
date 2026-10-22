@@ -32,7 +32,13 @@ export function decideRetry(attempt: number, result: { outcome: string } | { pen
 export interface ReconOrder {
   id: string; escrow_status: EscrowStatus; total_cents: number; funded_at: string | null;
   payment_provider: string | null; checkout_group_id: string | null;
+  /** Milestone escrow (migration 021): while only the deposit is paid, that is all escrow should hold. */
+  payment_structure?: string | null; deposit_amount?: number | null; final_paid_at?: string | null;
 }
+
+/** USD cents a funded order should have collected so far. */
+export const expectedPaidCents = (o: ReconOrder) =>
+  o.payment_structure === 'milestone_30_70' && !o.final_paid_at && o.deposit_amount != null ? o.deposit_amount : o.total_cents;
 export interface ReconCardPayment {
   reference: string; kind: 'order' | 'group' | 'pool'; order_id: string | null; checkout_group_id: string | null;
   status: 'initiated' | 'succeeded' | 'failed' | 'review'; usd_cents: number; amount_minor: number; currency: string; created_at: string;
@@ -49,7 +55,7 @@ export interface ReconIssue {
   message: string; expected?: Record<string, unknown>; actual?: Record<string, unknown>; fingerprint: string;
 }
 
-const HELD: EscrowStatus[] = ['funded', 'in_transit', 'customs_cleared', 'delivered_pending_verification', 'disputed'];
+const HELD: EscrowStatus[] = ['deposit_paid', 'funded', 'in_transit', 'customs_cleared', 'delivered_pending_verification', 'disputed'];
 const STALE_MPESA_MS = 60 * 60_000;
 
 const issue = (i: Omit<ReconIssue, 'fingerprint'>): ReconIssue => ({ ...i, fingerprint: `${i.kind}:${i.reference ?? i.order_id ?? 'global'}` });
@@ -133,9 +139,9 @@ export function reconcileEscrow(input: {
         message: 'A successful payment exists but the order is still awaiting payment.' }));
     }
     const direct = paidOrder.get(o.id);
-    if (direct !== undefined && o.funded_at && direct !== o.total_cents) {
+    if (direct !== undefined && o.funded_at && direct !== expectedPaidCents(o)) {
       issues.push(issue({ severity: 'critical', kind: 'escrow_amount_mismatch', provider: provider || null, reference: null, order_id: o.id,
-        message: 'Amount paid does not match the order total held in escrow.', expected: { usd_cents: o.total_cents }, actual: { usd_cents: direct } }));
+        message: 'Amount paid does not match the order total held in escrow.', expected: { usd_cents: expectedPaidCents(o) }, actual: { usd_cents: direct } }));
     }
   }
 
@@ -158,7 +164,7 @@ export function reconcileEscrow(input: {
     card_payments_checked: input.card.length,
     card_verified_with_gateway: [...input.gateway.values()].filter((g) => !('error' in g)).length,
     mpesa_payments_checked: input.mpesa.length,
-    held_in_escrow_cents: held.reduce((s, o) => s + o.total_cents, 0),
+    held_in_escrow_cents: held.reduce((s, o) => s + expectedPaidCents(o), 0),
     held_orders: held.length,
     paid_cents: { card: sum(input.card.filter((p) => p.status === 'succeeded').map((p) => p.usd_cents)), mpesa: sum(input.mpesa.filter((m) => m.status === 'succeeded').map((m) => m.usd_cents)) },
     critical: issues.filter((i) => i.severity === 'critical').length,

@@ -7,7 +7,7 @@ import { toast } from 'sonner';
 import clsx from 'clsx';
 import { Loader2, ShieldAlert, Truck } from 'lucide-react';
 import { forceRelease, overrideLandedCost, refundOrder, setTrackingReference, startPayout, type ControlResult } from '@/app/admin/control/actions';
-import { isHeld } from '@/lib/admin-overrides';
+import { isHeld, isRefundable } from '@/lib/admin-overrides';
 import { formatUSD } from '@/lib/format';
 
 export interface OverrideOrder {
@@ -26,7 +26,7 @@ export default function OrderOverrides({ order }: { order: OverrideOrder }) {
   const held = isHeld(order.escrow_status);
   const tools: [Tool, string, boolean][] = [
     ['release', 'Force release', held],
-    ['refund', 'Refund', held],
+    ['refund', 'Refund', isRefundable(order.escrow_status)],
     ['payout', 'Start payout', order.escrow_status === 'released'],
     ['tracking', 'Tracking number', true],
     ['landed', 'Landed cost', order.escrow_status === 'pending_payment' && !order.checkout_group_id],

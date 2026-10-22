@@ -3,6 +3,7 @@ import type { EscrowStatus } from '@/lib/types';
 export type OrderStage = 'awaiting' | 'escrow' | 'completed' | 'closed';
 
 export const ESCROW_HELD: readonly EscrowStatus[] = [
+  'deposit_paid',
   'funded',
   'in_transit',
   'customs_cleared',

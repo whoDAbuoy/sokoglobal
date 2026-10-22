@@ -19,6 +19,7 @@ export const LANES: { id: PipelineLane; label: string; hint: string; tone: strin
 export function laneOf(status: EscrowStatus): PipelineLane {
   switch (status) {
     case 'pending_payment': return 'awaiting';
+    case 'deposit_paid':
     case 'funded': return 'escrow';
     case 'in_transit':
     case 'customs_cleared': return 'transit';

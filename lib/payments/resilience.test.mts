@@ -65,3 +65,19 @@ test('cart payments must equal the sum of their orders', () => {
   });
   assert.deepEqual(bad.issues.map((i) => i.kind), ['escrow_amount_mismatch']);
 });
+
+test('milestone orders: a deposit alone matches escrow until the balance is paid', () => {
+  const m = { payment_structure: 'milestone_30_70', deposit_amount: 15_000 } as const;
+  const deposit = card({ reference: 'ord.o1', usd_cents: 15_000, amount_minor: 15_000 });
+  const clean = reconcileEscrow({ orders: [order({ ...m, escrow_status: 'deposit_paid' })], card: [deposit], mpesa: [], gateway: new Map(), now: NOW });
+  assert.deepEqual(clean.issues, []);
+  assert.equal(clean.summary.held_in_escrow_cents, 15_000);
+
+  const paid = reconcileEscrow({ orders: [order({ ...m, escrow_status: 'in_transit', final_paid_at: '2026-10-21T00:00:00Z' })],
+    card: [deposit, card({ reference: 'ord.o1-2', usd_cents: 35_000, amount_minor: 35_000 })], mpesa: [], gateway: new Map(), now: NOW });
+  assert.deepEqual(paid.issues, []);
+  assert.equal(paid.summary.held_in_escrow_cents, 50_000);
+
+  const short = reconcileEscrow({ orders: [order({ ...m, escrow_status: 'in_transit', final_paid_at: '2026-10-21T00:00:00Z' })], card: [deposit], mpesa: [], gateway: new Map(), now: NOW });
+  assert.deepEqual(short.issues.map((i) => i.kind), ['escrow_amount_mismatch']);
+});

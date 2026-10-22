@@ -33,3 +33,6 @@ yarn-error.log*
 /playwright-report/
 /blob-report/
 /playwright/.cache/
+
+# Local agent screenshots and archives
+/Claude outputs/

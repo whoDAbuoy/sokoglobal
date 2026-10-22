@@ -5,6 +5,7 @@ import { buyerPaymentView, latestPayment, startMpesaPayment } from '@/lib/paymen
 import { friendlyError } from '@/lib/format';
 import { UUID_RE } from '@/lib/uploads';
 import { checkCanTransact } from '@/lib/platform-server';
+import { paymentStep, type PayableOrder } from '@/lib/milestone';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -14,13 +15,15 @@ async function loadOrder(id: string) {
   if (!user || !profile) return { error: NextResponse.json({ error: 'Not signed in' }, { status: 401 }) } as const;
   // RLS: buyers only see their own orders.
   const { data: order } = await supabase
-    .from('orders').select('id, buyer_id, escrow_status, product:products ( title )').eq('id', id).maybeSingle();
+    .from('orders').select('id, buyer_id, escrow_status, total_cents, payment_structure, deposit_amount, remaining_balance, final_paid_at, current_status, product:products ( title )')
+    .eq('id', id).maybeSingle();
   if (!order || order.buyer_id !== user.id) return { error: NextResponse.json({ error: 'Order not found' }, { status: 404 }) } as const;
   return { supabase, user, profile, order } as const;
 }
 
 /**
- * POST /api/orders/:id/mpesa — send an M-Pesa STK Push for an unpaid order.
+ * POST /api/orders/:id/mpesa — send an M-Pesa STK Push for what is due on an order
+ * (full total, milestone deposit, or the balance once dispatched).
  * Body: { phone } → 201 { paymentId, amountKes, customerMessage }
  */
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -33,7 +36,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   if (ctx.profile.role !== 'importer') return NextResponse.json({ error: 'Importer account required' }, { status: 403 });
   const blocked = await checkCanTransact(ctx.supabase, ctx.user.id, 'checkout');
   if (blocked) return NextResponse.json({ error: blocked.error }, { status: blocked.status });
-  if (ctx.order.escrow_status !== 'pending_payment') return NextResponse.json({ error: 'This order is already paid' }, { status: 409 });
+  const step = paymentStep(ctx.order as PayableOrder);
+  if (step.kind === 'balance_waiting') return NextResponse.json({ error: 'The balance becomes payable once the supplier dispatches your order' }, { status: 409 });
+  if (step.kind === 'none') return NextResponse.json({ error: 'This order is already paid' }, { status: 409 });
 
   const body = await request.json().catch(() => null) as { phone?: string } | null;
   const phone = normalizeKenyanPhone(String(body?.phone ?? ''));

@@ -22,7 +22,7 @@ export default async function AdminOrdersPage() {
     .from('orders')
     .select(`id, escrow_status, current_status, eta_timestamp, total_cents, created_at, tracking_updated_at,
              product:products ( title ), buyer:profiles!orders_buyer_id_fkey ( company_name, country_code )`)
-    .in('escrow_status', ['funded', 'in_transit', 'customs_cleared', 'delivered_pending_verification'])
+    .in('escrow_status', ['deposit_paid', 'funded', 'in_transit', 'customs_cleared', 'delivered_pending_verification'])
     .order('created_at', { ascending: true })
     .limit(100);
   if (error) throw new Error(`Could not load shipments: ${error.message}`);

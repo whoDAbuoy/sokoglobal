@@ -26,11 +26,16 @@ function copyFor(key: string, p: Payload): Copy {
   const ref = shortId(p.order_id);
   const amount = formatMoney(p.total_cents, p.currency);
   const orderPath = `/dashboard/orders/${str(p.order_id)}`;
+  const shipped = str(p.tracking_number) ? ` via ${str(p.carrier, 'courier')} (waybill ${str(p.tracking_number)})` : '';
   switch (key) {
     case 'order.funded':
       return { subject: `Payment received: ${title}`, lines: [`We received your payment of ${amount} for ${title}. It is held in escrow until you confirm delivery.`], sms: `SokoGlobal: payment of ${amount} received for order ${ref}. Funds are held in escrow.`, cta: { label: 'View order', path: orderPath } };
+    case 'order.deposit_paid':
+      return { subject: `Deposit received: ${title}`, lines: [`We received your 30% deposit of ${formatMoney(p.deposit_cents, p.currency)} for ${title}. It is held in escrow, and the supplier is preparing your order.`, `The remaining ${formatMoney(p.balance_cents, p.currency)} becomes payable once the order is dispatched.`], sms: `SokoGlobal: 30% deposit received for order ${ref}. Balance is due on dispatch.`, cta: { label: 'View order', path: orderPath } };
+    case 'order.balance_due':
+      return { subject: `Dispatched: pay the balance for ${title}`, lines: [`Your order ${ref} (${title}) has been dispatched${shipped}.`, `Pay the remaining ${amount} to keep it moving. It is held in escrow with your deposit until you verify the goods.`], sms: `SokoGlobal: order ${ref} dispatched${shipped}. Pay the ${amount} balance in your dashboard.`, cta: { label: 'Pay balance', path: orderPath } };
     case 'order.in_transit':
-      return { subject: `On its way: ${title}`, lines: [`Your order ${ref} (${title}) has shipped.`], sms: `SokoGlobal: order ${ref} has shipped.`, cta: { label: 'Track shipment', path: orderPath } };
+      return { subject: `On its way: ${title}`, lines: [`Your order ${ref} (${title}) has shipped${shipped}.`], sms: `SokoGlobal: order ${ref} has shipped${shipped}.`, cta: { label: 'Track shipment', path: orderPath } };
     case 'order.customs_cleared':
       return { subject: `Cleared customs: ${title}`, lines: [`Your order ${ref} cleared customs and is heading to you.`], sms: `SokoGlobal: order ${ref} cleared customs.`, cta: { label: 'Track shipment', path: orderPath } };
     case 'order.delivered_pending_verification':
@@ -45,6 +50,18 @@ function copyFor(key: string, p: Payload): Copy {
       return { subject: `Order cancelled: ${title}`, lines: [`Order ${ref} (${title}) was cancelled.`], sms: `SokoGlobal: order ${ref} cancelled.` };
     case 'order.expired':
       return { subject: `Order expired: ${title}`, lines: [`Order ${ref} (${title}) was not paid within 24 hours, so we cancelled it. You can place it again at any time.`], sms: `SokoGlobal: unpaid order ${ref} expired after 24h.`, cta: { label: 'Browse catalogue', path: '/dashboard/discover' } };
+    case 'supplier.order_deposit':
+      return { subject: `Deposit paid: ${title}`, lines: [`A buyer paid the 30% deposit on ${title} (order ${ref}); it is held in escrow. Please prepare it for dispatch.`, 'The buyer pays the remaining 70% into escrow once you dispatch. You are paid the full goods value when they confirm delivery.'], sms: `SokoGlobal: deposit paid on order ${ref} for ${title}. Prepare for dispatch.`, cta: { label: 'Open orders', path: '/supplier/orders' } };
+    case 'supplier.order_balance_paid':
+      return { subject: `Balance paid: ${title}`, lines: [`The buyer paid the balance on order ${ref} (${title}). The full order value is now held in escrow.`], sms: `SokoGlobal: balance paid on order ${ref}; full value in escrow.`, cta: { label: 'Open orders', path: '/supplier/orders' } };
+    case 'supplier.rfq_accepted':
+      return { subject: `Quote accepted: ${str(p.rfq_title, title)}`, lines: [`Your quote for "${str(p.rfq_title, title)}" was accepted as order ${ref} (${amount}).`, 'You will be notified when the buyer has paid into escrow, then you can dispatch it from your orders page.'], sms: `SokoGlobal: your quote was accepted as order ${ref} (${amount}).`, cta: { label: 'View requests', path: '/supplier/rfqs' } };
+    case 'rfq.quote_received':
+      return { subject: `New quote: ${str(p.rfq_title, 'your request')}`, lines: [`A supplier sent a quote for "${str(p.rfq_title, 'your request')}". Compare quotes and accept the one that suits you.`], sms: `SokoGlobal: new quote for "${str(p.rfq_title, 'your request')}".`, cta: { label: 'Compare quotes', path: '/dashboard/rfqs' } };
+    case 'retention.restock_reminder': {
+      const days = typeof p.days === 'number' ? p.days : 30;
+      return { subject: `Time to restock ${title}?`, lines: [`It has been ${days} days since your order of ${title} was completed.`, 'You can reorder the same batch in one click from your orders page — prices are confirmed at checkout.'], sms: `SokoGlobal: ${days} days since your ${title} order. Reorder in one click from My Orders.`, cta: { label: 'Reorder', path: '/dashboard/orders#reorder' } };
+    }
     case 'supplier.order_funded':
       return { subject: `New paid order: ${title}`, lines: [`A buyer paid ${amount} for ${title} (order ${ref}). Funds are in escrow; please prepare it for dispatch.`], sms: `SokoGlobal: new paid order ${ref} for ${title}. Prepare for dispatch.`, cta: { label: 'Open orders', path: '/supplier/orders' } };
     case 'kyc.approved':

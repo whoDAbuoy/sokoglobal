@@ -6,7 +6,8 @@ import { toast } from 'sonner';
 import clsx from 'clsx';
 import { AlertCircle, BadgeCheck, Check, CheckCircle2, Eye, Film, Heart, Loader2, Lock, LogIn, ShieldCheck, ShoppingBag, Smartphone, Timer } from 'lucide-react';
 import type { TrialProductView } from '@/lib/types';
-import { countryName, flag, formatUSD } from '@/lib/format';
+import { countryName, flag } from '@/lib/format';
+import { useCurrency } from '@/context/CurrencyContext';
 import { useAuth } from '@/context/AuthContext';
 import { CART_MAX_ITEMS, useCart } from '@/context/CartContext';
 import { createClient } from '@/lib/supabase/client';
@@ -23,6 +24,7 @@ const MPESA_ENABLED = process.env.NEXT_PUBLIC_MPESA_ENABLED === 'true';
 const IS_DEV = process.env.NODE_ENV === 'development';
 
 export default function TrialBatchCard({ product }: { product: TrialProductView }) {
+  const { formatUsd } = useCurrency();
   const router = useRouter();
   const pathname = usePathname();
   const auth = useAuth();
@@ -144,8 +146,8 @@ export default function TrialBatchCard({ product }: { product: TrialProductView 
           <div className="flex items-center justify-between gap-3 pb-1">
             <QuantityStepper value={quantity} onChange={setQuantity} label="Trial Batches" size="sm" disabled={state === 'loading' || product.is_demo} />
             <p className="text-right text-xs leading-tight text-neutral-500">
-              {quantity} × {formatUSD(product.landed_cost_cents, true)}
-              <span className="block text-sm font-semibold tabular-nums text-neutral-900">{formatUSD(totals.landed_cost_cents, true)}</span>
+              {quantity} × {formatUsd(product.landed_cost_cents)}
+              <span className="block text-sm font-semibold tabular-nums text-neutral-900">{formatUsd(totals.landed_cost_cents)}</span>
             </p>
           </div>
           {/* M-Pesa is the primary method when enabled; card checkout is the fallback. */}
@@ -244,14 +246,14 @@ export default function TrialBatchCard({ product }: { product: TrialProductView 
         {(product.category_name || product.moq || product.price_tiers?.length) && (
           <p className="mt-1 text-xs text-neutral-600">
             {[product.category_name, product.moq ? `MOQ ${product.moq.toLocaleString('en-US')} ${product.unit_of_measure ?? ''}`.trim() : null,
-              product.price_tiers?.length ? `Volume pricing from ${formatUSD(Math.min(...product.price_tiers.map((t) => t.unit_price_cents)), true)}/${product.unit_of_measure ?? 'unit'}` : null]
+              product.price_tiers?.length ? `Volume pricing from ${formatUsd(Math.min(...product.price_tiers.map((t) => t.unit_price_cents)))}/${product.unit_of_measure ?? 'unit'}` : null]
               .filter(Boolean).join(' · ')}
           </p>
         )}
         <p className="mt-1.5 flex items-baseline justify-between gap-3">
-          <span className="text-lg font-semibold tabular-nums tracking-tight text-neutral-900">{formatUSD(totals.landed_cost_cents, true)}</span>
+          <span className="text-lg font-semibold tabular-nums tracking-tight text-neutral-900">{formatUsd(totals.landed_cost_cents)}</span>
           <span className="text-xs tabular-nums text-neutral-500">
-            {formatUSD(Math.round(product.landed_cost_cents / Math.max(1, product.trial_units)), true)} / unit landed
+            {formatUsd(Math.round(product.landed_cost_cents / Math.max(1, product.trial_units)))} / unit landed
           </span>
         </p>
 
@@ -272,12 +274,12 @@ export default function TrialBatchCard({ product }: { product: TrialProductView 
                   {l.label}
                   <InfoTip text={l.tip} label={`About ${l.label}`} />
                 </dt>
-                <dd className="tabular-nums transition-colors">{formatUSD(l.value, true)}</dd>
+                <dd className="tabular-nums transition-colors">{formatUsd(l.value)}</dd>
               </div>
             ))}
             <div className="flex items-center justify-between gap-2 pt-1 text-xs text-neutral-500">
               <dt className="flex items-center gap-1.5">Per unit, landed <InfoTip text="Guaranteed Landed Cost divided by the units in your batches — what each piece costs you at your door." label="About per-unit landed price" /></dt>
-              <dd className="font-semibold tabular-nums text-blue-600 dark:text-blue-400">{formatUSD(perUnit, true)} × {totals.units}</dd>
+              <dd className="font-semibold tabular-nums text-blue-600 dark:text-blue-400">{formatUsd(perUnit)} × {totals.units}</dd>
             </div>
           </dl>
           <div className="mt-2.5 flex items-center justify-between border-t border-dashed border-neutral-200 pt-2.5">
@@ -288,7 +290,7 @@ export default function TrialBatchCard({ product }: { product: TrialProductView 
               <p className="text-xs text-neutral-500">Delivered to your door · no surprise fees</p>
             </div>
             <p className="text-right text-lg font-semibold tabular-nums text-neutral-900">
-              {formatUSD(totals.landed_cost_cents, true)}
+              {formatUsd(totals.landed_cost_cents)}
               {quantity > 1 && <span className="block text-xs font-normal text-neutral-500">{quantity} batches</span>}
             </p>
           </div>

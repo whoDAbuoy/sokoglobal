@@ -4,6 +4,8 @@ import { Inter } from 'next/font/google';
 import { Toaster } from 'sonner';
 import { AuthProvider } from '@/context/AuthContext';
 import { CartProvider } from '@/context/CartContext';
+import { CurrencyProvider } from '@/context/CurrencyContext';
+import { getCurrencyState } from '@/lib/currency-server';
 import { ChatProvider } from '@/context/ChatContext';
 import CartDrawer from '@/components/cart/CartDrawer';
 import AmbientBackdrop from '@/components/motion/AmbientBackdrop';
@@ -22,7 +24,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   // Reading request headers opts every route into dynamic rendering, so each
   // response is rendered with that request's CSP nonce (prerendered HTML would
   // carry no nonce). Pass `nonce` to any third-party <Script nonce={nonce} />.
-  const nonce = (await headers()).get('x-nonce') ?? undefined;
+  const [nonce, money] = await Promise.all([headers().then((h) => h.get('x-nonce') ?? undefined), getCurrencyState()]);
   return (
     // suppressHydrationWarning: the theme script may add class="dark" before React hydrates.
     <html lang="en" className={inter.variable} suppressHydrationWarning>
@@ -33,14 +35,16 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body className="min-h-screen font-sans">
         <AmbientBackdrop />
         <PlatformBanner />
-        <AuthProvider>
-          <ChatProvider>
-            <CartProvider>
-              {children}
-              <CartDrawer />
-            </CartProvider>
-          </ChatProvider>
-        </AuthProvider>
+        <CurrencyProvider initialCurrency={money.currency} rates={money.rates} ratesUpdatedAt={money.ratesUpdatedAt}>
+          <AuthProvider>
+            <ChatProvider>
+              <CartProvider>
+                {children}
+                <CartDrawer />
+              </CartProvider>
+            </ChatProvider>
+          </AuthProvider>
+        </CurrencyProvider>
         <Toaster closeButton position="top-right"
           toastOptions={{ classNames: { toast: 'rounded-[18px] border border-black/[0.06] !bg-white/85 shadow-overlay backdrop-blur-xl font-sans dark:border-snow/10 dark:!bg-midnight/80', description: 'text-neutral-500' } }} />
       </body>

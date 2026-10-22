@@ -12,6 +12,11 @@ import { exceedsMpesaLimit } from '@/lib/payments/mpesa';
 import MessageSupplierButton from '@/components/chat/MessageSupplierButton';
 import AnimatedShipmentMap from '@/components/tracking/AnimatedShipmentMap';
 import { invoiceAvailable } from '@/lib/documents/model';
+import { milestoneEligible, paymentStep, type PaymentStructure } from '@/lib/milestone';
+import { trackingLink, trackingTimeline, type TimelineShipment } from '@/lib/shipping';
+import OrderTimeline from '@/components/tracking/OrderTimeline';
+import PaymentStructureChooser from '@/components/payments/PaymentStructureChooser';
+import Price, { LocalPreview } from '@/components/currency/Price';
 
 const EVENT_LABEL: Record<string, string> = {
   status_change: 'Status updated',
@@ -38,7 +43,10 @@ export default async function OrderPage({ params, searchParams }: {
     .from('orders')
     .select(`id, order_type, escrow_status, quantity, checkout_group_id, product_id, goods_cents, freight_cents, customs_cents, total_cents,
              created_at, buyer_id, discharge_timestamp, eta_timestamp, origin_port_coords, destination_coords,
-             route_waypoints, current_status, origin_label, destination_label, product:products ( title, trial_units )`)
+             route_waypoints, current_status, origin_label, destination_label, funded_at, delivered_at,
+             payment_structure, deposit_amount, remaining_balance, deposit_paid_at, final_paid_at, rfq_quote_id, fx_rate_to_kes,
+             product:products ( title, trial_units ),
+             shipments ( status, carrier_name, tracking_number, tracking_url, estimated_delivery, dispatched_at, delivered_at )`)
     .eq('id', id)
     .maybeSingle();
   if (!order || order.buyer_id !== user.id) notFound();
@@ -53,7 +61,14 @@ export default async function OrderPage({ params, searchParams }: {
   const view: OrderView = {
     id: order.id, order_type: order.order_type, escrow_status: order.escrow_status as EscrowStatus,
     total_cents: order.total_cents, created_at: order.created_at, product_title: product?.title ?? 'Order',
+    payment_structure: order.payment_structure, is_rfq: !!order.rfq_quote_id,
   };
+  const shipment = ((Array.isArray(order.shipments) ? order.shipments[0] : order.shipments) ?? null) as (TimelineShipment & { tracking_url: string | null }) | null;
+  const step = paymentStep({ ...order, escrow_status: view.escrow_status });
+  const dueCents = step.kind === 'pay_full' || step.kind === 'pay_deposit' || step.kind === 'pay_balance' ? step.amountCents : 0;
+  const milestone = order.payment_structure === 'milestone_30_70';
+  const kycApproved = profile.kyc_status === 'approved' || (!profile.kyc_status && profile.kyc_verified);
+  const canChoose = view.escrow_status === 'pending_payment' && !order.checkout_group_id && !order.rfq_quote_id && order.order_type !== 'pool';
 
   return (
     <>
@@ -63,7 +78,9 @@ export default async function OrderPage({ params, searchParams }: {
           <ArrowLeft className="h-4 w-4" /> My Orders
         </Link>
         <div className="mt-6 border-b border-neutral-200 pb-6">
-          <p className="eyebrow">Order #{order.id.slice(0, 8).toUpperCase()} · {batches > 1 ? `${batches} Trial Batches · ` : ''}{order.quantity} units</p>
+          <p className="eyebrow">
+            Order #{order.id.slice(0, 8).toUpperCase()} · {order.rfq_quote_id ? 'Quoted order · ' : batches > 1 ? `${batches} Trial Batches · ` : ''}{order.quantity.toLocaleString('en-US')} units
+          </p>
           <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
             <h1 className="text-3xl font-semibold text-neutral-900">{view.product_title}</h1>
             <MessageSupplierButton productId={order.product_id} productTitle={view.product_title} />
@@ -73,6 +90,15 @@ export default async function OrderPage({ params, searchParams }: {
         <div className="mt-8 grid gap-10 lg:grid-cols-[minmax(0,1fr)_22rem]">
         <div className="min-w-0">
         <EscrowTracker orders={[view]} actions={false} />
+
+        <OrderTimeline className="mt-6" steps={trackingTimeline({ ...order, escrow_status: view.escrow_status }, shipment)}
+          trackingUrl={shipment && shipment.status !== 'label_created' ? trackingLink(shipment) : null} />
+
+        {canChoose && (
+          <PaymentStructureChooser orderId={order.id} totalCents={order.total_cents} structure={(order.payment_structure ?? 'full') as PaymentStructure}
+            kycApproved={kycApproved}
+            eligible={milestoneEligible({ totalCents: order.total_cents, kycApproved, inCart: !!order.checkout_group_id, orderType: order.order_type })} />
+        )}
 
         {order.checkout_group_id && view.escrow_status === 'pending_payment' ? (
           // Cart orders are paid together, from their checkout (per-order payment is refused in Postgres).
@@ -84,8 +110,9 @@ export default async function OrderPage({ params, searchParams }: {
             <Link href={`/dashboard/checkout/${order.checkout_group_id}`} className="btn-primary">Go to checkout</Link>
           </div>
         ) : (
-          <OrderActions orderId={order.id} status={view.escrow_status} returnStatus={returnStatus ?? null} payWith={pay ?? null}
-            amountLabel={formatUSD(order.total_cents, true)} buyerName={profile.full_name} mpesaOverLimit={exceedsMpesaLimit(order.total_cents)} />
+          <OrderActions orderId={order.id} status={view.escrow_status} step={step} returnStatus={returnStatus ?? null} payWith={pay ?? null}
+            amountLabel={formatUSD(dueCents, true)} balanceLabel={order.remaining_balance ? formatUSD(order.remaining_balance, true) : undefined}
+            buyerName={profile.full_name} mpesaOverLimit={dueCents > 0 && exceedsMpesaLimit(dueCents)} />
         )}
 
         {order.origin_port_coords && order.destination_coords && (
@@ -124,14 +151,37 @@ export default async function OrderPage({ params, searchParams }: {
         {/* Order summary — checkout-style sidebar */}
         <aside className="lg:sticky lg:top-24 lg:self-start">
           <section className="rounded-lg border border-neutral-200 bg-neutral-50 p-6">
-            <h2 className="eyebrow">Guaranteed Landed Cost</h2>
+            <h2 className="eyebrow">{order.rfq_quote_id ? 'Quoted price' : 'Guaranteed Landed Cost'}</h2>
             <dl className="mt-5 space-y-3 text-sm text-neutral-600">
-              {[['Product', order.goods_cents], ['Consolidated air freight', order.freight_cents], ['Customs clearance & duties', order.customs_cents]].map(([l, v]) => (
-                <div key={l as string} className="flex justify-between"><dt>{l}</dt><dd className="tabular-nums text-neutral-900">{formatUSD(v as number, true)}</dd></div>
+              {(order.rfq_quote_id
+                ? [['Goods, delivered as quoted', order.goods_cents]]
+                : [['Product', order.goods_cents], ['Consolidated air freight', order.freight_cents], ['Customs clearance & duties', order.customs_cents]]
+              ).map(([l, v]) => (
+                <div key={l as string} className="flex justify-between gap-3"><dt>{l}</dt><dd className="tabular-nums text-neutral-900"><Price cents={v as number} /></dd></div>
               ))}
               <div className="flex items-baseline justify-between border-t border-neutral-200 pt-4 text-neutral-900">
-                <dt className="font-medium">Total held in escrow</dt><dd className="text-xl font-semibold tabular-nums">{formatUSD(order.total_cents, true)}</dd>
+                <dt className="font-medium">{milestone ? 'Order total' : 'Total held in escrow'}</dt>
+                <dd className="text-xl font-semibold tabular-nums">{formatUSD(order.total_cents, true)}</dd>
               </div>
+              <LocalPreview cents={order.total_cents} className="block text-right text-xs tabular-nums text-neutral-500" />
+              {milestone && order.deposit_amount != null && order.remaining_balance != null && (
+                <div className="space-y-2 border-t border-neutral-200 pt-4">
+                  {[
+                    { label: '30% deposit', cents: order.deposit_amount, paid: order.deposit_paid_at, due: 'due now' },
+                    { label: '70% balance', cents: order.remaining_balance, paid: order.final_paid_at, due: 'due on dispatch' },
+                  ].map((m) => (
+                    <div key={m.label} className="flex justify-between gap-3">
+                      <dt>{m.label} <span className={m.paid ? 'text-emerald-700' : 'text-neutral-500'}>· {m.paid ? 'in escrow' : m.due}</span></dt>
+                      <dd className="tabular-nums text-neutral-900">{formatUSD(m.cents, true)}</dd>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {order.rfq_quote_id && order.fx_rate_to_kes && (
+                <p className="text-xs text-neutral-500">
+                  Quoted in KES and converted at KES {Number(order.fx_rate_to_kes).toLocaleString('en-US', { maximumFractionDigits: 2 })} per US dollar when you accepted. Escrow is held in USD.
+                </p>
+              )}
             </dl>
             {invoiceAvailable(view.escrow_status) && (
               // Plain link: the route streams a PDF with Content-Disposition: attachment.

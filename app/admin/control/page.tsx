@@ -12,6 +12,7 @@ import type { EscrowStatus } from '@/lib/types';
 import DashboardHeader from '@/components/dashboard/DashboardHeader';
 import PlatformSwitches from '@/components/admin/control/PlatformSwitches';
 import MarketplaceRules from '@/components/admin/control/MarketplaceRules';
+import ExchangeRates, { type RateRow } from '@/components/admin/control/ExchangeRates';
 import { getSystemConfigs } from '@/lib/system-config-server';
 import OrderOverrides from '@/components/admin/control/OrderOverrides';
 import { financialOverrideBlock } from '@/lib/security/two-factor-gate';
@@ -45,7 +46,7 @@ export default async function ControlPage({ searchParams }: { searchParams: Prom
   if (auditFilter) auditQ = auditQ.like('action', `${auditFilter}%`);
   if (UUID_RE.test(orderId)) auditQ = auditQ.eq('target_id', orderId);
 
-  const [settings, auditRes, orderRes, configs] = await Promise.all([
+  const [settings, auditRes, orderRes, configs, ratesRes] = await Promise.all([
     getPlatformSettings(supabase),
     auditQ,
     superAdmin && UUID_RE.test(orderId)
@@ -53,7 +54,9 @@ export default async function ControlPage({ searchParams }: { searchParams: Prom
           product:products ( title ), buyer:profiles!orders_buyer_id_fkey ( company_name ), payout:payouts ( status )`).eq('id', orderId).maybeSingle()
       : Promise.resolve({ data: null, error: null }),
     getSystemConfigs(supabase),
+    supabase.from('exchange_rates').select('currency_code, rate_to_kes, updated_at').order('currency_code'),
   ]);
+  const rates = (ratesRes.data ?? []) as RateRow[];
   const migrationMissing = !!auditRes.error;
   const audit = (auditRes.data ?? []) as AuditRow[];
 
@@ -97,6 +100,14 @@ export default async function ControlPage({ searchParams }: { searchParams: Prom
               <h2 id="rules" className="mb-4 font-semibold text-neutral-900">Marketplace rules</h2>
               <MarketplaceRules trial={configs.trial} kyc={configs.kyc} canEdit={superAdmin}
                 updatedAt={[configs.updatedAt.trial_batch_config, configs.updatedAt.kyc_requirements].filter(Boolean).sort().pop()} />
+            </section>
+          )}
+
+          {rates.length > 0 && (
+            <section aria-labelledby="fx" className="card p-5 lg:col-start-1">
+              <h2 id="fx" className="font-semibold text-neutral-900">Display exchange rates</h2>
+              <p className="mb-4 mt-1 text-sm text-neutral-600">Used by the currency switcher and to price accepted RFQ quotes. Escrow stays in USD; card and M-Pesa charges are not affected.</p>
+              <ExchangeRates rows={rates} canEdit={superAdmin} />
             </section>
           )}
 

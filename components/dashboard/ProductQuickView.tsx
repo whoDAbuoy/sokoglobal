@@ -2,10 +2,12 @@
 
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
+import Link from 'next/link';
 import clsx from 'clsx';
 import { BadgeCheck, Film, Lock, ShieldCheck, Timer, X } from 'lucide-react';
 import type { TrialProductView } from '@/lib/types';
-import { countryName, flag, formatUSD } from '@/lib/format';
+import { countryName, flag } from '@/lib/format';
+import { useCurrency } from '@/context/CurrencyContext';
 import { lineTotals } from '@/lib/cart';
 import ProductGallery from './ProductGallery';
 
@@ -27,6 +29,7 @@ export default function ProductQuickView({ product, quantity = 1, onClose, actio
   onClose: () => void;
   actions: ReactNode;
 }) {
+  const { formatUsd } = useCurrency();
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [closing, setClosing] = useState(false);
   const images = product.image_urls?.length ? product.image_urls : product.image_url ? [product.image_url] : [];
@@ -113,7 +116,7 @@ export default function ProductQuickView({ product, quantity = 1, onClose, actio
             </div>
             <div>
               <dt className="eyebrow">Unit price</dt>
-              <dd className="mt-1 font-medium tabular-nums text-neutral-900">{formatUSD(product.unit_price_cents, true)}</dd>
+              <dd className="mt-1 font-medium tabular-nums text-neutral-900">{formatUsd(product.unit_price_cents)}</dd>
             </div>
             <div>
               <dt className="eyebrow">Lead time</dt>
@@ -129,7 +132,7 @@ export default function ProductQuickView({ product, quantity = 1, onClose, actio
             <dl className="space-y-2 text-sm">
               {lines.map((l) => (
                 <div key={l.label} className="flex justify-between text-neutral-600">
-                  <dt>{l.label}</dt><dd className="tabular-nums text-neutral-900">{formatUSD(l.value, true)}</dd>
+                  <dt>{l.label}</dt><dd className="tabular-nums text-neutral-900">{formatUsd(l.value)}</dd>
                 </div>
               ))}
             </dl>
@@ -141,8 +144,8 @@ export default function ProductQuickView({ product, quantity = 1, onClose, actio
                 <p className="text-xs text-neutral-500">Delivered to your door · no surprise fees</p>
               </div>
               <p className="text-right text-2xl font-semibold tabular-nums text-neutral-900">
-                {formatUSD(totals.landed_cost_cents, true)}
-                {totals.quantity > 1 && <span className="block text-xs font-normal text-neutral-500">{totals.quantity} × {formatUSD(product.landed_cost_cents, true)}</span>}
+                {formatUsd(totals.landed_cost_cents)}
+                {totals.quantity > 1 && <span className="block text-xs font-normal text-neutral-500">{totals.quantity} × {formatUsd(product.landed_cost_cents)}</span>}
               </p>
             </div>
           </section>
@@ -151,6 +154,12 @@ export default function ProductQuickView({ product, quantity = 1, onClose, actio
           <p className="mt-4 flex items-center gap-1.5 text-xs text-neutral-500">
             <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" /> Paid into escrow — released to the supplier only after you verify the goods.
           </p>
+          {!product.is_demo && (
+            <p className="mt-2 text-xs text-neutral-500">
+              Need a larger volume or a custom spec?{' '}
+              <Link href={`/dashboard/rfqs?product=${product.id}`} className="font-medium text-blue-700 underline-offset-4 hover:underline dark:text-blue-400">Request a volume quote</Link>
+            </p>
+          )}
         </div>
       </div>
     </dialog>,

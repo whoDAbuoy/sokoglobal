@@ -7,6 +7,8 @@ import type { EscrowStatus } from './types';
 /** Escrow states where money is still held (refunds and force-release allowed). */
 export const HELD_STATUSES: EscrowStatus[] = ['funded', 'in_transit', 'customs_cleared', 'delivered_pending_verification', 'disputed'];
 export const isHeld = (s: EscrowStatus | string) => (HELD_STATUSES as string[]).includes(s);
+/** Refunds may also return a milestone deposit (migration 021); release still needs the full amount. */
+export const isRefundable = (s: EscrowStatus | string) => s === 'deposit_paid' || isHeld(s);
 
 export function validateReason(reason: string): { ok: true; reason: string } | { ok: false; error: string } {
   const r = reason.trim().replace(/\s+/g, ' ');
@@ -23,11 +25,13 @@ export function parseUsdToCents(v: string): number | null {
   return Number.isSafeInteger(cents) && cents <= 1_000_000_000 ? cents : null;
 }
 
-export interface CardCharge { provider_ref: string | null; currency: string; usd_rate: number; amount_minor: number }
+export interface CardCharge { provider_ref: string | null; currency: string; usd_rate: number; amount_minor: number; usd_cents?: number }
 export interface MpesaCharge { id: string; mpesa_receipt: string | null }
 
 export type RefundPlan =
-  | { ok: true; full: boolean; amountCents: number; provider: 'paystack'; transaction: string; amountMinor: number }
+  | { ok: true; full: boolean; amountCents: number; provider: 'paystack'; transaction: string; amountMinor: number;
+      /** Further charges to refund in full (a milestone order paid as deposit + balance). */
+      more?: { transaction: string; amountMinor: number; usdCents: number }[] }
   | { ok: true; full: boolean; amountCents: number; provider: 'mpesa'; receipt: string | null }
   | { ok: false; error: string };
 
@@ -37,18 +41,37 @@ export type RefundPlan =
  * payments are recorded as manual_required for the finance team to send.
  */
 export function planRefund(input: {
-  order: { total_cents: number; escrow_status: EscrowStatus | string };
+  order: { total_cents: number; escrow_status: EscrowStatus | string; payment_structure?: string | null; deposit_amount?: number | null; final_paid_at?: string | null };
   mode: 'full' | 'partial';
   amountCents?: number | null;
   card?: CardCharge | null;
   mpesa?: MpesaCharge | null;
+  /** Every successful charge on a stand-alone order (milestone orders can have two). */
+  orderCards?: CardCharge[];
+  orderMpesa?: MpesaCharge[];
 }): RefundPlan {
   const { order } = input;
-  if (!isHeld(order.escrow_status)) return { ok: false, error: `Refunds are only possible while funds are held in escrow (order is ${String(order.escrow_status).replace(/_/g, ' ')}).` };
+  if (!isRefundable(order.escrow_status)) return { ok: false, error: `Refunds are only possible while funds are held in escrow (order is ${String(order.escrow_status).replace(/_/g, ' ')}).` };
+  const milestone = order.payment_structure === 'milestone_30_70';
+  // Only what was actually collected can go back: a milestone order may hold just its deposit.
+  const collected = milestone && !order.final_paid_at && order.deposit_amount != null ? order.deposit_amount : order.total_cents;
   const full = input.mode === 'full';
-  const amountCents = full ? order.total_cents : input.amountCents ?? 0;
+  const amountCents = full ? collected : input.amountCents ?? 0;
   if (!Number.isInteger(amountCents) || amountCents <= 0) return { ok: false, error: 'Enter the amount to refund.' };
-  if (!full && amountCents >= order.total_cents) return { ok: false, error: 'A partial refund must be less than the order total. Use a full refund instead.' };
+  if (!full && amountCents >= collected) return { ok: false, error: 'A partial refund must be less than what was collected for this order. Use a full refund instead.' };
+
+  if (full && milestone && order.final_paid_at) {
+    const cards = (input.orderCards ?? []).filter((c): c is CardCharge & { provider_ref: string } => !!c.provider_ref);
+    const mpesa = input.orderMpesa ?? [];
+    if (cards.length && mpesa.length) {
+      return { ok: false, error: 'This order was paid partly by card and partly by M-Pesa. Refund the card charge as a partial refund and send the M-Pesa part manually.' };
+    }
+    if (cards.length > 1) {
+      const [first, ...rest] = cards;
+      return { ok: true, full, amountCents, provider: 'paystack', transaction: first.provider_ref, amountMinor: first.amount_minor,
+        more: rest.map((c) => ({ transaction: c.provider_ref, amountMinor: c.amount_minor, usdCents: c.usd_cents ?? 0 })) };
+    }
+  }
 
   const c = input.card;
   if (c?.provider_ref) {

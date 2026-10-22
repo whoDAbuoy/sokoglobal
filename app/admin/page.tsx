@@ -26,7 +26,7 @@ const one = <T,>(v: T | T[] | null | undefined): T | null => (Array.isArray(v) ?
 
 const PER_PAGE = 10;
 const METRIC_SAMPLE = 2000; // most recent orders used for money / cohort figures
-const ACTIVE_SHIPMENT: EscrowStatus[] = ['funded', 'in_transit', 'customs_cleared', 'delivered_pending_verification'];
+const ACTIVE_SHIPMENT: EscrowStatus[] = ['deposit_paid', 'funded', 'in_transit', 'customs_cleared', 'delivered_pending_verification'];
 const TRACKABLE = new Set<string>(ACTIVE_SHIPMENT);
 
 const TONE: Record<TxnTone, string> = {
@@ -90,7 +90,7 @@ export default async function AdminOverviewPage({ searchParams }: {
     supabase.from('products').select('id', head).eq('status', 'live').is('deleted_at', null),
     supabase.from('products').select('updated_at', { count: 'exact' }).eq('status', 'pending_review').is('deleted_at', null).limit(500),
     supabase.from('orders')
-      .select('buyer_id, escrow_status, total_cents, created_at, funded_at, payment_provider, product:products ( category )')
+      .select('buyer_id, escrow_status, total_cents, deposit_amount, created_at, funded_at, payment_provider, product:products ( category )')
       .order('created_at', { ascending: false }).limit(METRIC_SAMPLE),
     txq,
   ]);
@@ -100,7 +100,7 @@ export default async function AdminOverviewPage({ searchParams }: {
 
   const metricOrders: MetricOrder[] = (metricRes.data ?? []).map((o) => ({
     buyer_id: o.buyer_id, escrow_status: o.escrow_status, total_cents: o.total_cents, created_at: o.created_at,
-    funded_at: o.funded_at, payment_provider: o.payment_provider,
+    funded_at: o.funded_at, payment_provider: o.payment_provider, deposit_amount: o.deposit_amount,
     category: one(o.product as unknown as { category: string })?.category ?? null,
   }));
   const inWindow = (o: MetricOrder, w: { from: string; to: string }) => !!o.funded_at && o.funded_at >= w.from && o.funded_at < w.to;

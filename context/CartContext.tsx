@@ -30,6 +30,8 @@ interface CartState {
   /** 'full' when the cart already holds CART_MAX_ITEMS lines. Adding an existing line adds to its quantity. */
   add: (item: Omit<CartItem, 'quantity'>, quantity?: number) => 'added' | 'updated' | 'full';
   setQuantity: (productId: string, quantity: number) => void;
+  /** Quick reorder: put each line in the cart at exactly its quantity (existing lines are set, not added to). */
+  reorder: (lines: CartItem[]) => { added: number; updated: number; skipped: number };
   remove: (productId: string) => void;
   clear: () => void;
   open: boolean;
@@ -84,6 +86,18 @@ export function CartProvider({ children }: { children: ReactNode }) {
       return 'added';
     },
     setQuantity: (id, quantity) => persist(items.map((i) => (i.productId === id ? { ...i, quantity: clampQuantity(quantity) } : i))),
+    reorder: (lines) => {
+      const next = [...items];
+      const r = { added: 0, updated: 0, skipped: 0 };
+      for (const line of lines) {
+        const at = next.findIndex((i) => i.productId === line.productId);
+        if (at >= 0) { next[at] = { ...next[at], quantity: clampQuantity(line.quantity) }; r.updated += 1; }
+        else if (next.length < CART_MAX_ITEMS) { next.push({ ...line, quantity: clampQuantity(line.quantity) }); r.added += 1; }
+        else r.skipped += 1;
+      }
+      persist(next);
+      return r;
+    },
     remove: (id) => persist(items.filter((i) => i.productId !== id)),
     clear: () => persist([]),
     open,

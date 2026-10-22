@@ -6,7 +6,7 @@ import { AlertCircle, ArrowRight, Loader2, LogIn, ShieldCheck, ShoppingBag, Tras
 import { CART_MAX_ITEMS, useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
 import { createClient } from '@/lib/supabase/client';
-import { formatUSD } from '@/lib/format';
+import { useCurrency } from '@/context/CurrencyContext';
 import { ROLE_LABEL, checkoutGate, gateFromStatus, importerLoginUrl, type CheckoutGate } from '@/lib/checkout-gate';
 import ProductVisual from '@/components/dashboard/ProductVisual';
 import QuantityStepper from '@/components/cart/QuantityStepper';
@@ -17,6 +17,7 @@ import QuantityStepper from '@/components/cart/QuantityStepper';
  * whole cart is paid once with M-Pesa or card.
  */
 export default function CartDrawer() {
+  const { formatUsd, currency } = useCurrency();
   const cart = useCart();
   const auth = useAuth();
   const router = useRouter();
@@ -86,7 +87,7 @@ export default function CartDrawer() {
             className="glass-toolbar press pointer-events-auto flex w-full max-w-md items-center justify-between gap-4 !rounded-full py-2.5 pl-5 pr-2.5 text-sm text-neutral-900 hover:border-blue-500/30 motion-safe:animate-slide-up">
             <span className="flex items-center gap-2">
               <ShoppingBag className="h-4 w-4" />
-              {cart.batchCount} Trial Batch{cart.batchCount === 1 ? '' : 'es'} · <span className="font-semibold tabular-nums">{formatUSD(cart.subtotalCents, true)}</span>
+              {cart.batchCount} Trial Batch{cart.batchCount === 1 ? '' : 'es'} · <span className="font-semibold tabular-nums">{formatUsd(cart.subtotalCents)}</span>
             </span>
             <span className="flex items-center gap-1 rounded-full bg-blue-600 px-3 py-1.5 text-xs font-medium text-snow">
               View cart <ArrowRight className="h-3.5 w-3.5" />
@@ -129,10 +130,10 @@ export default function CartDrawer() {
                     <div className="flex min-w-0 flex-1 flex-col">
                       <p className="text-xs text-neutral-500">{item.supplierName}</p>
                       <p className="line-clamp-2 text-sm font-medium text-neutral-900">{item.title}</p>
-                      <p className="text-xs tabular-nums text-neutral-500">{formatUSD(item.landedCostCents, true)} per batch</p>
+                      <p className="text-xs tabular-nums text-neutral-500">{formatUsd(item.landedCostCents)} per batch</p>
                       <div className="mt-auto flex items-center justify-between gap-2 pt-2">
                         <QuantityStepper value={item.quantity} onChange={(q) => cart.setQuantity(item.productId, q)} label={`Trial Batches of ${item.title}`} size="sm" />
-                        <span className="text-sm font-semibold tabular-nums text-neutral-900">{formatUSD(item.landedCostCents * item.quantity, true)}</span>
+                        <span className="text-sm font-semibold tabular-nums text-neutral-900">{formatUsd(item.landedCostCents * item.quantity)}</span>
                       </div>
                       <div className="flex justify-end pt-1">
                         <button type="button" onClick={() => cart.remove(item.productId)} aria-label={`Remove ${item.title}`}
@@ -148,9 +149,12 @@ export default function CartDrawer() {
               <footer className="border-t border-neutral-200 bg-neutral-50 px-6 py-5">
                 <div className="flex items-baseline justify-between">
                   <span className="text-sm text-neutral-600">Guaranteed Landed Cost total</span>
-                  <span className="text-xl font-semibold tabular-nums text-neutral-900">{formatUSD(cart.subtotalCents, true)}</span>
+                  <span className="text-xl font-semibold tabular-nums text-neutral-900">{formatUsd(cart.subtotalCents)}</span>
                 </div>
-                <p className="mt-1 text-xs text-neutral-500">Product, air freight and customs included. Prices are confirmed at checkout.</p>
+                <p className="mt-1 text-xs text-neutral-500">
+                  Product, air freight and customs included. Prices are confirmed at checkout.
+                  {currency !== 'USD' && <> Shown in {currency} at today&apos;s rate; escrow is held in USD.</>}
+                </p>
 
                 {gate.kind === 'signed_out' || gate.kind === 'wrong_role' ? (
                   <div role="status" className="mt-4 rounded-md border border-neutral-200 bg-white p-4 text-sm">

@@ -34,6 +34,7 @@ export type TxnTone = 'success' | 'warning' | 'danger' | 'muted' | 'escrow';
 export function txnStatus(status: EscrowStatus): { label: string; tone: TxnTone } {
   switch (status) {
     case 'pending_payment': return { label: 'Pending', tone: 'warning' };
+    case 'deposit_paid': return { label: 'Deposit paid', tone: 'escrow' };
     case 'funded':
     case 'in_transit':
     case 'customs_cleared':
@@ -59,7 +60,7 @@ export type TxnFilter = (typeof TXN_FILTERS)[number][0];
 
 export function txnFilterStatuses(filter: string): EscrowStatus[] | null {
   switch (filter) {
-    case 'paid': return ['funded', 'in_transit', 'customs_cleared', 'delivered_pending_verification'];
+    case 'paid': return ['deposit_paid', 'funded', 'in_transit', 'customs_cleared', 'delivered_pending_verification'];
     case 'pending': return ['pending_payment'];
     case 'released': return ['released'];
     case 'disputed': return ['disputed'];
@@ -112,9 +113,11 @@ export interface MetricOrder {
   funded_at: string | null;
   payment_provider: string | null;
   category: string | null;
+  /** Milestone escrow (migration 021): while 'deposit_paid', only this much is held. */
+  deposit_amount?: number | null;
 }
 
-const HELD: EscrowStatus[] = ['funded', 'in_transit', 'customs_cleared', 'delivered_pending_verification', 'disputed'];
+const HELD: EscrowStatus[] = ['deposit_paid', 'funded', 'in_transit', 'customs_cleared', 'delivered_pending_verification', 'disputed'];
 
 /** Money and buyer-cohort figures over a set of orders (unpaid checkouts are ignored). */
 export function escrowSummary(orders: readonly MetricOrder[]) {
@@ -128,7 +131,7 @@ export function escrowSummary(orders: readonly MetricOrder[]) {
     if (o.escrow_status === 'cancelled' && !o.funded_at) continue; // abandoned before payment
     paidCount += 1;
     gmv += o.total_cents;
-    if (HELD.includes(o.escrow_status)) held += o.total_cents;
+    if (HELD.includes(o.escrow_status)) held += o.escrow_status === 'deposit_paid' ? o.deposit_amount ?? o.total_cents : o.total_cents;
     else if (o.escrow_status === 'released') released += o.total_cents;
     else if (o.escrow_status === 'refunded' || o.escrow_status === 'cancelled') refunded += o.total_cents;
     perBuyer.set(o.buyer_id, (perBuyer.get(o.buyer_id) ?? 0) + 1);

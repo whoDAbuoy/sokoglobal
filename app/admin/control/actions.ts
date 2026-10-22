@@ -1,6 +1,6 @@
 'use server';
 
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, revalidateTag } from 'next/cache';
 import { headers } from 'next/headers';
 import { getSessionProfile } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
@@ -13,6 +13,7 @@ import { PaystackError, refundTransaction } from '@/lib/payments/paystack';
 import { financialOverrideBlock } from '@/lib/security/two-factor-gate';
 import { parseTrialConfigInput } from '@/lib/trial-batch';
 import { twoFactorState } from '@/lib/security/two-factor-server';
+import { isCurrency } from '@/lib/currency';
 
 /** 2FA gate for money-moving overrides, checked BEFORE any provider call (Postgres re-checks on insert). */
 async function moneyGate(ctx: { supabase: Parameters<typeof twoFactorState>[0] }): Promise<string | null> {
@@ -119,12 +120,19 @@ export async function refundOrder(orderId: string, mode: 'full' | 'partial', amo
 
   let db;
   try { db = createAdminClient(); } catch { return { ok: false, message: 'SUPABASE_SERVICE_ROLE_KEY is not configured on the server.' }; }
-  const { data: order } = await db.from('orders').select('id, total_cents, escrow_status, checkout_group_id').eq('id', orderId).maybeSingle();
+  const { data: order } = await db.from('orders').select('id, total_cents, escrow_status, checkout_group_id, payment_structure, deposit_amount, final_paid_at').eq('id', orderId).maybeSingle();
   if (!order) return { ok: false, message: 'Order not found.' };
 
   // A cart (checkout group) is paid in one charge; refund this order's share of it.
-  const cardQ = db.from('card_payments').select('provider_ref, currency, usd_rate, amount_minor').eq('status', 'succeeded');
+  const cardQ = db.from('card_payments').select('provider_ref, currency, usd_rate, amount_minor, usd_cents').eq('status', 'succeeded');
   const mpesaQ = db.from('mpesa_payments').select('id, mpesa_receipt').eq('status', 'succeeded');
+  // Milestone orders (migration 021) may have been paid in two charges: deposit, then balance.
+  const [{ data: orderCards }, { data: orderMpesa }] = order.checkout_group_id
+    ? [{ data: [] }, { data: [] }]
+    : await Promise.all([
+      db.from('card_payments').select('provider_ref, currency, usd_rate, amount_minor, usd_cents').eq('status', 'succeeded').eq('order_id', orderId).order('completed_at'),
+      db.from('mpesa_payments').select('id, mpesa_receipt').eq('status', 'succeeded').eq('order_id', orderId),
+    ]);
   const [{ data: card }, { data: mpesa }] = await Promise.all([
     (order.checkout_group_id ? cardQ.eq('checkout_group_id', order.checkout_group_id) : cardQ.eq('order_id', orderId))
       .order('completed_at', { ascending: false }).limit(1)
@@ -136,12 +144,16 @@ export async function refundOrder(orderId: string, mode: 'full' | 'partial', amo
   const plan = planRefund({
     order, mode, amountCents: mode === 'partial' ? parseUsdToCents(amountUsd) : null,
     card: card ? { ...card, usd_rate: Number(card.usd_rate), amount_minor: Number(card.amount_minor) } : null, mpesa,
+    orderCards: (orderCards ?? []).map((c) => ({ ...c, usd_rate: Number(c.usd_rate), amount_minor: Number(c.amount_minor), usd_cents: Number(c.usd_cents) })),
+    orderMpesa: orderMpesa ?? [],
   });
   if (!plan.ok) return { ok: false, message: plan.error };
 
   let status: 'sent' | 'manual_required' | 'failed' = 'manual_required';
   let providerRef: string | null = plan.provider === 'mpesa' ? plan.receipt : null;
   let providerNote = '';
+  let amountCents = plan.amountCents;
+  let full = plan.full;
   if (plan.provider === 'paystack') {
     try {
       const refund = await refundTransaction(plan.transaction, plan.amountMinor);
@@ -150,10 +162,21 @@ export async function refundOrder(orderId: string, mode: 'full' | 'partial', amo
       status = 'failed';
       providerNote = err instanceof PaystackError || err instanceof Error ? err.message : 'Paystack error';
     }
+    // Deposit + balance: refund the other charge too. If it fails, record only what was actually sent.
+    for (const part of status === 'sent' ? plan.more ?? [] : []) {
+      try {
+        const refund = await refundTransaction(part.transaction, part.amountMinor);
+        providerRef = `${providerRef},${refund.id}`;
+      } catch (err) {
+        full = false;
+        amountCents -= part.usdCents;
+        providerNote = `second charge ${part.transaction} not refunded: ${err instanceof Error ? err.message : 'Paystack error'}`;
+      }
+    }
   }
 
   const { error } = await ctx.supabase.rpc('super_record_refund', {
-    p_order_id: orderId, p_amount_cents: plan.amountCents, p_full: plan.full, p_provider: plan.provider, p_provider_ref: providerRef,
+    p_order_id: orderId, p_amount_cents: amountCents, p_full: full, p_provider: plan.provider, p_provider_ref: providerRef,
     p_status: status, p_reason: providerNote ? `${r.reason} [Paystack: ${providerNote}]`.slice(0, 1000) : r.reason, p_ip: ctx.fp.ip, p_ua: ctx.fp.ua,
   });
   if (error) {
@@ -163,6 +186,7 @@ export async function refundOrder(orderId: string, mode: 'full' | 'partial', amo
       : friendlyError(error.message) };
   }
   if (status === 'failed') return { ok: false, message: `Paystack refused the refund (${providerNote}). Nothing was changed; the attempt is logged.` };
+  if (plan.full && !full) return { ok: false, message: `Refunded the first charge (${providerRef}) as a partial refund; ${providerNote}. Retry the remaining charge from Paystack.` };
   return done(status === 'sent'
     ? `${plan.full ? 'Full' : 'Partial'} card refund sent through Paystack (ref ${providerRef}).`
     : `${plan.full ? 'Full' : 'Partial'} refund recorded. Send it by M-Pesa B2C manually${plan.provider === 'mpesa' && plan.receipt ? ` (original receipt ${plan.receipt})` : ''}.`, orderId);
@@ -221,4 +245,18 @@ export async function saveTrialBatchConfig(enabled: boolean, minimum: string): P
 
 export async function saveKycRequirements(listings: boolean, orders: boolean): Promise<ControlResult> {
   return saveConfig('kyc_requirements', { listings: !!listings, orders: !!orders });
+}
+
+/** Display / RFQ pricing rate for one currency, in KES per unit (super_set_exchange_rate, migration 021; audited). */
+export async function setExchangeRate(currency: string, rate: string): Promise<ControlResult> {
+  const ctx = await caller('super');
+  if (!ctx) return { ok: false, message: 'Super admin access required.' };
+  const n = Number(rate.replace(/[,\s]/g, ''));
+  if (!isCurrency(currency) || currency === 'KES') return { ok: false, message: 'Unknown currency.' };
+  if (!(n > 0 && n <= 100_000)) return { ok: false, message: 'Enter a positive rate in KES.' };
+  const { error } = await ctx.supabase.rpc('super_set_exchange_rate', { p_currency: currency, p_rate_to_kes: n, p_ip: ctx.fp.ip, p_ua: ctx.fp.ua });
+  if (error) return { ok: false, message: friendlyError(error.message) };
+  revalidateTag('exchange-rates');
+  revalidatePath('/', 'layout');
+  return { ok: true, message: 'Saved.' };
 }

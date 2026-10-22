@@ -6,7 +6,8 @@ import { toast } from 'sonner';
 import { BadgeCheck, Check, Heart, Loader2, ShoppingBag, Trash2 } from 'lucide-react';
 import type { ProductCategory } from '@/lib/types';
 import { createClient } from '@/lib/supabase/client';
-import { formatUSD, flag } from '@/lib/format';
+import { flag } from '@/lib/format';
+import { useCurrency } from '@/context/CurrencyContext';
 import { UUID_RE } from '@/lib/uploads';
 import { DEMO_PRODUCTS } from '@/lib/demo-data';
 import { useAuth } from '@/context/AuthContext';
@@ -43,6 +44,7 @@ type Row = {
  * Add to cart uses the same cart.add() as the product cards.
  */
 export default function WishlistView() {
+  const { formatUsd } = useCurrency();
   const wishlist = useWishlist();
   const cart = useCart();
   const auth = useAuth();
@@ -144,8 +146,8 @@ export default function WishlistView() {
                 <p className="mt-0.5 font-medium text-neutral-900">{p.title}</p>
                 {p.available ? (
                   <p className="mt-1 flex items-baseline gap-2">
-                    <span className="font-semibold tabular-nums text-neutral-900">{formatUSD(p.landed_cost_cents, true)}</span>
-                    <span className="text-xs tabular-nums text-neutral-500">{formatUSD(Math.round(p.landed_cost_cents / Math.max(1, p.trial_units)), true)} / unit landed</span>
+                    <span className="font-semibold tabular-nums text-neutral-900">{formatUsd(p.landed_cost_cents)}</span>
+                    <span className="text-xs tabular-nums text-neutral-500">{formatUsd(Math.round(p.landed_cost_cents / Math.max(1, p.trial_units)))} / unit landed</span>
                   </p>
                 ) : (
                   <p className="mt-1 text-sm text-amber-700">No longer available</p>

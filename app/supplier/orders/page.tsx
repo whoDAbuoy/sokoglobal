@@ -1,10 +1,20 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Truck } from 'lucide-react';
 import { getSessionProfile } from '@/lib/supabase/server';
 import { groupPaidOrders, parseGroupedCatalog, type ListingGroup, type RawOrder } from '@/lib/supplier-orders';
 import DashboardHeader from '@/components/dashboard/DashboardHeader';
 import OrderCatalog from '@/components/supplier/OrderCatalog';
+import ShipOrderDialog, { type ExistingShipment } from '@/components/supplier/ShipOrderDialog';
+import { SHIPMENT_STAGE_LABEL, trackingLink } from '@/lib/shipping';
+
+type ShipmentRow = ExistingShipment & {
+  order_id: string; dispatched_at: string | null;
+  order: { quantity: number; escrow_status: string; payment_structure: string | null; product: { title: string } | { title: string }[] | null }
+       | { quantity: number; escrow_status: string; payment_structure: string | null; product: { title: string } | { title: string }[] | null }[] | null;
+};
+const one = <T,>(v: T | T[] | null | undefined): T | null => (Array.isArray(v) ? v[0] ?? null : v ?? null);
+const day = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : '—');
 
 export const metadata = { title: 'Orders to fulfil · SokoGlobal' };
 export const dynamic = 'force-dynamic';
@@ -38,6 +48,15 @@ export default async function SupplierOrdersPage() {
     groups = groupPaidOrders((orders ?? []) as RawOrder[], meta);
   }
 
+  // Shipments (migration 021; RLS: own orders only). Saved waybills prefill the dialog; parcels on the way can be moved forward.
+  const { data: shipmentRows } = await supabase.from('shipments')
+    .select(`order_id, status, carrier_name, tracking_number, tracking_url, estimated_delivery, dispatched_at,
+             order:orders ( quantity, escrow_status, payment_structure, product:products ( title ) )`)
+    .neq('status', 'delivered').order('dispatched_at', { ascending: true, nullsFirst: true }).limit(200);
+  const shipments = (shipmentRows ?? []) as unknown as ShipmentRow[];
+  const saved = Object.fromEntries(shipments.filter((r) => r.status === 'label_created').map((r) => [r.order_id, r]));
+  const onTheWay = shipments.filter((r) => r.status !== 'label_created');
+
   return (
     <>
       <DashboardHeader profile={profile} />
@@ -50,7 +69,41 @@ export default async function SupplierOrdersPage() {
           you&apos;re paid the goods value when the buyer confirms delivery.
         </p>
 
-        <OrderCatalog groups={groups} />
+        <OrderCatalog groups={groups} shipments={saved} />
+
+        {onTheWay.length > 0 && (
+          <section aria-labelledby="on-the-way" className="mt-12">
+            <h2 id="on-the-way" className="flex items-center gap-2 text-lg font-semibold text-neutral-900"><Truck className="h-5 w-5" aria-hidden /> On the way</h2>
+            <p className="mt-1 text-sm text-neutral-600">Mark parcels out for delivery or delivered; buyers verify the goods before escrow is released.</p>
+            <ul className="card mt-4 divide-y divide-neutral-200">
+              {onTheWay.map((r) => {
+                const o = one(r.order);
+                const title = one(o?.product)?.title ?? 'Order';
+                const link = trackingLink(r);
+                return (
+                  <li key={r.order_id} className="grid gap-2 px-4 py-3 text-sm sm:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_auto] sm:items-center sm:px-5">
+                    <div className="min-w-0">
+                      <p className="truncate font-medium text-neutral-900">{title}</p>
+                      <p className="font-mono text-xs text-neutral-600">#{r.order_id.slice(0, 8).toUpperCase()} · dispatched {day(r.dispatched_at)}</p>
+                    </div>
+                    <div className="min-w-0 text-neutral-700">
+                      <p className="truncate">{SHIPMENT_STAGE_LABEL[r.status]} · {r.carrier_name}{' '}
+                        {link ? <a href={link} target="_blank" rel="noopener noreferrer" className="font-mono underline underline-offset-2">{r.tracking_number}</a> : <span className="font-mono">{r.tracking_number}</span>}
+                      </p>
+                      <p className="text-xs text-neutral-600">
+                        {r.estimated_delivery ? `ETA ${day(r.estimated_delivery)}` : 'No ETA set'}
+                        {o?.escrow_status === 'deposit_paid' ? ' · waiting for the buyer’s 70% balance' : ''}
+                      </p>
+                    </div>
+                    <div className="sm:text-right">
+                      <ShipOrderDialog orderId={r.order_id} existing={r} orderLabel={`${title} (#${r.order_id.slice(0, 8).toUpperCase()})`} />
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+        )}
       </main>
     </>
   );

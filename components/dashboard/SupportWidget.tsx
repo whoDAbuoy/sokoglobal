@@ -62,7 +62,7 @@ const DISPUTE_REASONS = [
   ['other', 'Other'],
 ] as const;
 
-const DISPUTABLE: EscrowStatus[] = ['funded', 'in_transit', 'customs_cleared', 'delivered_pending_verification'];
+const DISPUTABLE: EscrowStatus[] = ['deposit_paid', 'funded', 'in_transit', 'customs_cleared', 'delivered_pending_verification'];
 
 type Tab = 'help' | 'chat' | 'dispute';
 interface Message { id: number; body: string; sender_role: 'customer' | 'agent'; created_at: string }

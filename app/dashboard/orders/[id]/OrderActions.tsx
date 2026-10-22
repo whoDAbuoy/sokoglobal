@@ -2,17 +2,28 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { AlertCircle, CheckCircle2, Loader2, PackageCheck, ShieldCheck } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Clock, Loader2, PackageCheck, ShieldCheck } from 'lucide-react';
 import type { EscrowStatus } from '@/lib/types';
+import type { PaymentStep } from '@/lib/milestone';
 import BankCardPanel from '@/components/payments/BankCardPanel';
 import MpesaPay from './MpesaPay';
 
 const MPESA_ENABLED = process.env.NEXT_PUBLIC_MPESA_ENABLED === 'true';
 
-export default function OrderActions({ orderId, status, returnStatus, payWith, amountLabel = 'now', buyerName, mpesaOverLimit = false }: {
+const PAY_COPY: Record<'pay_full' | 'pay_deposit' | 'pay_balance', { title: string; note: string }> = {
+  pay_full: { title: 'Awaiting payment', note: 'Your money goes into escrow, not to the supplier.' },
+  pay_deposit: { title: 'Pay the 30% deposit', note: 'The deposit is held in escrow. The 70% balance is due once the supplier dispatches.' },
+  pay_balance: { title: 'Your order is on its way — pay the 70% balance', note: 'The balance joins your deposit in escrow; the supplier is paid only after you verify the goods.' },
+};
+
+export default function OrderActions({ orderId, status, step, returnStatus, payWith, amountLabel = 'now', balanceLabel, buyerName, mpesaOverLimit = false }: {
   orderId: string; status: EscrowStatus; returnStatus: string | null; payWith?: string | null;
-  /** Formatted order total, e.g. "$579.00". */
+  /** What is payable now (lib/milestone.ts paymentStep). */
+  step: PaymentStep;
+  /** Formatted amount due now, e.g. "$579.00". */
   amountLabel?: string;
+  /** Formatted milestone balance, shown while waiting for dispatch. */
+  balanceLabel?: string;
   buyerName?: string;
   /** Total is above the M-Pesa per-payment limit → Bank Card only. */
   mpesaOverLimit?: boolean;
@@ -26,7 +37,8 @@ export default function OrderActions({ orderId, status, returnStatus, payWith, a
   const [busy, setBusy] = useState<'confirm' | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [confirmed, setConfirmed] = useState(false);
-  const awaitingWebhook = status === 'pending_payment' && (returnStatus === 'processing' || returnStatus === 'successful');
+  const payable = step.kind === 'pay_full' || step.kind === 'pay_deposit' || step.kind === 'pay_balance';
+  const awaitingWebhook = payable && (returnStatus === 'processing' || returnStatus === 'successful');
 
   // Returning from checkout: poll briefly while the webhook confirms the payment.
   useEffect(() => {
@@ -61,13 +73,28 @@ export default function OrderActions({ orderId, status, returnStatus, payWith, a
     );
   }
 
-  if (status === 'pending_payment') {
+  if (step.kind === 'balance_waiting') {
+    return (
+      <div className="card mt-6 flex items-start gap-3 p-5">
+        <Clock className="mt-0.5 h-5 w-5 shrink-0 text-cyan-600" aria-hidden />
+        <div>
+          <p className="font-medium text-slate-900">Deposit held in escrow — the supplier is preparing your order</p>
+          <p className="mt-1 text-sm text-slate-600">
+            The remaining 70%{balanceLabel ? ` (${balanceLabel})` : ''} becomes payable as soon as it is dispatched. We&apos;ll notify you with the waybill.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (payable) {
+    const copy = PAY_COPY[step.kind];
     return (
       <div className="card mt-6 p-5">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <p className="font-medium text-slate-900">{returnStatus === 'failed' || returnStatus === 'cancelled' ? 'Payment didn’t go through' : 'Awaiting payment'}</p>
-            <p className="text-sm text-slate-500">Your money goes into escrow, not to the supplier.</p>
+            <p className="font-medium text-slate-900">{returnStatus === 'failed' || returnStatus === 'cancelled' ? 'Payment didn’t go through' : copy.title}</p>
+            <p className="text-sm text-slate-500">{copy.note}</p>
           </div>
           {mpesaAvailable && (
             <div role="radiogroup" aria-label="Payment method" className="inline-flex rounded-lg bg-slate-100 p-1 text-sm font-medium">

@@ -2,10 +2,10 @@ import Link from 'next/link';
 import clsx from 'clsx';
 import { AlertTriangle, ArrowRight, BadgeDollarSign, Check, ClipboardCheck, Info, PackageCheck, PackageOpen, Plane, Wallet, type LucideIcon } from 'lucide-react';
 import type { EscrowStatus, OrderView } from '@/lib/types';
-import { formatUSD } from '@/lib/format';
 import { orderAction, statusMeta, type Tone } from '@/lib/order-status';
 import { UUID_RE } from '@/lib/uploads';
 import OrderSupportButton from './OrderSupportButton';
+import Price from '@/components/currency/Price';
 
 const STEPS: { status: EscrowStatus; label: string; icon: LucideIcon }[] = [
   { status: 'funded', label: 'Paid to escrow', icon: Wallet },
@@ -53,7 +53,8 @@ export default function EscrowTracker({ orders, actions = true }: { orders: Orde
   return (
     <ul className="space-y-3">
       {orders.map((o) => {
-        const idx = ORDER.indexOf(o.escrow_status);
+        // A milestone deposit counts as "paid to escrow"; the balance is collected on dispatch.
+        const idx = ORDER.indexOf(o.escrow_status === 'deposit_paid' ? 'funded' : o.escrow_status);
         const note = EXCEPTION_NOTE[o.escrow_status];
         const status = statusMeta(o.escrow_status);
         const action = orderAction(o);
@@ -71,7 +72,8 @@ export default function EscrowTracker({ orders, actions = true }: { orders: Orde
                   ) : o.product_title}
                 </p>
                 <p className="mt-0.5 text-xs text-neutral-500">
-                  {o.order_type === 'trial' ? 'Trial Batch' : o.order_type === 'pool' ? 'Trend Pool' : 'Order'}
+                  {o.is_rfq ? 'Quoted order' : o.order_type === 'trial' ? 'Trial Batch' : o.order_type === 'pool' ? 'Trend Pool' : 'Order'}
+                  {o.payment_structure === 'milestone_30_70' && <><span aria-hidden> · </span>30/70 milestones</>}
                   <span aria-hidden> · </span>
                   {new Date(o.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
                   <span aria-hidden> · </span>
@@ -79,7 +81,7 @@ export default function EscrowTracker({ orders, actions = true }: { orders: Orde
                 </p>
               </div>
               <div className="flex shrink-0 flex-col items-end gap-1.5">
-                <span className="whitespace-nowrap text-base font-semibold tabular-nums text-neutral-900">{formatUSD(o.total_cents, true)}</span>
+                <Price cents={o.total_cents} className="whitespace-nowrap text-base font-semibold tabular-nums text-neutral-900" />
                 <span className={clsx('pill whitespace-nowrap', pillTone(o.escrow_status, status.tone))}>{status.label}</span>
               </div>
             </div>

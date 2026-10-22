@@ -5,6 +5,7 @@ import { postSlack } from '@/lib/notifications/slack';
 import { reconcileEscrow, type GatewayCharge, type ReconCardPayment, type ReconMpesaPayment, type ReconOrder } from '@/lib/payments/resilience';
 
 const WINDOW_DAYS = 3;
+const ORDER_COLUMNS = 'id, escrow_status, total_cents, funded_at, payment_provider, checkout_group_id, payment_structure, deposit_amount, final_paid_at';
 const ROW_LIMIT = 1000;
 const MAX_GATEWAY_CALLS = 150;
 
@@ -25,7 +26,7 @@ export async function runEscrowReconciliation({ db, hasTime, triggeredBy = 'cron
 
   try {
     const [orders, card, mpesa] = await Promise.all([
-      db.from('orders').select('id, escrow_status, total_cents, funded_at, payment_provider, checkout_group_id')
+      db.from('orders').select(ORDER_COLUMNS)
         .or(`created_at.gte."${from}",funded_at.gte."${from}"`).limit(ROW_LIMIT),
       db.from('card_payments').select('reference, kind, order_id, checkout_group_id, status, usd_cents, amount_minor, currency, created_at')
         .gte('created_at', from).limit(ROW_LIMIT),
@@ -41,7 +42,7 @@ export async function runEscrowReconciliation({ db, hasTime, triggeredBy = 'cron
     const haveOrders = new Set(orderRows.map((o) => o.id));
     const groups = [...new Set([...cardRows, ...mpesaRows].map((p) => p.checkout_group_id).filter((g): g is string => !!g))];
     if (groups.length) {
-      const { data: extra } = await db.from('orders').select('id, escrow_status, total_cents, funded_at, payment_provider, checkout_group_id').in('checkout_group_id', groups);
+      const { data: extra } = await db.from('orders').select(ORDER_COLUMNS).in('checkout_group_id', groups);
       for (const o of (extra ?? []) as ReconOrder[]) if (!haveOrders.has(o.id)) { orderRows.push(o); haveOrders.add(o.id); }
     }
 

@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import {
   BadgeCheck, Bell, ClipboardCheck, Compass, FileCheck2, Headphones, Heart, LayoutDashboard, LogOut, MessageSquare, Package,
-  PackagePlus, ShieldCheck, ShieldHalf, ShoppingBag, Store, Truck, Undo2, UserCog, Users, Gauge, LayoutGrid, type LucideIcon,
+  PackagePlus, ShieldCheck, ShieldHalf, ShoppingBag, Store, Truck, Undo2, UserCog, Users, Gauge, LayoutGrid, FileQuestion, type LucideIcon,
 } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
@@ -12,11 +12,12 @@ import { useChat } from '@/context/ChatContext';
 import { useWishlist } from '@/hooks/useWishlist';
 import type { Profile } from '@/lib/types';
 import { ADMIN_LEVEL_LABEL, adminLevel, formatTimeLeft, homePathFor, roleAdminLevel } from '@/lib/auth/admin-access';
+import CurrencySwitcher from '@/components/currency/CurrencySwitcher';
 
 const ADMIN_NAV: [string, string][] = [['Overview', '/admin'], ['Review queue', '/admin/review'], ['Catalogue', '/admin/products'], ['Shipments', '/admin/orders'], ['Supplier KYC', '/admin/kyc'], ['Users', '/admin/users'], ['Support', '/admin/support']];
 const NAV: Record<Profile['role'], [string, string][]> = {
-  importer: [['Discover', '/dashboard'], ['Catalog', '/dashboard/discover'], ['Trend Pools', '/dashboard#pools'], ['Messages', '/dashboard/messages']],
-  supplier: [['Catalogue', '/supplier'], ['Orders', '/supplier/orders'], ['Messages', '/supplier/messages'], ['New product', '/supplier/products/new'], ['Verification', '/supplier/verification']],
+  importer: [['Discover', '/dashboard'], ['Catalog', '/dashboard/discover'], ['RFQs', '/dashboard/rfqs'], ['Trend Pools', '/dashboard#pools'], ['Messages', '/dashboard/messages']],
+  supplier: [['Catalogue', '/supplier'], ['Orders', '/supplier/orders'], ['RFQs', '/supplier/rfqs'], ['Messages', '/supplier/messages'], ['New product', '/supplier/products/new'], ['Verification', '/supplier/verification']],
   admin: ADMIN_NAV,
   super_admin: ADMIN_NAV,
 };
@@ -35,7 +36,7 @@ const NAV_ICON: Record<string, LucideIcon> = {
   Discover: Compass, 'Trend Pools': Users, Messages: MessageSquare, Catalogue: Store, 'New product': PackagePlus,
   Verification: FileCheck2, Overview: LayoutDashboard, 'Review queue': ClipboardCheck, Shipments: Truck,
   'Supplier KYC': BadgeCheck, Users: UserCog, Support: Headphones, Catalog: LayoutGrid, Control: Gauge, Admin: ShieldHalf,
-  'My portal': Undo2, Orders: Truck,
+  'My portal': Undo2, Orders: Truck, RFQs: FileQuestion,
 };
 
 export default function DashboardHeader({ profile }: { profile: Profile }) {
@@ -47,7 +48,7 @@ export default function DashboardHeader({ profile }: { profile: Profile }) {
   const pathname = usePathname() ?? '';
   const level = adminLevel(profile);
   const wideNav = (level !== null && pathname.startsWith('/admin')) || roleAdminLevel(profile.role) !== null;
-  // Five supplier links only fit beside the account block from lg up; below that they scroll in the second row.
+  // Six supplier links only fit beside the account block from xl up; below that they scroll in the second row.
   const midNav = !wideNav && profile.role === 'supplier';
   const links = navLinks(profile, pathname).map(([label, href]) => {
     const Icon = NAV_ICON[label];
@@ -74,7 +75,7 @@ export default function DashboardHeader({ profile }: { profile: Profile }) {
             <ShieldCheck className="h-5 w-5 text-blue-600 dark:text-cyan-400" strokeWidth={2.25} aria-hidden />
             <span className="text-base font-semibold tracking-tight text-neutral-900">SokoGlobal</span>
           </Link>
-          <nav className={wideNav ? 'hidden items-center gap-5 xl:flex' : midNav ? 'hidden items-center gap-6 lg:flex' : 'hidden items-center gap-7 md:flex'}>{links}</nav>
+          <nav className={wideNav ? 'hidden items-center gap-5 xl:flex' : midNav ? 'hidden items-center gap-6 xl:flex' : 'hidden items-center gap-6 lg:flex'}>{links}</nav>
         </div>
 
         <div className="flex items-center gap-1">
@@ -84,6 +85,7 @@ export default function DashboardHeader({ profile }: { profile: Profile }) {
               <Gauge className="h-4 w-4" strokeWidth={1.75} aria-hidden /> <span className="hidden sm:inline">Control</span>
             </Link>
           )}
+          <CurrencySwitcher />
           {profile.role === 'importer' && (
             <Link href="/dashboard/orders" aria-label="My orders and escrow tracking"
               className="mr-0.5 inline-flex items-center gap-1.5 rounded-md border border-neutral-300 px-2 py-1.5 text-sm font-medium text-neutral-900 transition-colors hover:border-neutral-900 sm:mr-1 sm:px-2.5">
@@ -144,7 +146,7 @@ export default function DashboardHeader({ profile }: { profile: Profile }) {
         </div>
       </div>
       {/* Small screens: the same links as a scrollable row. */}
-      <nav className={`no-scrollbar flex gap-6 overflow-x-auto border-t border-black/[0.06] px-4 py-2.5 dark:border-snow/[0.08] sm:px-5 ${wideNav ? 'xl:hidden' : midNav ? 'lg:hidden' : 'md:hidden'}`}>{links}</nav>
+      <nav className={`no-scrollbar flex gap-6 overflow-x-auto border-t border-black/[0.06] px-4 py-2.5 dark:border-snow/[0.08] sm:px-5 ${wideNav || midNav ? 'xl:hidden' : 'lg:hidden'}`}>{links}</nav>
       </div>
     </header>
   );

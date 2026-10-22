@@ -44,7 +44,8 @@ export default async function SupplierHome() {
     id: string; product_id: string; escrow_status: EscrowStatus; total_cents: number; goods_cents: number; created_at: string;
     batches: number | null; current_status: string | null; eta_timestamp: string | null; fulfillment_status?: string;
   }[];
-  const toShip = orders.filter((o) => o.fulfillment_status === 'pending_fulfillment' || (!o.fulfillment_status && o.escrow_status === 'funded' && o.current_status === 'awaiting_dispatch'));
+  const toShip = orders.filter((o) => o.fulfillment_status === 'pending_fulfillment' || (!o.fulfillment_status && o.escrow_status === 'funded' && o.current_status === 'awaiting_dispatch')
+    || (o.escrow_status === 'deposit_paid' && o.current_status === 'awaiting_dispatch'));
   const readyToShip = { count: toShip.length, goodsCents: toShip.reduce((n, o) => n + (o.goods_cents ?? 0), 0) };
   const titleOf = new Map(products.map((p) => [p.id, p.title]));
   const pipeline: FulfilmentOrder[] = orders.map((o) => ({

@@ -51,7 +51,9 @@ MVP built with Next.js 15 (App Router) + Tailwind + Supabase (Postgres, Auth, St
 | Super admin, temporary admins, kill switch, audit log | `supabase/migrations/014_super_admin.sql`, `lib/auth/admin-access.ts`, `lib/platform.ts`, `app/admin/control`, `app/admin/view-as/[userId]`, `middleware.ts` (maintenance mode) |
 | Multi-commodity catalogue | `supabase/migrations/015_catalog.sql`, `lib/catalog.ts`, `lib/catalog-import.ts`, `app/dashboard/discover`, `app/supplier/products/{new,import}`, `app/admin/categories` |
 | Settings hub, avatars, 2FA | `supabase/migrations/016_profiles_and_security.sql`, `app/dashboard/settings`, `app/api/auth/2fa`, `app/auth/2fa`, `lib/security/two-factor*.ts`, `lib/settings.ts`, `components/settings` |
-| Tests (`npm test`) | `lib/**/*.test.mts`, `tests/*.test.mts` (205 tests) |
+| RFQs, display currencies, supplier shipments, milestone escrow, quick reorder | `supabase/migrations/021_enterprise_features.sql`, `lib/{rfq,currency,milestone,shipping,reorder}.ts` (+ tests), `app/{dashboard,supplier}/rfqs`, `context/CurrencyContext.tsx`, `components/{currency,rfq}`, `components/supplier/ShipOrderDialog.tsx`, `components/tracking/OrderTimeline.tsx`, `components/dashboard/QuickReorder.tsx`, `app/api/cron/restock-reminders` |
+| Tests (`npm test`) | `lib/**/*.test.mts`, `tests/*.test.mts` (256 tests) |
+| Database tests (`npm run test:db`, needs Docker) | `scripts/db-test.mjs` applies `schema.sql` + every migration to a throwaway Postgres with `supabase/tests/supabase-stubs.sql`, then runs `supabase/tests/*.test.sql` |
 
 ## How the trust rules are enforced (server-side, not just UI)
 
@@ -105,6 +107,35 @@ update public.profiles set role = 'super_admin' where id = '<your auth user id>'
   `/supplier/products/import` (CSV or Excel `.xlsx`, up to 500 rows, preview then import as drafts; template download).
 - Buyers: `/dashboard/discover` (category tree, full-text search, attribute facets, featured first).
 - Regulated categories (`requires_compliance`) show a notice to suppliers and a review warning to admins.
+
+## RFQs, currencies, shipments, milestone escrow & restock reminders (migration 021)
+
+Run `021_enterprise_features.sql` after 020, **before** deploying the app code that uses it.
+
+- **Money model is unchanged**: escrow, payouts and reconciliation stay in USD cents, and every Paystack / M-Pesa amount is still
+  computed in Postgres. KES is the *display* pivot: `exchange_rates.rate_to_kes` is KES per unit of each currency (KES, USD, UGX,
+  TZS, RWF; seeded with placeholder rates — set real ones in **Control room → Display exchange rates**, audited as `fx.rate`).
+- **Currency switcher** (header): `lib/currency.ts` (`formatCurrency(amountInKES, currency, rates)`, `formatUsdCents`), the
+  `sg_currency` cookie (read on the server so SSR matches) and `<Price>` / `<LocalPreview>`. Converted amounts show "≈"; checkout
+  keeps the charged USD amount and adds the local preview.
+- **RFQs**: importers post requests at `/dashboard/rfqs` (`submit_rfq`); suppliers with a live listing in that category (or a
+  sub-category) see them at `/supplier/rfqs` (`supplier_rfq_feed`) and send one private quote each against a listing, with
+  optional bulk tiers, MOQ, validity and accepted payment terms (`submit_rfq_quote`). `accept_rfq_quote()` creates a locked
+  `standard` order: quantity = max(request, MOQ), tier price × quantity in KES, converted to USD at the `exchange_rates` USD rate
+  (frozen in `orders.fx_rate_to_kes`). RLS keeps quotes private; all writes go through the functions.
+- **Milestone escrow** (`orders.payment_structure = 'milestone_30_70'`): for KYC-approved buyers on single orders of at least
+  $1,000 (chosen on the order page, or fixed by an accepted quote). The buyer pays a 30% deposit (rounded up to the cent) →
+  `deposit_paid`; the 70% balance becomes payable once the supplier dispatches, and paying it moves the order to the escrow state
+  matching the shipment. Card and M-Pesa attempts record which leg they pay (`leg`). Release, force-release and payouts still need
+  the full amount; refunds are capped at what was collected and cover both charges. `credit_30_days` is reserved in the schema
+  but not offered yet.
+- **Shipments**: suppliers use **Fulfil & ship** on `/supplier/orders` (`supplier_save_shipment`: waybill, carrier, tracking link,
+  ETA; stages only move forward). It mirrors onto `orders.current_status` / tracking via `set_shipment_tracking()`, so the escrow
+  timeline and map follow, and queues the buyer's dispatch (or balance-due) alert. Buyers see an Order placed → Payment escrowed →
+  Dispatched → Delivered timeline with a carrier link on the order page.
+- **Retention**: "Quick reorder" on `/dashboard/orders` refills the cart with the same batch quantities (Checkout re-prices);
+  `queue_restock_reminders()` runs daily (pg_cron when available, plus `/api/cron/restock-reminders`) and emails buyers 30 and 60
+  days after an order completes, unless they already reordered. Expired RFQs are closed by pg_cron and the expire-orders cron.
 
 ## KYC, trial batch controls & paid-order visibility (migrations 017, 018)
 
