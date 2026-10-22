@@ -145,6 +145,8 @@ end $$;
 
 -- Inbox: the caller's threads with product, counterpart, last message and unread count.
 -- SECURITY DEFINER so a supplier sees the buyer's company name (profiles RLS hides importers).
+-- Return type changes in 024 (+ order_id): drop first so this file can be re-run after 024 (else 42P13).
+drop function if exists public.my_chat_threads();
 create or replace function public.my_chat_threads()
 returns table (
   thread_id uuid, product_id uuid, product_title text, my_role text,
