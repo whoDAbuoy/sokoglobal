@@ -31,7 +31,7 @@ async function loadSecurityState(supabase: SupabaseClient, userId: string) {
 const MAINTENANCE_TTL_MS = 15_000;
 let maintenanceCache: { on: boolean; at: number } | null = null;
 
-const PROTECTED = ['/dashboard', '/supplier', '/admin'];
+const PROTECTED = ['/dashboard', '/supplier', '/admin', '/rfqs'];
 const AUTH_PAGES = ['/login', '/signup'];
 
 /**

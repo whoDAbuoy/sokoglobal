@@ -8,6 +8,7 @@ import { categoryWithin, parseTiers, type QuoteStatus } from '@/lib/rfq';
 import DashboardHeader from '@/components/dashboard/DashboardHeader';
 import QuoteForm from '@/components/rfq/QuoteForm';
 import Price from '@/components/currency/Price';
+import ShareRFQButton from '@/components/rfq/ShareRFQButton';
 
 export const metadata = { title: 'Buyer requests · SokoGlobal' };
 export const dynamic = 'force-dynamic';
@@ -16,6 +17,8 @@ interface FeedRow {
   id: string; title: string; description: string; quantity: number; unit_of_measure: string | null; target_price_kes: number | null;
   delivery_location: string; category_id: string | null; category_name: string | null; buyer_country: string | null; status: string;
   created_at: string; expires_at: string; quote_count: number;
+  /** Migration 022: the feed lists every live request; quoting still needs a listing in the category. */
+  can_quote?: boolean;
   my_quote: { id: string; product_id: string; unit_price_kes: number; price_tiers: unknown; moq: number; lead_time_days: number | null;
               terms_note: string | null; valid_until: string; allowed_payment_structures: string[]; status: QuoteStatus } | null;
 }
@@ -23,9 +26,9 @@ interface FeedRow {
 const day = (iso: string) => new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
 
 /**
- * Supplier RFQ lane: open buyer requests in categories where the supplier has
- * a live listing (supplier_rfq_feed(), migration 021), plus requests they have
- * already quoted. Quotes are private to the buyer.
+ * Supplier RFQ lane: every live buyer request (supplier_rfq_feed(), migration 022) — ones matching the
+ * supplier's live listings first — plus requests they have already quoted. Requests outside their
+ * categories can't be quoted, but can be shared with a supplier who can fulfil them. Quotes are private.
  */
 export default async function SupplierRfqsPage() {
   const { supabase, user, profile } = await getSessionProfile();
@@ -56,7 +59,7 @@ export default async function SupplierRfqsPage() {
         <article className="card p-5">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="min-w-0">
-              <h3 className="text-lg font-semibold text-neutral-900">{r.title}</h3>
+              <h3 className="text-lg font-semibold text-neutral-900"><Link href={`/rfqs/${r.id}`} className="hover:underline">{r.title}</Link></h3>
               <p className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-sm text-neutral-600">
                 <span className="inline-flex items-center gap-1"><Package className="h-3.5 w-3.5" aria-hidden />{r.quantity.toLocaleString('en-US')} {unit}</span>
                 <span className="inline-flex items-center gap-1"><MapPin className="h-3.5 w-3.5" aria-hidden />{r.delivery_location}
@@ -75,14 +78,17 @@ export default async function SupplierRfqsPage() {
               <span className="inline-flex items-center gap-1"><Users className="h-3.5 w-3.5" aria-hidden />{r.quote_count} quote{r.quote_count === 1 ? '' : 's'} so far</span>
               {q && <span>Your price: <Price kes={Number(q.unit_price_kes)} /> · MOQ {q.moq.toLocaleString('en-US')}</span>}
             </p>
+            <div className="flex flex-wrap items-center gap-2">
+            {live && <ShareRFQButton rfqId={r.id} title={r.title} />}
             {live && q?.status !== 'accepted' && (
-              eligible.length
+              eligible.length && r.can_quote !== false
                 ? <QuoteForm rfqId={r.id} products={eligible.map(({ id, title }) => ({ id, title }))} buyerQuantity={r.quantity}
                     defaults={q ? { quoteId: q.id, productId: q.product_id, unitPriceKes: Number(q.unit_price_kes), moq: q.moq, leadTimeDays: q.lead_time_days,
                                     termsNote: q.terms_note, tiers: parseTiers(q.price_tiers), allowed: q.allowed_payment_structures } : {}} />
-                : <p className="text-xs text-neutral-500">List a product in this category to quote.</p>
+                : <p className="text-xs text-neutral-500">Outside your categories — share it with a supplier who can fulfil it.</p>
             )}
             {q?.status === 'accepted' && <Link href="/supplier/orders" className="btn-secondary px-3 py-1.5 text-sm">Go to orders</Link>}
+            </div>
           </div>
         </article>
       </li>
@@ -97,16 +103,16 @@ export default async function SupplierRfqsPage() {
         <p className="eyebrow mt-4">Sourcing</p>
         <h1 className="mt-2 text-3xl font-semibold text-neutral-900">Buyer requests</h1>
         <p className="mt-1 max-w-2xl text-sm text-neutral-600">
-          Volume requests from verified importers in your categories. Send a private quote against one of your listings; if the buyer
-          accepts, it becomes an escrow order you fulfil from your orders page.
+          Volume requests from verified importers — ones in your categories first. Send a private quote against one of your listings,
+          or share a request with a supplier who can fulfil it. Accepted quotes become escrow orders you fulfil from your orders page.
         </p>
 
         {open.length === 0 ? (
           <div className="card mt-8 px-6 py-14 text-center">
             <FileQuestion className="mx-auto h-8 w-8 text-neutral-400" aria-hidden />
-            <p className="mt-3 font-medium text-neutral-900">No open requests in your categories</p>
+            <p className="mt-3 font-medium text-neutral-900">No open buyer requests right now</p>
             <p className="mt-1 text-sm text-neutral-600">
-              {listings.length ? 'New requests appear here as soon as buyers post them.' : 'Requests are matched to your live listings — publish one to start receiving them.'}
+              {listings.length ? 'New requests appear here as soon as buyers post them.' : 'You can quote on requests in the categories of your live listings — publish one to start quoting.'}
             </p>
           </div>
         ) : (

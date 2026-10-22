@@ -69,3 +69,20 @@ export async function closeRfq(rfqId: string): Promise<RfqResult> {
   revalidatePath('/dashboard/rfqs');
   return { ok: true };
 }
+
+/**
+ * Delete a request. RLS (migration 022) decides: the buyer while no quote is accepted, or a super admin
+ * (audited). A request whose quote became an order is refused by a trigger with a clear message.
+ */
+export async function deleteRfq(rfqId: string): Promise<RfqResult> {
+  if (!UUID_RE.test(rfqId)) return { ok: false, message: 'Invalid request.' };
+  const { supabase, user } = await getSessionProfile();
+  if (!user) return { ok: false, message: 'Sign in first.' };
+  const { data, error } = await supabase.from('rfqs').delete().eq('id', rfqId).select('id');
+  if (error) return { ok: false, message: friendlyError(error.message) };
+  if (!data?.length) return { ok: false, message: 'This request can no longer be deleted (a quote was accepted, or it is not yours).' };
+  revalidatePath('/dashboard/rfqs');
+  revalidatePath('/supplier/rfqs');
+  revalidatePath(`/rfqs/${rfqId}`);
+  return { ok: true };
+}

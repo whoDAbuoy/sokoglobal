@@ -43,7 +43,8 @@ select pg_temp.as_user('11111111-1111-4111-8111-111111111111');
 select pg_temp.ok((select count(*) from public.rfqs) = 1, 'supplier with a listing in a child category sees the RFQ');
 select pg_temp.ok((select buyer_country from public.supplier_rfq_feed() limit 1) = 'KE', 'supplier feed shows buyer country');
 select pg_temp.as_user('33333333-3333-4333-8333-333333333333');
-select pg_temp.ok((select count(*) from public.rfqs) = 0, 'supplier in another category does not see it');
+-- Since migration 022 every signed-in user can read live requests; quoting is still category-bound (next check).
+select pg_temp.ok((select count(*) from public.rfqs) = 1, 'supplier in another category can see it (022: open visibility)');
 select pg_temp.fails(format($q$select public.submit_rfq_quote(%L, 'bbbbbbbb-0000-4000-8000-000000000002', 300, 10, now() + interval '7 days')$q$, :'rfq'), 'not in the requested category');
 select pg_temp.fails($q$insert into public.rfqs (buyer_id, title, description, quantity, delivery_location) values (auth.uid(), 'xyz', 'xxxxxxxxxxxx', 1, 'xx')$q$, 'permission denied');
 reset role;

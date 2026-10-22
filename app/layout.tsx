@@ -1,7 +1,6 @@
 import type { Metadata } from 'next';
 import { headers } from 'next/headers';
 import { Inter } from 'next/font/google';
-import { Toaster } from 'sonner';
 import { AuthProvider } from '@/context/AuthContext';
 import { CartProvider } from '@/context/CartContext';
 import { CurrencyProvider } from '@/context/CurrencyContext';
@@ -10,6 +9,7 @@ import { ChatProvider } from '@/context/ChatContext';
 import CartDrawer from '@/components/cart/CartDrawer';
 import AmbientBackdrop from '@/components/motion/AmbientBackdrop';
 import PlatformBanner from '@/components/platform/PlatformBanner';
+import ThemedToaster from '@/components/platform/ThemedToaster';
 import { THEME_INIT_SCRIPT } from '@/lib/theme';
 import './globals.css';
 
@@ -45,8 +45,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             </ChatProvider>
           </AuthProvider>
         </CurrencyProvider>
-        <Toaster closeButton position="top-right"
-          toastOptions={{ classNames: { toast: 'rounded-[18px] border border-black/[0.06] !bg-white/85 shadow-overlay backdrop-blur-xl font-sans dark:border-snow/10 dark:!bg-midnight/80', description: 'text-neutral-500' } }} />
+        <ThemedToaster />
       </body>
     </html>
   );

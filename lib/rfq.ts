@@ -229,3 +229,17 @@ export function categoryOptions(rows: readonly { id: string; parent_id: string |
   walk(null, [], 0);
   return out;
 }
+
+// ── Deletion & sharing (migration 022) ─────────────────────────────────────
+
+/** Mirrors the delete policies: the buyer while undecided, a super admin always — never once a quote became an order. */
+export function canDeleteRfq(r: { status: RfqStatus; hasOrder: boolean }, who: { isOwner: boolean; isSuperAdmin: boolean }): boolean {
+  if (r.hasOrder) return false;
+  if (who.isSuperAdmin) return true;
+  return who.isOwner && (r.status === 'open' || r.status === 'quoted');
+}
+
+/** Link that opens a request directly (signed-in users; RLS shows live requests to everyone). */
+export function rfqShareUrl(origin: string, rfqId: string): string {
+  return `${origin.replace(/\/+$/, '')}/rfqs/${encodeURIComponent(rfqId)}`;
+}
