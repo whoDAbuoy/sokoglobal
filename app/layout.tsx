@@ -3,7 +3,7 @@ import { headers } from 'next/headers';
 import { Inter } from 'next/font/google';
 import { AuthProvider } from '@/context/AuthContext';
 import { CartProvider } from '@/context/CartContext';
-import { CurrencyProvider } from '@/context/CurrencyContext';
+import { CurrencyCountrySync, CurrencyProvider } from '@/context/CurrencyContext';
 import { getCurrencyState } from '@/lib/currency-server';
 import { ChatProvider } from '@/context/ChatContext';
 import CartDrawer from '@/components/cart/CartDrawer';
@@ -41,8 +41,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <ThemeSync />
         <AmbientBackdrop />
         <PlatformBanner />
-        <CurrencyProvider initialCurrency={money.currency} rates={money.rates} ratesUpdatedAt={money.ratesUpdatedAt}>
+        <CurrencyProvider initialCurrency={money.currency} pinned={money.pinned} rates={money.rates} ratesUpdatedAt={money.ratesUpdatedAt}>
           <AuthProvider>
+            <CurrencyCountrySync />
             <ChatProvider>
               <CartProvider>
                 {children}
