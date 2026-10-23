@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getSessionProfile } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { settleCardReference } from '@/lib/payments/checkout';
+import { gatewayRowByReference, settleGatewayRow } from '@/lib/payments/gateways';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -20,12 +20,13 @@ export async function POST(request: Request) {
   const reference = typeof body?.reference === 'string' ? body.reference : '';
   if (!/^[A-Za-z0-9.=-]{8,120}$/.test(reference)) return NextResponse.json({ error: 'Invalid reference' }, { status: 400 });
 
-  const { data: payment } = await createAdminClient().from('card_payments')
-    .select('id').eq('reference', reference).eq('buyer_id', user.id).maybeSingle();
-  if (!payment) return NextResponse.json({ error: 'Payment not found' }, { status: 404 });
+  const db = createAdminClient();
+  const payment = await gatewayRowByReference(db, reference);
+  if (!payment || payment.buyer_id !== user.id) return NextResponse.json({ error: 'Payment not found' }, { status: 404 });
 
   try {
-    return NextResponse.json({ outcome: await settleCardReference(reference) });
+    // Paystack, or (migration 028) whichever gateway took this attempt.
+    return NextResponse.json({ outcome: await settleGatewayRow(db, payment) });
   } catch (err) {
     console.warn('[card] confirm could not verify yet — webhook will settle', { reference, err: err instanceof Error ? err.message : err });
     return NextResponse.json({ outcome: 'pending' });

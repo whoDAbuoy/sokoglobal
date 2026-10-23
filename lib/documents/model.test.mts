@@ -1,7 +1,7 @@
 // Run: npx tsx --test lib/documents/model.test.mts
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { invoiceAvailable, invoiceModel, maskRef, payoutReceiptModel, receiptAvailable, winAnsi } from './model.ts';
+import { invoiceAvailable, invoiceModel, maskRef, payoutReceiptModel, receiptAvailable, winAnsi, wireInstructionsModel } from './model.ts';
 
 const order = {
   id: '1234abcd-0000-4000-8000-000000000000', escrow_status: 'customs_cleared' as const, created_at: '2026-10-01T09:00:00Z', funded_at: '2026-10-01T10:00:00Z',
@@ -56,6 +56,19 @@ test('early payout receipt splits commission and the early fee', () => {
   assert.deepEqual(m.table.rows.slice(1).map((r) => [r[0], r[3]]), [['Platform commission', '-$15.00'], ['Instant early payout fee', '-$15.00']]);
   assert.match(m.parties[1].lines[1], /early payout/);
   assert.equal(m.totals[0].value, '$470.00');
+});
+
+test('SWIFT payment instructions: reference, bank details and the amount to receive', () => {
+  const m = wireInstructionsModel({
+    reference: 'SGW-AB12CD34EF', usd_cents: 34_884, leg: 'deposit', created_at: '2026-10-23T09:00:00Z',
+    pay_to: { bank_name: 'Escrow Bank', swift_code: 'ESCBKENX', account_number: '0123 4567', account_name: 'SokoGlobal Escrow Ltd' },
+    order: { id: '1234abcd-0000', product_title: 'Widgets' }, buyer: { company_name: 'Glow Boutique', country_code: 'ke' },
+  }, new Date('2026-10-23T00:00:00Z'));
+  assert.equal(m.number, 'SGW-AB12CD34EF');
+  assert.ok(m.facts.some((f) => f.label === 'SWIFT / BIC' && f.value === 'ESCBKENX'));
+  assert.equal(m.table.rows[0][0], '30% deposit - Widgets');
+  assert.equal(m.totals[0].value, '$348.84');
+  assert.match(m.notes[0], /SGW-AB12CD34EF/);
 });
 
 test('text safe for standard PDF fonts', () => {

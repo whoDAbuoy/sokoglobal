@@ -20,8 +20,8 @@ export function limitFor(method: string, path: string, isServerAction: boolean):
   if (method === 'GET' || method === 'HEAD' || method === 'OPTIONS') return null;
   if (isServerAction) return path.startsWith('/admin') ? 'moderation' : 'action';
   if (!path.startsWith('/api/')) return null;
-  if (path.startsWith('/api/webhooks') || path.startsWith('/api/cron') || path === '/api/csp-report') return null;
-  if (/^\/api\/(payments\/|orders\/[^/]+\/(mpesa|checkout|confirm)|checkout\/[^/]+\/(card|mpesa))/.test(path)) return 'payment';
+  if (path.startsWith('/api/webhooks') || path.startsWith('/api/cron') || path === '/api/csp-report' || path === '/api/payments/paypal/webhook') return null;
+  if (/^\/api\/(payments\/|orders\/[^/]+\/(mpesa|checkout|confirm|gateway)|checkout\/[^/]+\/(card|mpesa|gateway))/.test(path)) return 'payment';
   if (path.startsWith('/api/uploads')) return 'upload';
   if (path.startsWith('/api/auth/2fa')) return 'twofactor';
   if (path.startsWith('/api/orders') || path.startsWith('/api/checkout') || path.startsWith('/api/pools')) return 'checkout';

@@ -42,6 +42,8 @@ export const expectedPaidCents = (o: ReconOrder) =>
 export interface ReconCardPayment {
   /** 'subscription' / 'rfq_addon' (migration 026) are platform purchases: verified with Paystack, outside the escrow ledger. */
   reference: string; kind: 'order' | 'group' | 'pool' | 'subscription' | 'rfq_addon'; order_id: string | null; checkout_group_id: string | null;
+  /** 'paystack' (default) or, since migration 028, 'dpo' | 'paypal' | 'airtel_money'. */
+  provider?: string;
   status: 'initiated' | 'succeeded' | 'failed' | 'review'; usd_cents: number; amount_minor: number; currency: string; created_at: string;
 }
 export interface ReconMpesaPayment {
@@ -131,7 +133,8 @@ export function reconcileEscrow(input: {
   for (const o of input.orders) {
     const provider = (o.payment_provider ?? '').toLowerCase();
     const covered = paidOrder.has(o.id) || (!!o.checkout_group_id && paidGroup.has(o.checkout_group_id));
-    if (o.funded_at && (provider === 'paystack' || provider === 'mpesa') && !covered) {
+    // Gateway charges (Paystack, DPO, PayPal, Airtel) live in card_payments; wire / crypto are approved by hand (manual_payments).
+    if (o.funded_at && ['paystack', 'mpesa', 'dpo', 'paypal', 'airtel_money'].includes(provider) && !covered) {
       issues.push(issue({ severity: 'critical', kind: 'funded_without_payment', provider, reference: null, order_id: o.id,
         message: `Order is marked funded via ${provider} but no successful ${provider} payment is on record.` }));
     }

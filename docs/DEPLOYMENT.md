@@ -121,6 +121,33 @@ Daraja's **STK Query** confirms the result (`apply_mpesa_payment()`). Double pay
 parked as `mpesa_payments.status = 'review'` and alerted to Slack (`mpesa_review`), as are prompts unresolved
 after 1h (`mpesa_unresolved`).
 
+### DPO Pay, PayPal, Airtel Money, SWIFT and crypto (migration 028)
+
+Each channel appears at checkout only when it is **configured** (env vars below) **and switched on** in
+`/admin/financials → Payment gateways` (super admins; changes apply on the next page load, and are audited).
+
+| Channel | Env vars | URL to register with the provider |
+|---|---|---|
+| DPO Pay | `DPO_COMPANY_TOKEN`, `DPO_SERVICE_TYPE`, optional `DPO_CURRENCY` + `DPO_USD_RATE`, `DPO_API_URL` | Push notifications: `https://<domain>/api/webhooks/dpo` |
+| PayPal | `PAYPAL_ENV`, `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET`, `PAYPAL_WEBHOOK_ID` | Webhook (events: Checkout order approved, Payment capture completed/denied/pending): `https://<domain>/api/payments/paypal/webhook` |
+| Airtel Money | `AIRTEL_ENV`, `AIRTEL_CLIENT_ID`, `AIRTEL_CLIENT_SECRET`, `AIRTEL_COUNTRY`, `AIRTEL_USD_RATE`, `AIRTEL_CALLBACK_TOKEN`, optional `AIRTEL_CURRENCY`, `AIRTEL_MAX_AMOUNT` | Callback: `https://<domain>/api/webhooks/airtel/<AIRTEL_CALLBACK_TOKEN>` |
+| SWIFT wire | none — enter the escrow bank account in `/admin/financials` | — |
+| Crypto (USDT / USDC) | none — enter the deposit wallets in `/admin/financials` (off by default) | — |
+
+How it works: DPO, PayPal and Airtel attempts are `card_payments` rows (`provider` = the gateway) whose amount is
+frozen by `begin_gateway_payment()`. Webhooks, callbacks and the buyer's return are never trusted on their own:
+the server asks the gateway (DPO `verifyToken`, PayPal capture / order lookup, Airtel status API) and only then
+calls `apply_card_payment()`, which re-checks amount and currency. The retry-webhooks cron re-checks attempts
+that never heard back and closes ones still unpaid after 48 h. Only Paystack charges are cross-checked by the
+daily escrow reconciliation; the others are confirmed by their own sync.
+
+Wire and crypto are manual: the buyer gets the bank details or wallet with a unique reference
+(`manual_payments`), then uploads the bank receipt or submits the transaction hash. A super admin with 2FA
+approves it in `/admin/financials → Wire & crypto approvals` after checking that the money arrived (amount,
+reference, receiving address — the queue links each hash to the block explorer); approval funds escrow exactly
+like an online payment. Unpaid orders with a transfer in progress get 14 days instead of 24 hours before expiring.
+**Before enabling crypto, confirm you are licensed to hold virtual assets in your markets** (e.g. Kenya's VASP Act).
+
 **Treasury:** M-Pesa collections settle into your Paybill/Till, not Flutterwave. Supplier payouts are Flutterwave
 transfers from the USD balance, so sweep M-Pesa collections into that balance regularly. Keep `MPESA_KES_PER_USD`
 current: it is the rate buyers pay at.

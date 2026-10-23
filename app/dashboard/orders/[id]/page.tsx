@@ -8,7 +8,8 @@ import DashboardHeader from '@/components/dashboard/DashboardHeader';
 import EscrowTracker from '@/components/dashboard/EscrowTracker';
 import SupportWidget from '@/components/dashboard/SupportWidget';
 import OrderActions from './OrderActions';
-import { exceedsMpesaLimit } from '@/lib/payments/mpesa';
+import { getPaymentSettings, methodsFor } from '@/lib/payment-settings-server';
+import { cryptoOptions, type ManualPaymentView } from '@/lib/payment-methods';
 import MessageSupplierButton from '@/components/chat/MessageSupplierButton';
 import OrderChatButton from '@/components/chat/OrderChatButton';
 import { orderChatOpen } from '@/lib/chat-admin';
@@ -43,9 +44,9 @@ const EARLY_EVENT_LABEL: Record<string, string> = {
  */
 export default async function OrderPage({ params, searchParams }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ status?: string; pay?: string }>;
+  searchParams: Promise<{ status?: string; pay?: string; gw?: string; token?: string; TransactionToken?: string }>;
 }) {
-  const [{ id }, { status: returnStatus, pay }] = await Promise.all([params, searchParams]);
+  const [{ id }, { status: returnStatus, pay, gw, token: paypalToken, TransactionToken: dpoToken }] = await Promise.all([params, searchParams]);
   const { supabase, user, profile } = await getSessionProfile();
   if (!user || !profile) redirect(`/login?redirectTo=/dashboard/orders/${id}`);
 
@@ -83,7 +84,18 @@ export default async function OrderPage({ params, searchParams }: {
   const chatOpen = orderChatOpen({ ...order, escrow_status: view.escrow_status });
   // Migration 026: the escrow fee is part of total_cents (0 on older orders); M-Pesa charges also carry the FX spread.
   const escrowFee = (order.escrow_fee_cents as number | null) ?? 0;
-  const { data: fxSpread } = await supabase.rpc('current_fx_spread');
+  // Migration 028: methods switched on + configured + within limits, and any open wire / crypto transfer.
+  const [payments, { data: manualRows }] = await Promise.all([
+    getPaymentSettings(supabase),
+    supabase.from('manual_payments')
+      .select('id, method, network, leg, usd_cents, fee_cents, charge_cents, reference, pay_to, tx_hash, proof_path, status, review_note, created_at, submitted_at')
+      .eq('order_id', id).order('created_at', { ascending: false }).limit(1),
+  ]);
+  const lastManual = (manualRows?.[0] ?? null) as ManualPaymentView | null;
+  const openManual = lastManual && (lastManual.status === 'awaiting' || lastManual.status === 'submitted') ? lastManual : null;
+  const methods = methodsFor({ settings: payments.settings, fxSpread: payments.fxSpread, dueCents, cart: !!order.checkout_group_id });
+  const gatewayReturn = gw === 'paypal' && paypalToken ? { gateway: 'paypal' as const, token: paypalToken }
+    : gw === 'dpo' && dpoToken ? { gateway: 'dpo' as const, token: dpoToken } : null;
   const canChoose = view.escrow_status === 'pending_payment' && !order.checkout_group_id && !order.rfq_quote_id && order.order_type !== 'pool';
 
   return (
@@ -131,7 +143,10 @@ export default async function OrderPage({ params, searchParams }: {
         ) : (
           <OrderActions orderId={order.id} status={view.escrow_status} step={step} returnStatus={returnStatus ?? null} payWith={pay ?? null}
             amountLabel={formatUSD(dueCents, true)} balanceLabel={order.remaining_balance ? formatUSD(order.remaining_balance, true) : undefined}
-            buyerName={profile.full_name} mpesaOverLimit={dueCents > 0 && exceedsMpesaLimit(dueCents, Number(fxSpread) || 0)} />
+            buyerName={profile.full_name} methods={methods} gatewayReturn={gatewayReturn}
+            manual={{ buyerId: user.id, dueCents, open: openManual, rejectedNote: lastManual?.status === 'rejected' ? lastManual.review_note ?? '' : null,
+                      swift: payments.settings.swift_bank_details, cryptoOptions: cryptoOptions(payments.settings.crypto_deposit_wallets),
+                      cryptoMarkup: payments.settings.crypto_markup_percent }} />
         )}
 
         {order.origin_port_coords && order.destination_coords && (

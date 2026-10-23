@@ -137,6 +137,27 @@ Run `021_enterprise_features.sql` after 020, **before** deploying the app code t
   `queue_restock_reminders()` runs daily (pg_cron when available, plus `/api/cron/restock-reminders`) and emails buyers 30 and 60
   days after an order completes, unless they already reordered. Expired RFQs are closed by pg_cron and the expire-orders cron.
 
+## More ways to pay: DPO Pay, Airtel Money, PayPal, SWIFT & crypto (migration 028)
+
+Run `028_payment_gateways_expansion.sql` after 027 (it creates the private `payment-proofs` bucket). Setup:
+`docs/DEPLOYMENT.md` → *DPO Pay, PayPal, Airtel Money, SWIFT and crypto*.
+
+- Checkout (order page and cart checkout) groups methods in tabs: **Local Mobile Money** (M-Pesa, Airtel Money),
+  **Cards & Pan-African** (card, DPO Pay), **Global Digital Payments** (PayPal), **B2B Bank Wire** (SWIFT) and
+  **Crypto Escrow** (USDT / USDC). A method shows only when its switch in `platform_settings` is on and the
+  gateway is configured; wire and crypto are per order (not carts).
+- DPO / PayPal / Airtel reuse `card_payments` (`provider`, `gateway_token`): amounts frozen in
+  `begin_gateway_payment()`, results confirmed with each gateway's API before `apply_card_payment()` funds escrow
+  (`lib/payments/{dpo,paypal,airtel,gateways}.ts`). Webhooks: `/api/webhooks/dpo`, `/api/payments/paypal/webhook`,
+  `/api/webhooks/airtel/<token>`; the retry cron re-checks attempts that never heard back.
+- SWIFT / crypto: `manual_payments` (reference, bank or wallet snapshot, receipt in `payment-proofs` or tx hash,
+  crypto handling fee). `/api/orders/<id>/wire-invoice` is the PDF of the wire instructions. Super admins with
+  2FA approve or reject in `/admin/financials` (service-role `approve_manual_payment`, audited);
+  `orders.payment_method` / `payment_metadata` record how an order was paid.
+- `/admin/financials → Payment gateways`: switches, SWIFT escrow account, wallets and the crypto fee
+  (`super_set_payment_settings()`, audited). Crypto is off by default.
+- Tests: `supabase/tests/028_payment_gateways_expansion.test.sql`, `lib/payment-methods.test.mts`, `lib/payments/gateways.test.mts`.
+
 ## Platform monetization & financials (migration 026)
 
 Run `026_platform_monetization.sql` after 025, **before** deploying the app code that reads its columns.
