@@ -7,7 +7,8 @@ import type { EscrowStatus } from '@/lib/types';
 import DashboardHeader from '@/components/dashboard/DashboardHeader';
 import SupportWidget from '@/components/dashboard/SupportWidget';
 import SupplierStats, { type ProductCounts } from '@/components/supplier/SupplierStats';
-import SupplierProductCard, { type SupplierProduct } from '@/components/supplier/SupplierProductCard';
+import type { SupplierProduct } from '@/components/supplier/SupplierProductCard';
+import SupplierProductGrid from '@/components/supplier/SupplierProductGrid';
 import { addOrder, emptyCounts, type OrderCounts } from '@/components/supplier/orderStages';
 import FulfilmentPipeline, { type FulfilmentOrder } from '@/components/supplier/FulfilmentPipeline';
 import QuickActions from '@/components/portal/QuickActions';
@@ -129,6 +130,7 @@ export default async function SupplierHome() {
         <div className="mt-12 flex items-baseline justify-between border-b border-neutral-200 pb-3">
           <h2 className="text-lg font-semibold text-neutral-900">Trial Batches</h2>
           <p className="flex items-center gap-3 text-sm tabular-nums text-neutral-500">
+            {productCounts.draft > 0 && <Link href="/supplier/drafts" className="font-medium text-blue-700 hover:underline dark:text-cyan-300">Drafts ({productCounts.draft})</Link>}
             <Link href="/supplier/products/import" className="font-medium text-blue-700 hover:underline dark:text-cyan-300">Bulk import</Link>
             {products.length} product{products.length === 1 ? '' : 's'}
           </p>
@@ -140,11 +142,7 @@ export default async function SupplierHome() {
             <Link href="/supplier/products/new" className="btn-secondary mt-4 inline-flex"><Plus className="h-4 w-4" /> New product</Link>
           </div>
         ) : (
-          <div className="mt-6 grid gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
-            {products.map((p) => (
-              <SupplierProductCard key={p.id} product={p} orders={byProduct.get(p.id) ?? emptyCounts()} />
-            ))}
-          </div>
+          <SupplierProductGrid products={products} orders={Object.fromEntries(byProduct)} />
         )}
       </main>
       <SupportWidget />
