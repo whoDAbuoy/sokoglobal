@@ -10,7 +10,6 @@ import SupportWidget from '@/components/dashboard/SupportWidget';
 import OrderActions from './OrderActions';
 import { exceedsMpesaLimit } from '@/lib/payments/mpesa';
 import MessageSupplierButton from '@/components/chat/MessageSupplierButton';
-import OrderChatPanel from '@/components/chat/OrderChatPanel';
 import OrderChatButton from '@/components/chat/OrderChatButton';
 import { orderChatOpen } from '@/lib/chat-admin';
 import AnimatedShipmentMap from '@/components/tracking/AnimatedShipmentMap';
@@ -139,8 +138,6 @@ export default async function OrderPage({ params, searchParams }: {
             }}
           />
         )}
-
-        {chatOpen && <OrderChatPanel orderId={order.id} counterpart="the supplier" />}
 
         <section className="mt-10 border-t border-neutral-200 pt-8">
           <h2 className="eyebrow">Escrow audit trail</h2>
