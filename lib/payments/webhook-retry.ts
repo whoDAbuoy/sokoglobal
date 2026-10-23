@@ -7,6 +7,8 @@ import { syncPayment, type MpesaPaymentRow } from '@/lib/payments/mpesa-checkout
 import { isMpesaConfigured } from '@/lib/payments/mpesa';
 import { postSlack } from '@/lib/notifications/slack';
 import { decideRetry, retryDelayMs, WEBHOOK_GRACE_MS } from '@/lib/payments/resilience';
+import { reprocessGatewayEvent } from '@/lib/payments/gateway-events';
+import { isGateway, syncOpenGatewayPayments } from '@/lib/payments/gateways';
 
 const BATCH = 50;
 const MPESA_BATCH = 25;
@@ -21,10 +23,12 @@ type Attempt = { outcome: string } | { pending: true } | { error: string };
  * payment_events but never finished, using the same idempotent settle
  * functions as the live webhooks, with exponential backoff; after
  * MAX_WEBHOOK_ATTEMPTS an event is dead-lettered and posted to Slack.
- * Also re-queries M-Pesa prompts whose callback never arrived.
+ * Also re-queries M-Pesa prompts whose callback never arrived, and DPO Pay / PayPal / Airtel Money
+ * attempts that never heard back (migration 028).
  */
 export async function retryWebhooks({ db, hasTime, now = new Date() }: { db: SupabaseClient; hasTime: () => boolean; now?: Date }) {
-  const report = { examined: 0, settled: 0, still_pending: 0, dead_lettered: [] as { id: number; provider: string; tx_ref: string | null; error: string }[], mpesa_synced: 0 };
+  const report = { examined: 0, settled: 0, still_pending: 0, dead_lettered: [] as { id: number; provider: string; tx_ref: string | null; error: string }[], mpesa_synced: 0,
+    gateways: { checked: 0, settled: 0, abandoned: 0, errors: 0 } };
 
   const { data: due, error } = await db.from('payment_events')
     .select('id, provider, event_type, tx_ref, payload, attempts')
@@ -67,6 +71,9 @@ export async function retryWebhooks({ db, hasTime, now = new Date() }: { db: Sup
     }
   }
 
+  // DPO / PayPal / Airtel attempts with no final answer yet (buyer closed the tab, webhook lost).
+  if (hasTime()) report.gateways = await syncOpenGatewayPayments(db, hasTime, now);
+
   if (report.dead_lettered.length) {
     await postSlack({
       text: `:rotating_light: ${report.dead_lettered.length} payment webhook(s) dead-lettered after repeated failures — review in Admin → Reconciliation.\n`
@@ -99,6 +106,7 @@ async function processEvent(db: SupabaseClient, ev: EventRow): Promise<Attempt> 
       const outcome = await syncPayment(db, r);
       return outcome ? { outcome } : { pending: true };
     }
+    if (isGateway(ev.provider)) return await reprocessGatewayEvent(ev.provider, ev.tx_ref);
     return { outcome: 'unknown_provider' };
   } catch (err) {
     return { error: err instanceof Error ? err.message : String(err) };

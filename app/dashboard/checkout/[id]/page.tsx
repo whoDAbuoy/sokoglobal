@@ -9,7 +9,7 @@ import type { ProductCategory } from '@/lib/types';
 import DashboardHeader from '@/components/dashboard/DashboardHeader';
 import ProductVisual from '@/components/dashboard/ProductVisual';
 import CheckoutActions from './CheckoutActions';
-import { exceedsMpesaLimit } from '@/lib/payments/mpesa';
+import { getPaymentSettings, methodsFor } from '@/lib/payment-settings-server';
 
 export const metadata = { title: 'Checkout · SokoGlobal' };
 export const dynamic = 'force-dynamic';
@@ -28,9 +28,9 @@ const one = <T,>(v: T | T[] | null | undefined): T | null => (Array.isArray(v) ?
  */
 export default async function CheckoutPage({ params, searchParams }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ status?: string }>;
+  searchParams: Promise<{ status?: string; gw?: string; token?: string; TransactionToken?: string }>;
 }) {
-  const [{ id }, { status: returnStatus }] = await Promise.all([params, searchParams]);
+  const [{ id }, { status: returnStatus, gw, token: paypalToken, TransactionToken: dpoToken }] = await Promise.all([params, searchParams]);
   if (!UUID_RE.test(id)) notFound();
   const { supabase, user, profile } = await getSessionProfile();
   if (!user || !profile) redirect(`/login?redirectTo=/dashboard/checkout/${id}`);
@@ -49,7 +49,11 @@ export default async function CheckoutPage({ params, searchParams }: {
   const due = unpaid.reduce((s, o) => s + o.total_cents, 0);
   const total = orders.reduce((s, o) => s + o.total_cents, 0);
   const sum = (k: 'goods_cents' | 'freight_cents' | 'customs_cents' | 'escrow_fee_cents') => orders.reduce((s, o) => s + (o[k] ?? 0), 0);
-  const { data: fxSpread } = await supabase.rpc('current_fx_spread');
+  // Migration 028: online methods switched on + configured + within limits (wire and crypto are per order).
+  const payments = await getPaymentSettings(supabase);
+  const methods = methodsFor({ settings: payments.settings, fxSpread: payments.fxSpread, dueCents: due, cart: true });
+  const gatewayReturn = gw === 'paypal' && paypalToken ? { gateway: 'paypal' as const, token: paypalToken }
+    : gw === 'dpo' && dpoToken ? { gateway: 'dpo' as const, token: dpoToken } : null;
   const batchesOf = (o: Row) => (o.product?.trial_units ? Math.max(1, Math.round(o.quantity / o.product.trial_units)) : 1);
   const totalBatches = orders.reduce((n, o) => n + batchesOf(o), 0);
   const image = (o: Row) => [...(o.product?.product_media ?? [])].filter((m) => m.media_type === 'image').sort((a, b) => a.sort_order - b.sort_order)[0]?.public_url ?? null;
@@ -96,7 +100,7 @@ export default async function CheckoutPage({ params, searchParams }: {
 
             {unpaid.length > 0 ? (
               <CheckoutActions checkoutId={group.id} returnStatus={returnStatus ?? null}
-                amountLabel={formatUSD(due, true)} buyerName={profile.full_name} mpesaOverLimit={exceedsMpesaLimit(due, Number(fxSpread) || 0)} />
+                amountLabel={formatUSD(due, true)} buyerName={profile.full_name} methods={methods} gatewayReturn={gatewayReturn} />
             ) : (
               <p className="mt-6 flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">
                 <CheckCircle2 className="h-5 w-5" /> All {totalBatches} Trial Batches are paid and held in escrow. Track each one from its order page.

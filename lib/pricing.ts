@@ -128,6 +128,8 @@ export const REVENUE_KEYS = [
   'subscriptions_cents', 'rfq_featured_cents', 'rfq_white_glove_cents', 'escrow_fees_cents', 'logistics_markup_cents',
   'fx_margin_cents', 'commission_cents', 'early_payout_fees_cents', 'active_gold_suppliers', 'early_payout_exposure_cents',
   'early_payouts_open', 'white_glove_open',
+  // Migration 028
+  'crypto_fees_cents', 'manual_payments_pending',
 ] as const;
 export type RevenueSummary = Record<(typeof REVENUE_KEYS)[number], number>;
 
@@ -145,7 +147,7 @@ export function revenueTotals(r: RevenueSummary) {
   return {
     rfqPromotions,
     total: r.subscriptions_cents + rfqPromotions + r.escrow_fees_cents + r.logistics_markup_cents + r.fx_margin_cents
-      + r.commission_cents + r.early_payout_fees_cents,
+      + r.commission_cents + r.early_payout_fees_cents + r.crypto_fees_cents,
   };
 }
 

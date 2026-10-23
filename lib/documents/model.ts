@@ -142,6 +142,47 @@ export function payoutReceiptModel(p: PayoutInput, issuedAt = new Date()): DocMo
   };
 }
 
+export interface WireInput {
+  reference: string; usd_cents: number; leg: string | null; created_at: string;
+  pay_to: { bank_name?: string; swift_code?: string; account_number?: string; account_name?: string; routing_number?: string; bank_address?: string };
+  order: { id: string; product_title: string | null };
+  buyer: Party | null;
+}
+
+/** SWIFT payment instructions for one order (migration 028 manual_payments row). */
+export function wireInstructionsModel(w: WireInput, issuedAt = new Date()): DocModel {
+  const b = w.pay_to;
+  const what = w.leg === 'deposit' ? '30% deposit' : w.leg === 'balance' ? '70% balance' : 'Order total';
+  return {
+    title: 'SWIFT Payment Instructions',
+    number: w.reference,
+    issued: day(issuedAt.toISOString()),
+    status: 'Awaiting transfer',
+    parties: [
+      { heading: 'Beneficiary (escrow account)', lines: [b.account_name || '—', b.bank_name || '—', ...(b.bank_address ? [b.bank_address] : [])] },
+      { heading: 'Remitter', lines: w.buyer ? [w.buyer.company_name, ...(w.buyer.full_name ? [`Attn: ${w.buyer.full_name}`] : []), w.buyer.country_code.toUpperCase()] : ['—'] },
+    ],
+    facts: [
+      { label: 'Payment reference', value: w.reference },
+      { label: 'Order', value: `#${w.order.id.slice(0, 8).toUpperCase()}` },
+      { label: 'SWIFT / BIC', value: b.swift_code || '—' },
+      { label: 'Account / IBAN', value: b.account_number || '—' },
+      ...(b.routing_number ? [{ label: 'Routing / sort code', value: b.routing_number }] : []),
+      { label: 'Requested', value: day(w.created_at) },
+    ],
+    table: {
+      head: ['Description', '', '', 'Amount'],
+      rows: [[`${what}${w.order.product_title ? ` - ${w.order.product_title}` : ''}`, '', '', money(w.usd_cents)]],
+    },
+    totals: [{ label: 'Amount to receive (USD)', value: money(w.usd_cents), strong: true }],
+    notes: [
+      `Quote the reference ${w.reference} in the payment details so we can match your transfer.`,
+      'Send in US dollars with charges paid by the sender (OUR), so the full amount arrives. Funds are held in escrow until you verify delivery.',
+      'After sending, upload the bank confirmation on your order page. We confirm the transfer once it is credited, usually in 1-3 business days.',
+    ],
+  };
+}
+
 /**
  * The standard PDF fonts only cover WinAnsi (Latin-1). Map common typography
  * to ASCII and replace anything else (e.g. CJK company names) with "?" so PDF

@@ -28,7 +28,7 @@ export async function runEscrowReconciliation({ db, hasTime, triggeredBy = 'cron
     const [orders, card, mpesa] = await Promise.all([
       db.from('orders').select(ORDER_COLUMNS)
         .or(`created_at.gte."${from}",funded_at.gte."${from}"`).limit(ROW_LIMIT),
-      db.from('card_payments').select('reference, kind, order_id, checkout_group_id, status, usd_cents, amount_minor, currency, created_at')
+      db.from('card_payments').select('reference, provider, kind, order_id, checkout_group_id, status, usd_cents, amount_minor, currency, created_at')
         .gte('created_at', from).limit(ROW_LIMIT),
       db.from('mpesa_payments').select('id, order_id, checkout_group_id, status, usd_cents, mpesa_receipt, created_at')
         .gte('created_at', from).limit(ROW_LIMIT),
@@ -49,7 +49,8 @@ export async function runEscrowReconciliation({ db, hasTime, triggeredBy = 'cron
     const gateway = new Map<string, GatewayCharge>();
     let skippedGateway = 0;
     if (isPaystackConfigured()) {
-      for (const p of cardRows.filter((c) => c.status !== 'review')) {
+      // Only Paystack charges can be verified with Paystack; DPO / PayPal / Airtel are confirmed by their own sync.
+      for (const p of cardRows.filter((c) => c.status !== 'review' && (c.provider ?? 'paystack') === 'paystack')) {
         if (gateway.size >= MAX_GATEWAY_CALLS || !hasTime()) { skippedGateway += 1; continue; }
         try {
           const v = await verifyTransaction(p.reference);

@@ -198,7 +198,7 @@ export const config = {
   // Prefetches are skipped too (they'd mint nonces for documents never rendered).
   matcher: [
     {
-      source: '/((?!_next/static|_next/image|favicon.ico|api/webhooks|api/cron|api/csp-report|monitoring|.*\\.(?:svg|png|jpg|jpeg|webp|ico|txt|xml)$).*)',
+      source: '/((?!_next/static|_next/image|favicon.ico|api/webhooks|api/payments/paypal/webhook|api/cron|api/csp-report|monitoring|.*\\.(?:svg|png|jpg|jpeg|webp|ico|txt|xml)$).*)',
       missing: [
         { type: 'header', key: 'next-router-prefetch' },
         { type: 'header', key: 'purpose', value: 'prefetch' },

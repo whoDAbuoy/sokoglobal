@@ -74,11 +74,11 @@ test('Gold state: active until the period ends, lapsed after, none without a per
 
 test('revenue summary: numbers (bigint sums arrive as strings), missing → 0, totals add every stream once', () => {
   const r = parseRevenue({ subscriptions_cents: '9800', rfq_featured_cents: 1500, rfq_white_glove_cents: 2500, escrow_fees_cents: 2280,
-    fx_margin_cents: 930, commission_cents: 1500, early_payout_fees_cents: 1500, early_payout_exposure_cents: 47000, bogus: 5 });
+    fx_margin_cents: 930, commission_cents: 1500, early_payout_fees_cents: 1500, early_payout_exposure_cents: 47000, crypto_fees_cents: 582, bogus: 5 });
   assert.equal(r.subscriptions_cents, 9800);
   assert.equal(r.logistics_markup_cents, 0);
   assert.equal(r.white_glove_open, 0);
-  assert.deepEqual(revenueTotals(r), { rfqPromotions: 4000, total: 9800 + 4000 + 2280 + 930 + 1500 + 1500 });
+  assert.deepEqual(revenueTotals(r), { rfqPromotions: 4000, total: 9800 + 4000 + 2280 + 930 + 1500 + 1500 + 582 });
   assert.equal(parseRevenue(null).commission_cents, 0);
 });
 

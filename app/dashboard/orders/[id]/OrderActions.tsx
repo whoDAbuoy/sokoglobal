@@ -5,10 +5,9 @@ import { useRouter } from 'next/navigation';
 import { AlertCircle, CheckCircle2, Clock, Loader2, PackageCheck, ShieldCheck } from 'lucide-react';
 import type { EscrowStatus } from '@/lib/types';
 import type { PaymentStep } from '@/lib/milestone';
-import BankCardPanel from '@/components/payments/BankCardPanel';
-import MpesaPay from './MpesaPay';
-
-const MPESA_ENABLED = process.env.NEXT_PUBLIC_MPESA_ENABLED === 'true';
+import type { PaymentMethod } from '@/lib/payment-methods';
+import PaymentMethods, { type ManualContext } from '@/components/payments/PaymentMethods';
+import GatewayReturn from '@/components/payments/GatewayReturn';
 
 const PAY_COPY: Record<'pay_full' | 'pay_deposit' | 'pay_balance', { title: string; note: string }> = {
   pay_full: { title: 'Awaiting payment', note: 'Your money goes into escrow, not to the supplier.' },
@@ -16,7 +15,7 @@ const PAY_COPY: Record<'pay_full' | 'pay_deposit' | 'pay_balance', { title: stri
   pay_balance: { title: 'Your order is on its way — pay the 70% balance', note: 'The balance joins your deposit in escrow; the supplier is paid only after you verify the goods.' },
 };
 
-export default function OrderActions({ orderId, status, step, returnStatus, payWith, amountLabel = 'now', balanceLabel, buyerName, mpesaOverLimit = false }: {
+export default function OrderActions({ orderId, status, step, returnStatus, payWith, amountLabel = 'now', balanceLabel, buyerName, methods, manual, gatewayReturn }: {
   orderId: string; status: EscrowStatus; returnStatus: string | null; payWith?: string | null;
   /** What is payable now (lib/milestone.ts paymentStep). */
   step: PaymentStep;
@@ -25,14 +24,13 @@ export default function OrderActions({ orderId, status, step, returnStatus, payW
   /** Formatted milestone balance, shown while waiting for dispatch. */
   balanceLabel?: string;
   buyerName?: string;
-  /** Total is above the M-Pesa per-payment limit → Bank Card only. */
-  mpesaOverLimit?: boolean;
+  /** Methods switched on, configured and within limits for this amount (lib/payment-settings-server.ts). */
+  methods: PaymentMethod[];
+  /** SWIFT / crypto context, including an open transfer. */
+  manual?: ManualContext;
+  /** Back from DPO Pay / PayPal: confirm with the gateway now. */
+  gatewayReturn?: { gateway: 'dpo' | 'paypal'; token: string } | null;
 }) {
-  const mpesaAvailable = MPESA_ENABLED && !mpesaOverLimit;
-  // M-Pesa is the default when available, unless the buyer chose card or is returning from card checkout.
-  const [method, setMethod] = useState<'card' | 'mpesa'>(
-    mpesaAvailable && payWith !== 'card' && !returnStatus ? 'mpesa' : 'card',
-  );
   const router = useRouter();
   const [busy, setBusy] = useState<'confirm' | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -67,6 +65,7 @@ export default function OrderActions({ orderId, status, step, returnStatus, payW
   if (awaitingWebhook) {
     return (
       <div role="status" className="mt-6 flex items-center gap-3 rounded-xl bg-brand-50 p-4 text-sm text-brand-900 ring-1 ring-neutral-200">
+        {gatewayReturn && <GatewayReturn gateway={gatewayReturn.gateway} token={gatewayReturn.token} />}
         <Loader2 className="h-5 w-5 animate-spin" />
         Payment received — we&apos;re confirming it with the escrow account. This usually takes under a minute.
       </div>
@@ -96,26 +95,9 @@ export default function OrderActions({ orderId, status, step, returnStatus, payW
             <p className="font-medium text-slate-900">{returnStatus === 'failed' || returnStatus === 'cancelled' ? 'Payment didn’t go through' : copy.title}</p>
             <p className="text-sm text-slate-500">{copy.note}</p>
           </div>
-          {mpesaAvailable && (
-            <div role="radiogroup" aria-label="Payment method" className="inline-flex rounded-lg bg-slate-100 p-1 text-sm font-medium">
-              {(['mpesa', 'card'] as const).map((m) => (
-                <button key={m} type="button" role="radio" aria-checked={method === m} onClick={() => setMethod(m)}
-                  className={method === m ? 'rounded-md bg-white px-3 py-1.5 text-slate-900 shadow-sm' : 'px-3 py-1.5 text-slate-500 hover:text-slate-800'}>
-                  {m === 'card' ? 'Bank Card (Visa / Mastercard)' : 'M-Pesa'}
-                </button>
-              ))}
-            </div>
-          )}
         </div>
-        {MPESA_ENABLED && mpesaOverLimit && (
-          <p className="mt-4 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
-            This total is above M-Pesa&apos;s KES 250,000 per-payment limit. Please pay by <strong>Bank Card (Visa / Mastercard)</strong>.
-          </p>
-        )}
         <div className="mt-4">
-          {method === 'mpesa'
-            ? <MpesaPay orderId={orderId} onSwitchToCard={() => setMethod('card')} />
-            : <BankCardPanel endpoint={`/api/orders/${orderId}/checkout`} amountLabel={amountLabel} returnPath={`/dashboard/orders/${orderId}`} defaultName={buyerName} />}
+          <PaymentMethods target={{ kind: 'order', id: orderId }} methods={methods} preferred={payWith} amountLabel={amountLabel} buyerName={buyerName} manual={manual} />
         </div>
       </div>
     );

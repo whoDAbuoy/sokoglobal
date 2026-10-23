@@ -68,6 +68,13 @@ function copyFor(key: string, p: Payload): Copy {
       return { subject: 'New message from SokoGlobal', lines: [`The SokoGlobal team sent you a message${where}.`, ...(preview ? [`“${preview}”`] : [])],
         sms: `SokoGlobal: new message from our team${where}. Open Messages to reply.`, cta: { label: 'Open messages', path: p.role === 'supplier' ? '/supplier/messages' : '/dashboard/messages' } };
     }
+    case 'payment.manual_rejected': {
+      const how = p.method === 'swift_wire' ? 'bank wire' : 'crypto payment';
+      const note = str(p.note);
+      return { subject: `We couldn't confirm your ${how}: ${title}`,
+        lines: [`We couldn't confirm your ${how} (reference ${str(p.reference)}) for order ${ref}.`, ...(note ? [`Our team's note: ${note}`] : []), 'Your order is still saved. Open it to pay again or contact support.'],
+        sms: `SokoGlobal: we couldn't confirm your ${how} for order ${ref}. See your order page for details.`, cta: { label: 'Open order', path: orderPath } };
+    }
     case 'supplier.order_funded':
       return { subject: `New paid order: ${title}`, lines: [`A buyer paid ${amount} for ${title} (order ${ref}). Funds are in escrow; please prepare it for dispatch.`], sms: `SokoGlobal: new paid order ${ref} for ${title}. Prepare for dispatch.`, cta: { label: 'Open orders', path: '/supplier/orders' } };
     case 'kyc.approved':
