@@ -11,7 +11,7 @@ export default function CurrencySwitcher() {
   const id = useId();
   const asOf = ratesUpdatedAt ? new Date(ratesUpdatedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : null;
   return (
-    <div className="relative mr-0.5 sm:mr-1">
+    <div className="relative shrink-0">
       <label htmlFor={id} className="sr-only">Display currency</label>
       <Coins className="pointer-events-none absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-500" strokeWidth={1.75} aria-hidden />
       <select id={id} value={currency} onChange={(e) => setCurrency(parseCurrency(e.target.value))}

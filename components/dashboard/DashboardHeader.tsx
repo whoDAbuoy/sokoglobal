@@ -49,8 +49,9 @@ export default function DashboardHeader({ profile }: { profile: Profile }) {
   const pathname = usePathname() ?? '';
   const level = adminLevel(profile);
   const wideNav = (level !== null && pathname.startsWith('/admin')) || roleAdminLevel(profile.role) !== null;
-  // Seven supplier links only fit beside the account block from xl up; below that they scroll in the second row.
-  const midNav = !wideNav && profile.role === 'supplier';
+  // Admin (up to nine) and supplier (seven) links don't fit beside the account block in the 1280 px toolbar,
+  // so they always get their own row; the five importer links sit inline from lg up.
+  const rowNav = wideNav || profile.role === 'supplier';
   const links = navLinks(profile, pathname).map(([label, href]) => {
     const Icon = NAV_ICON[label];
     return (
@@ -77,26 +78,26 @@ export default function DashboardHeader({ profile }: { profile: Profile }) {
   return (
     <header className="sticky top-3 z-50 px-3 sm:top-4 sm:px-4">
       <div className="glass-toolbar mx-auto max-w-7xl">
-      <div className="flex h-14 items-center justify-between gap-6 px-3 sm:h-16 sm:px-5">
-        <div className="flex items-center gap-10">
-          <Link href="/" className="flex items-center gap-2">
+      <div className="flex h-14 items-center justify-between gap-4 px-3 sm:h-16 sm:px-5">
+        <div className="flex min-w-0 flex-1 items-center gap-8">
+          <Link href="/" className="flex shrink-0 items-center gap-2">
             <ShieldCheck className="h-5 w-5 text-blue-600 dark:text-cyan-400" strokeWidth={2.25} aria-hidden />
             <span className="text-base font-semibold tracking-tight text-neutral-900">SokoGlobal</span>
           </Link>
-          <nav className={wideNav ? 'hidden items-center gap-5 xl:flex' : midNav ? 'hidden items-center gap-6 xl:flex' : 'hidden items-center gap-6 lg:flex'}>{links}</nav>
+          {!rowNav && <nav className="hidden min-w-0 items-center gap-6 lg:flex">{links}</nav>}
         </div>
 
-        <div className="flex items-center gap-1">
+        <div className="flex shrink-0 items-center gap-1 sm:gap-2">
           {roleAdminLevel(profile.role) && (
             <Link href="/admin/control" aria-label="Control room: platform switches, overrides and audit log" title="Control room"
-              className={`mr-0.5 inline-flex items-center gap-1.5 rounded-md border px-2 py-1.5 text-sm font-medium transition-colors sm:mr-1 sm:px-2.5 ${pathname.startsWith('/admin/control') ? 'border-neutral-900 text-neutral-900' : 'border-neutral-300 text-neutral-800 hover:border-neutral-900'}`}>
+              className={`inline-flex h-8 items-center gap-1.5 rounded-md border px-2 text-sm font-medium transition-colors sm:px-2.5 ${pathname.startsWith('/admin/control') ? 'border-neutral-900 text-neutral-900' : 'border-neutral-300 text-neutral-800 hover:border-neutral-900'}`}>
               <Gauge className="h-4 w-4" strokeWidth={1.75} aria-hidden /> <span className="hidden sm:inline">Control</span>
             </Link>
           )}
           <CurrencySwitcher />
           {profile.role === 'importer' && (
             <Link href="/dashboard/orders" aria-label="My orders and escrow tracking"
-              className="mr-0.5 inline-flex items-center gap-1.5 rounded-md border border-neutral-300 px-2 py-1.5 text-sm font-medium text-neutral-900 transition-colors hover:border-neutral-900 sm:mr-1 sm:px-2.5">
+              className="inline-flex h-8 items-center gap-1.5 rounded-md border border-neutral-300 px-2 text-sm font-medium text-neutral-900 transition-colors hover:border-neutral-900 sm:px-2.5">
               <Package className="h-4 w-4" strokeWidth={1.75} /> <span className="hidden sm:inline">My Orders</span>
             </Link>
           )}
@@ -126,7 +127,7 @@ export default function DashboardHeader({ profile }: { profile: Profile }) {
             <Bell className="h-5 w-5" strokeWidth={1.75} />
           </button>
           <Link href="/dashboard/settings" aria-label="Profile & settings" title="Profile & settings"
-            className="ml-1 flex items-center gap-3 rounded-md border-l border-neutral-200 py-1 pl-2 pr-1 transition-colors hover:bg-neutral-50 sm:ml-2 sm:pl-4">
+            className="flex items-center gap-3 rounded-md border-l border-neutral-200 py-1 pl-2 pr-1 transition-colors hover:bg-neutral-50 sm:pl-4">
             <div className="hidden text-right sm:block">
               <p className="flex items-center justify-end gap-1 text-sm font-medium text-neutral-900">
                 {profile.company_name}
@@ -153,8 +154,8 @@ export default function DashboardHeader({ profile }: { profile: Profile }) {
           </button>
         </div>
       </div>
-      {/* Small screens: the same links as a scrollable row. */}
-      <nav className={`no-scrollbar flex gap-6 overflow-x-auto border-t border-black/[0.06] px-4 py-2.5 dark:border-snow/[0.08] sm:px-5 ${wideNav || midNav ? 'xl:hidden' : 'lg:hidden'}`}>{links}</nav>
+      {/* Admin and supplier links (and every role on small screens): their own scrollable row. */}
+      <nav className={`no-scrollbar flex gap-6 overflow-x-auto border-t border-black/[0.06] px-4 py-2.5 dark:border-snow/[0.08] sm:px-5 ${rowNav ? '' : 'lg:hidden'}`}>{links}</nav>
       </div>
     </header>
   );
