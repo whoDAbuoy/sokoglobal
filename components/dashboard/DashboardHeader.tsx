@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import {
   BadgeCheck, Bell, ClipboardCheck, Compass, FileCheck2, Headphones, Heart, LayoutDashboard, LogOut, MessageSquare, Package,
-  PackagePlus, ShieldCheck, ShieldHalf, ShoppingBag, Store, Truck, Undo2, UserCog, Users, Gauge, LayoutGrid, FileQuestion, Landmark, type LucideIcon,
+  PackagePlus, ShieldCheck, ShieldHalf, ShoppingBag, Store, Truck, Undo2, UserCog, Users, Gauge, LayoutGrid, FileQuestion, Landmark, FilePen, type LucideIcon,
 } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
@@ -17,7 +17,7 @@ import CurrencySwitcher from '@/components/currency/CurrencySwitcher';
 const ADMIN_NAV: [string, string][] = [['Overview', '/admin'], ['Review queue', '/admin/review'], ['Catalogue', '/admin/products'], ['Shipments', '/admin/orders'], ['Supplier KYC', '/admin/kyc'], ['Users', '/admin/users'], ['Support', '/admin/support']];
 const NAV: Record<Profile['role'], [string, string][]> = {
   importer: [['Discover', '/dashboard'], ['Catalog', '/dashboard/discover'], ['RFQs', '/dashboard/rfqs'], ['Trend Pools', '/dashboard#pools'], ['Messages', '/dashboard/messages']],
-  supplier: [['Catalogue', '/supplier'], ['Orders', '/supplier/orders'], ['RFQs', '/supplier/rfqs'], ['Messages', '/supplier/messages'], ['New product', '/supplier/products/new'], ['Verification', '/supplier/verification']],
+  supplier: [['Catalogue', '/supplier'], ['Drafts', '/supplier/drafts'], ['Orders', '/supplier/orders'], ['RFQs', '/supplier/rfqs'], ['Messages', '/supplier/messages'], ['New product', '/supplier/products/new'], ['Verification', '/supplier/verification']],
   admin: ADMIN_NAV,
   // Super admins also run the chat center (every conversation + direct support, migration 025) and pricing (026).
   super_admin: [...ADMIN_NAV, ['Messages', '/admin/messages'], ['Financials', '/admin/financials']],
@@ -37,7 +37,7 @@ const NAV_ICON: Record<string, LucideIcon> = {
   Discover: Compass, 'Trend Pools': Users, Messages: MessageSquare, Catalogue: Store, 'New product': PackagePlus,
   Verification: FileCheck2, Overview: LayoutDashboard, 'Review queue': ClipboardCheck, Shipments: Truck,
   'Supplier KYC': BadgeCheck, Users: UserCog, Support: Headphones, Catalog: LayoutGrid, Control: Gauge, Admin: ShieldHalf,
-  'My portal': Undo2, Orders: Truck, RFQs: FileQuestion, Financials: Landmark,
+  'My portal': Undo2, Orders: Truck, RFQs: FileQuestion, Financials: Landmark, Drafts: FilePen,
 };
 
 export default function DashboardHeader({ profile }: { profile: Profile }) {
@@ -49,7 +49,7 @@ export default function DashboardHeader({ profile }: { profile: Profile }) {
   const pathname = usePathname() ?? '';
   const level = adminLevel(profile);
   const wideNav = (level !== null && pathname.startsWith('/admin')) || roleAdminLevel(profile.role) !== null;
-  // Six supplier links only fit beside the account block from xl up; below that they scroll in the second row.
+  // Seven supplier links only fit beside the account block from xl up; below that they scroll in the second row.
   const midNav = !wideNav && profile.role === 'supplier';
   const links = navLinks(profile, pathname).map(([label, href]) => {
     const Icon = NAV_ICON[label];

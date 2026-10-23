@@ -5,6 +5,7 @@ import { getSessionProfile } from '@/lib/supabase/server';
 import { friendlyError } from '@/lib/format';
 import type { CategoryRow, ProductInsert } from '@/lib/catalog';
 import { IMPORT_MAX_BYTES, cellToText, mapImportRows, parseCsv, type ImportRow } from '@/lib/catalog-import';
+import { MEDIA_BUCKET, UUID_RE } from '@/lib/uploads';
 
 export type ImportState = {
   ok: boolean;
@@ -78,4 +79,33 @@ export async function importListings(_prev: ImportState, form: FormData): Promis
     ok: created > 0, mode, created, rows: summary(result.rows),
     message: created ? `Created ${created} draft listing${created === 1 ? '' : 's'}. Add at least 3 photos to each, then submit for review.` : 'No listings were created.',
   };
+}
+
+export type DeleteDraftResult = { ok: boolean; message: string };
+
+/**
+ * Delete one of the supplier's drafts (migration 027). delete_supplier_draft() re-checks the role,
+ * ownership, draft status and that nothing references the listing (orders, Trend Pools, quotes),
+ * logs it to moderation_log, and returns the media paths. The files are then removed with the
+ * supplier's own session (storage RLS allows files no longer attached to a non-draft listing).
+ */
+export async function deleteDraft(productId: string): Promise<DeleteDraftResult> {
+  const { supabase, user, profile } = await getSessionProfile();
+  if (!user || profile?.role !== 'supplier') return { ok: false, message: 'Supplier access required.' };
+  if (!UUID_RE.test(productId)) return { ok: false, message: 'Invalid draft.' };
+
+  const { data, error } = await supabase.rpc('delete_supplier_draft', { p_product_id: productId });
+  if (error) return { ok: false, message: friendlyError(error.message) };
+  revalidatePath('/supplier');
+  revalidatePath('/supplier/drafts');
+
+  // The row is already gone; a storage failure only leaves orphaned files (their paths are in moderation_log).
+  const paths = ((data as { storage_paths?: string[] } | null)?.storage_paths ?? []).filter(Boolean);
+  if (paths.length) {
+    const { data: removed, error: storageError } = await supabase.storage.from(MEDIA_BUCKET).remove(paths);
+    if (storageError || (removed?.length ?? 0) < paths.length) {
+      console.error('[supplier] draft deleted but media cleanup incomplete', { productId, storageError, expected: paths.length, removed: removed?.length ?? 0 });
+    }
+  }
+  return { ok: true, message: 'Draft deleted.' };
 }
