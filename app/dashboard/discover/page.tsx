@@ -8,6 +8,7 @@ import {
   matchesFilters, parseCatalogQuery, sortListings, toggleFilter, type CatalogQuery, type CategoryNode, type CategoryRow,
 } from '@/lib/catalog';
 import { toTrialProductView, type CatalogProductRow } from '@/lib/product-view';
+import { goldSupplierIds } from '@/lib/pricing-server';
 import DashboardHeader from '@/components/dashboard/DashboardHeader';
 import TrialBatchCard from '@/components/dashboard/TrialBatchCard';
 
@@ -17,7 +18,7 @@ export const dynamic = 'force-dynamic';
 /** Upper bound of live listings scanned per category view; facets and filters run over this set. */
 const SCAN_LIMIT = 500;
 
-const SELECT = `id, title, brand, category, origin_country, trial_units, unit_price_cents, trial_goods_cents, trial_freight_cents,
+const SELECT = `id, supplier_id, title, brand, category, origin_country, trial_units, unit_price_cents, trial_goods_cents, trial_freight_cents,
   trial_customs_cents, trial_landed_cost_cents, lead_time_days, created_at, attributes, category_id, is_featured, moq, unit_of_measure, price_tiers,
   supplier:profiles!products_supplier_id_fkey ( company_name, kyc_verified ), product_media ( public_url, media_type, sort_order )`;
 
@@ -68,7 +69,9 @@ export default async function DiscoverPage({ searchParams }: { searchParams: Pro
   const sorted = sortListings(filtered.map((r) => ({ ...r, landed_cost_cents: r.trial_landed_cost_cents })), query.sort);
   const pages = Math.max(1, Math.ceil(sorted.length / CATALOG_PAGE_SIZE));
   const page = Math.min(query.page, pages);
-  const shown = sorted.slice((page - 1) * CATALOG_PAGE_SIZE, page * CATALOG_PAGE_SIZE).map((r) => toTrialProductView(r, r.category_id ? nameById.get(r.category_id) ?? null : null));
+  const pageRows = sorted.slice((page - 1) * CATALOG_PAGE_SIZE, page * CATALOG_PAGE_SIZE);
+  const gold = await goldSupplierIds(supabase, pageRows.map((r) => r.supplier_id));
+  const shown = pageRows.map((r) => toTrialProductView(r, r.category_id ? nameById.get(r.category_id) ?? null : null, gold));
 
   // Listing counts per child category (from the scanned set).
   const children: CategoryNode[] = current ? findNode(tree, current.id)?.children ?? [] : tree;

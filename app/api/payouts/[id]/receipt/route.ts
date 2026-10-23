@@ -18,7 +18,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   if (!user || !profile) return NextResponse.json({ error: 'Sign in required' }, { status: 401 });
 
   const { data: p } = await supabase.from('payouts')
-    .select(`id, order_id, supplier_id, reference, status, gross_cents, fee_cents, amount_cents, currency, payout_currency, payout_amount,
+    .select(`id, order_id, supplier_id, reference, status, gross_cents, fee_cents, early, early_payout_fee_cents, amount_cents, currency, payout_currency, payout_amount,
              created_at, completed_at, flw_transfer_id,
              supplier:profiles!payouts_supplier_id_fkey ( company_name, country_code ),
              order:orders ( product:products ( title ) )`)

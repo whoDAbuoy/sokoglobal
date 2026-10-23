@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { ArrowLeft, Truck } from 'lucide-react';
+import { ArrowLeft, Truck, Zap } from 'lucide-react';
 import { getSessionProfile } from '@/lib/supabase/server';
 import { groupPaidOrders, parseGroupedCatalog, type ListingGroup, type RawOrder } from '@/lib/supplier-orders';
 import DashboardHeader from '@/components/dashboard/DashboardHeader';
@@ -67,7 +67,7 @@ export default async function SupplierOrdersPage() {
         <h1 className="mt-2 text-3xl font-semibold text-neutral-900">Orders to fulfil</h1>
         <p className="mt-1 max-w-2xl text-sm text-neutral-600">
           Paid orders waiting for dispatch, grouped by listing. Every order here is confirmed by Paystack or M-Pesa and held in escrow;
-          you&apos;re paid the goods value when the buyer confirms delivery.
+          you&apos;re paid the goods value when the buyer confirms delivery — or right after dispatch with an instant early payout.
         </p>
 
         <OrderCatalog groups={groups} shipments={saved} />
@@ -97,6 +97,9 @@ export default async function SupplierOrdersPage() {
                       </p>
                     </div>
                     <div className="flex flex-wrap gap-2 sm:justify-end">
+                      <Link href={`/supplier/orders/${r.order_id}`} className="btn-secondary px-3 py-1.5 text-sm">
+                        {o?.escrow_status === 'deposit_paid' ? 'Details' : <><Zap className="h-3.5 w-3.5 text-yellow-600 dark:text-yellow-300" aria-hidden /> Payout</>}
+                      </Link>
                       <OrderChatButton orderId={r.order_id} label="Message buyer" title={`Order #${r.order_id.slice(0, 8).toUpperCase()} · ${title}`} />
                       <ShipOrderDialog orderId={r.order_id} existing={r} orderLabel={`${title} (#${r.order_id.slice(0, 8).toUpperCase()})`} />
                     </div>

@@ -10,6 +10,7 @@ import { countryName, flag } from '@/lib/format';
 import { useCurrency } from '@/context/CurrencyContext';
 import { lineTotals } from '@/lib/cart';
 import ProductGallery from './ProductGallery';
+import GoldBadge from '@/components/supplier/GoldBadge';
 
 const EXIT_MS = 160;   // matches the fade-out / scale-out animations
 
@@ -108,6 +109,7 @@ export default function ProductQuickView({ product, quantity = 1, onClose, actio
               <dd className="mt-1 flex items-center gap-1.5 font-medium text-neutral-900">
                 {product.supplier_name}
                 {product.supplier_verified && <BadgeCheck className="h-4 w-4 text-emerald-600" aria-label="KYC verified" />}
+                {product.supplier_gold && <GoldBadge compact />}
               </dd>
             </div>
             <div>

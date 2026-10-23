@@ -1,6 +1,9 @@
 'use client';
 
 import { startTransition, useActionState, useEffect, useId, useRef } from 'react';
+import { formatUSD } from '@/lib/format';
+import { RFQ_ADDONS, RFQ_ADDON_LABEL } from '@/lib/pricing';
+import { ADDON_HINT, AddonCheckout, type AddonPrices } from './RfqAddOns';
 import { toast } from 'sonner';
 import { AlertCircle, Loader2, Send } from 'lucide-react';
 import { createRfq, type RfqFormState } from '@/app/dashboard/rfqs/actions';
@@ -9,8 +12,10 @@ import { useCurrency } from '@/context/CurrencyContext';
 export interface RfqPrefill { title?: string; quantity?: number; categoryId?: string | null; productId?: string | null; unitOfMeasure?: string | null }
 
 /** Buyer's request for a custom volume quote. Target price is per unit, in KES. */
-export default function RfqForm({ categories, prefill = {}, disabledReason }: {
+export default function RfqForm({ categories, prefill = {}, disabledReason, addonPrices, buyerName }: {
   categories: { id: string; label: string }[]; prefill?: RfqPrefill; disabledReason?: string | null;
+  /** USD cents per add-on (from platform_settings); omitted → no add-ons offered. */
+  addonPrices?: AddonPrices; buyerName?: string;
 }) {
   const uid = useId();
   const formRef = useRef<HTMLFormElement>(null);
@@ -87,8 +92,25 @@ export default function RfqForm({ categories, prefill = {}, disabledReason }: {
             {msg('expiresInDays')}
           </div>
         </div>
+        {addonPrices && (
+          <fieldset className="space-y-2">
+            <legend className="label">Add-ons <span className="font-normal text-neutral-500">(optional, paid by card after posting)</span></legend>
+            {RFQ_ADDONS.map((a) => (
+              <label key={a} htmlFor={`${uid}-addon-${a}`} className="flex cursor-pointer items-start gap-3 rounded-md border border-neutral-200 p-3 text-sm hover:border-neutral-400">
+                <input id={`${uid}-addon-${a}`} type="checkbox" name="addons" value={a} className="mt-0.5" />
+                <span className="min-w-0 flex-1">
+                  <span className="flex items-center justify-between gap-2 font-medium text-neutral-900">{RFQ_ADDON_LABEL[a]}<span className="tabular-nums">{formatUSD(addonPrices[a], true)}</span></span>
+                  <span className="mt-0.5 block text-xs text-neutral-600">{ADDON_HINT[a]}</span>
+                </span>
+              </label>
+            ))}
+          </fieldset>
+        )}
       </fieldset>
 
+      {state?.ok && state.rfqId && state.addons?.length && addonPrices ? (
+        <AddonCheckout key={state.rfqId} rfqId={state.rfqId} available={state.addons} prices={addonPrices} defaultName={buyerName} />
+      ) : null}
       {state && !state.ok && <p role="alert" className="flex items-start gap-1.5 text-sm text-red-600"><AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />{state.message}</p>}
       <button type="submit" disabled={pending || !!disabledReason} className="btn-primary w-full">
         {pending ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <Send className="h-4 w-4" aria-hidden />} Post request

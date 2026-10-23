@@ -18,6 +18,7 @@ import FeaturedCarousel, { type FeaturedSlide } from '@/components/dashboard/Fea
 import CategoryTiles, { type CategoryTile } from '@/components/dashboard/CategoryTiles';
 import Link from 'next/link';
 import QuickActions from '@/components/portal/QuickActions';
+import { goldSupplierIds } from '@/lib/pricing-server';
 
 export const metadata = { title: 'Buyer dashboard · SokoGlobal' };
 
@@ -52,7 +53,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
       .limit(6),
     supabase
       .from('products')
-      .select(`id, title, brand, category, origin_country, trial_units, unit_price_cents, trial_goods_cents,
+      .select(`id, supplier_id, title, brand, category, origin_country, trial_units, unit_price_cents, trial_goods_cents,
                trial_freight_cents, trial_customs_cents, trial_landed_cost_cents, lead_time_days,
                supplier:profiles!products_supplier_id_fkey ( company_name, kyc_verified ),
                product_media ( public_url, media_type, sort_order )`)
@@ -93,12 +94,14 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     };
   });
 
+  const gold = await goldSupplierIds(supabase, (productsRes.data ?? []).map((p) => p.supplier_id as string));
   const products: TrialProductView[] = (productsRes.data ?? []).map((p) => {
     const supplier = one(p.supplier as unknown as { company_name: string; kyc_verified: boolean });
     const media = (p.product_media ?? []) as MediaRow[];
     return {
       id: p.id, title: p.title, brand: p.brand, category: p.category, origin_country: p.origin_country,
       supplier_name: supplier?.company_name ?? 'Verified supplier', supplier_verified: !!supplier?.kyc_verified,
+      supplier_gold: gold.has(p.supplier_id as string),
       trial_units: p.trial_units, unit_price_cents: p.unit_price_cents, goods_cents: p.trial_goods_cents,
       freight_cents: p.trial_freight_cents, customs_cents: p.trial_customs_cents,
       landed_cost_cents: p.trial_landed_cost_cents, lead_time_days: p.lead_time_days,

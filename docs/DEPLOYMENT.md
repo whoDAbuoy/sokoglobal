@@ -46,7 +46,7 @@ Set in Vercel → Settings → Environment Variables. **Production** values must
 | `FLW_SECRET_HASH` | Prod, Preview | **yes** | Same value as the webhook "secret hash" in the Flutterwave dashboard |
 | `FLW_API_BASE_URL` | Prod, Preview | no | `https://api.flutterwave.com/v3` |
 | `FLW_OUTBOUND_PROXY_URL` | Prod | **yes** | Optional static-IP proxy (see §4) |
-| `PLATFORM_FEE_BPS` | Prod, Preview | no | Commission on goods value in basis points, e.g. `500` = 5% |
+| `PLATFORM_FEE_BPS` | Prod, Preview | no | Commission for orders placed before migration 026, in basis points (`500` = 5%). Newer orders use the rates in `/admin/financials` |
 | `CRON_SECRET` | Prod, Preview | **yes** | ≥ 32 random chars: `openssl rand -hex 32` |
 | `SLACK_WEBHOOK_URL` | Prod (+ a test channel for Preview) | **yes** | `https://hooks.slack.com/services/…` (Slack app → Incoming Webhooks) |
 | `NEXT_PUBLIC_MAP_TILE_URL` | Prod, Preview | no | Production tile provider URL (MapTiler/Stadia/Mapbox raster) |

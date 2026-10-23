@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { ChevronDown, Clock, Lock, MapPin, PackageCheck, Truck } from 'lucide-react';
 import { catalogTotals, type ListingGroup } from '@/lib/supplier-orders';
 import { countryName, flag, formatUSD } from '@/lib/format';
@@ -99,6 +100,7 @@ export default function OrderCatalog({ groups, shipments = {}, now = Date.now() 
                             {o.quantity.toLocaleString('en-US')} {g.unit_of_measure ?? 'units'}<span className="block text-xs text-neutral-600">{formatUSD(o.goods_cents, true)}</span>
                           </p>
                           <div className="flex flex-wrap gap-2 sm:justify-end">
+                            <Link href={`/supplier/orders/${o.order_id}`} className="btn-secondary px-3 py-1.5 text-sm">Details</Link>
                             <OrderChatButton orderId={o.order_id} label="Message buyer"
                               title={`Order #${o.order_id.slice(0, 8).toUpperCase()} · ${g.title}`} />
                             <ShipOrderDialog orderId={o.order_id} existing={shipments[o.order_id] ?? null}

@@ -137,6 +137,32 @@ Run `021_enterprise_features.sql` after 020, **before** deploying the app code t
   `queue_restock_reminders()` runs daily (pg_cron when available, plus `/api/cron/restock-reminders`) and emails buyers 30 and 60
   days after an order completes, unless they already reordered. Expired RFQs are closed by pg_cron and the expire-orders cron.
 
+## Platform monetization & financials (migration 026)
+
+Run `026_platform_monetization.sql` after 025, **before** deploying the app code that reads its columns.
+
+- **Pricing** lives on the existing single-row `platform_settings` (014's kill-switch row): Gold price and commission, standard
+  commission, Featured RFQ and white-glove fees, escrow fee, FX spread, early-payout fee, logistics markup. Everyone can read it;
+  only `super_set_platform_pricing()` writes it (super admins, validated, audited as `platform.pricing`). Edit it on
+  **`/admin/financials`**, which also shows revenue per stream (`super_platform_revenue()`) and early-payout exposure.
+- **Escrow fee**: new orders store `escrow_fee_cents` (escrow fee × goods + freight + customs; not Trend Pools) and `total_cents`
+  now includes it, so card, M-Pesa, carts, milestone splits and refunds all charge it. Orders placed before 026 have no fee.
+- **FX spread**: M-Pesa and non-USD card charges use base rate × (1 + spread); `fx_margin_cents` records it per payment.
+- **Logistics markup**: the freight an admin enters on `/admin/review` is the carrier cost; approval adds the markup
+  (`products.freight_markup_percent`, `orders.logistics_markup_cents`).
+- **Gold Supplier** (`/supplier/subscription`): one month per card payment, no auto-renewal (`subscriptions`, `begin_card_purchase`
+  → Paystack → `apply_card_payment`). Orders placed while Gold snapshot the Gold commission (`orders.commission_rate`; payouts use it,
+  `PLATFORM_FEE_BPS` only covers older orders). Gold suppliers get a **Gold Supplier** badge on listings and quotes; the green
+  **Verified** mark still means KYC only. Lapsed months are marked `past_due` by the expire-orders cron.
+- **RFQ add-ons**: buyers tick **Promote as Featured RFQ** / **Request White-Glove Sourcing** when posting (or **Promote** later) and
+  pay by card. A verified charge sets `rfqs.is_featured` (top of `supplier_rfq_feed()`) / `needs_white_glove` (opens a support
+  ticket in `/admin/support`).
+- **Instant early payout** (`/supplier/orders/[id]`): once an order is fully paid (milestone balance included) and dispatched with a
+  waybill, its supplier can be paid before the buyer confirms delivery, minus the early-payout fee (`request_early_payout`, then
+  the normal payout worker). SokoGlobal carries the risk: a later dispute is refunded from platform funds. The buyer's escrow
+  timeline shows the early payout and that their protection is unchanged.
+- Tests: `supabase/tests/026_platform_monetization.test.sql`, `lib/pricing.test.mts`.
+
 ## Admin messaging & direct support (migration 025)
 
 Run `025_admin_and_order_chat.sql` after 024.

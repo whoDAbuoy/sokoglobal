@@ -40,7 +40,8 @@ export interface ReconOrder {
 export const expectedPaidCents = (o: ReconOrder) =>
   o.payment_structure === 'milestone_30_70' && !o.final_paid_at && o.deposit_amount != null ? o.deposit_amount : o.total_cents;
 export interface ReconCardPayment {
-  reference: string; kind: 'order' | 'group' | 'pool'; order_id: string | null; checkout_group_id: string | null;
+  /** 'subscription' / 'rfq_addon' (migration 026) are platform purchases: verified with Paystack, outside the escrow ledger. */
+  reference: string; kind: 'order' | 'group' | 'pool' | 'subscription' | 'rfq_addon'; order_id: string | null; checkout_group_id: string | null;
   status: 'initiated' | 'succeeded' | 'failed' | 'review'; usd_cents: number; amount_minor: number; currency: string; created_at: string;
 }
 export interface ReconMpesaPayment {

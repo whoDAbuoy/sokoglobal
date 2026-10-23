@@ -11,13 +11,16 @@ import { confirmCardPayment, openCardForm, type CardSession } from '@/lib/paymen
  * iframe — card data never touches SokoGlobal). On success the charge is
  * verified server-side immediately and the page shows "confirming payment".
  */
-export default function BankCardPanel({ endpoint, amountLabel, returnPath, defaultName }: {
-  /** Our route that starts the card payment: POST { billingName } → { card }. */
+export default function BankCardPanel({ endpoint, amountLabel, returnPath, defaultName, extraBody, disabled }: {
+  /** Our route that starts the card payment: POST { billingName, ...extraBody } → { card }. */
   endpoint: string;
   amountLabel: string;
   /** Page to land on after a successful charge (status=processing is appended). */
   returnPath: string;
   defaultName?: string;
+  /** More fields for the route (e.g. which RFQ add-ons). */
+  extraBody?: Record<string, unknown>;
+  disabled?: boolean;
 }) {
   const router = useRouter();
   const [name, setName] = useState(defaultName ?? '');
@@ -32,7 +35,7 @@ export default function BankCardPanel({ endpoint, amountLabel, returnPath, defau
     setNotice(null);
     try {
       const res = await fetch(endpoint, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ billingName: name }),
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...extraBody, billingName: name }),
       });
       const json = await res.json();
       if (!res.ok || !json.card) throw new Error(json.error ?? 'Could not start the card payment');
@@ -72,7 +75,7 @@ export default function BankCardPanel({ endpoint, amountLabel, returnPath, defau
         Card number, expiry and CVC are entered in Paystack&apos;s secure form next — SokoGlobal never sees your card details.
       </p>
 
-      <button type="submit" disabled={busy || name.trim().length < 2} className="btn-primary w-full">
+      <button type="submit" disabled={busy || disabled || name.trim().length < 2} className="btn-primary w-full">
         {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Lock className="h-4 w-4" />} Pay {amountLabel} by card
       </button>
       {notice && <p role="status" className="text-sm text-neutral-600">{notice}</p>}

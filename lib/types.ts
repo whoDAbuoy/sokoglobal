@@ -79,6 +79,8 @@ export interface TrialProductView {
   origin_country: string;
   supplier_name: string;
   supplier_verified: boolean;
+  /** Active Gold Supplier membership (migration 026) — a paid badge, separate from KYC. */
+  supplier_gold?: boolean;
   trial_units: number;
   unit_price_cents: number;
   goods_cents: number;

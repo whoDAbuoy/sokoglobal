@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import clsx from 'clsx';
-import { ArrowLeft, CalendarClock, FileQuestion, MapPin, Package, Users } from 'lucide-react';
+import { ArrowLeft, CalendarClock, FileQuestion, MapPin, Megaphone, Package, Users } from 'lucide-react';
 import { getSessionProfile } from '@/lib/supabase/server';
 import { countryName, flag } from '@/lib/format';
 import { categoryWithin, parseTiers, type QuoteStatus } from '@/lib/rfq';
@@ -20,6 +20,8 @@ interface FeedRow {
   created_at: string; expires_at: string; quote_count: number;
   /** Migration 022: the feed lists every live request; quoting still needs a listing in the category. */
   can_quote?: boolean;
+  /** Migration 026: the buyer paid to feature it; featured requests lead the feed. */
+  is_featured?: boolean;
   my_quote: { id: string; product_id: string; unit_price_kes: number; price_tiers: unknown; moq: number; lead_time_days: number | null;
               terms_note: string | null; valid_until: string; allowed_payment_structures: string[]; status: QuoteStatus } | null;
 }
@@ -66,7 +68,10 @@ export default async function SupplierRfqsPage() {
         <article className="card p-5">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="min-w-0">
-              <h3 className="text-lg font-semibold text-neutral-900"><Link href={`/rfqs/${r.id}`} className="hover:underline">{r.title}</Link></h3>
+              <h3 className="flex flex-wrap items-center gap-2 text-lg font-semibold text-neutral-900">
+                <Link href={`/rfqs/${r.id}`} className="hover:underline">{r.title}</Link>
+                {r.is_featured && live && <span className="pill tone-gold text-xs"><Megaphone className="h-3 w-3" aria-hidden /> Featured</span>}
+              </h3>
               <p className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-sm text-neutral-600">
                 <span className="inline-flex items-center gap-1"><Package className="h-3.5 w-3.5" aria-hidden />{r.quantity.toLocaleString('en-US')} {unit}</span>
                 <span className="inline-flex items-center gap-1"><MapPin className="h-3.5 w-3.5" aria-hidden />{r.delivery_location}
@@ -114,7 +119,7 @@ export default async function SupplierRfqsPage() {
         <p className="eyebrow mt-4">Sourcing</p>
         <h1 className="mt-2 text-3xl font-semibold text-neutral-900">Buyer requests</h1>
         <p className="mt-1 max-w-2xl text-sm text-neutral-600">
-          Volume requests from verified importers — ones in your categories first. Send a private quote against one of your listings,
+          Volume requests from verified importers — featured requests first, then ones in your categories. Send a private quote against one of your listings,
           or share a request with a supplier who can fulfil it. Accepted quotes become escrow orders you fulfil from your orders page.
         </p>
 

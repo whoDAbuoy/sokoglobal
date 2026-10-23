@@ -10,6 +10,7 @@ import { approveProduct, rejectProduct, type ReviewState } from '@/app/admin/act
 import DeleteProductButton from '@/components/admin/DeleteProductButton';
 import { TRIAL_BATCH_MIN_CENTS, countryName, flag, formatUSD } from '@/lib/format';
 import type { MediaType, ProductCategory } from '@/lib/types';
+import { formatRate, markedUpFreightCents } from '@/lib/pricing';
 
 export interface PendingProduct {
   id: string;
@@ -42,7 +43,11 @@ function hoursSince(iso: string) {
   return Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 3_600_000));
 }
 
-export default function ReviewCard({ product, minCents = TRIAL_BATCH_MIN_CENTS }: { product: PendingProduct; minCents?: number }) {
+export default function ReviewCard({ product, minCents = TRIAL_BATCH_MIN_CENTS, logisticsMarkup = 0 }: {
+  product: PendingProduct; minCents?: number;
+  /** platform_settings.logistics_markup_percent (migration 026): admin_approve_product() adds it to the carrier freight. */
+  logisticsMarkup?: number;
+}) {
   const [approveState, approveAction, approving] = useActionState<ReviewState, FormData>(approveProduct, null);
   const [rejectState, rejectAction, rejecting] = useActionState<ReviewState, FormData>(rejectProduct, null);
   const [freight, setFreight] = useState('');
@@ -53,7 +58,8 @@ export default function ReviewCard({ product, minCents = TRIAL_BATCH_MIN_CENTS }
   const [active, setActive] = useState(images[0]?.id ?? null);
   const activeImage = images.find((i) => i.id === active) ?? images[0];
 
-  const landed = product.trial_goods_cents + toCents(freight) + toCents(customs);
+  const buyerFreight = markedUpFreightCents(toCents(freight), logisticsMarkup);
+  const landed = product.trial_goods_cents + buyerFreight + toCents(customs);
   const meetsMinimum = landed >= minCents;
   const quoted = freight.trim() !== '' && customs.trim() !== '';
   const waited = hoursSince(product.updated_at);
@@ -154,13 +160,13 @@ export default function ReviewCard({ product, minCents = TRIAL_BATCH_MIN_CENTS }
           <input type="hidden" name="productId" value={product.id} />
           <p className="eyebrow">Logistics quote</p>
 
-          <MoneyInput id={`freight-${product.id}`} name="freight" label="Consolidated air freight" value={freight} onChange={setFreight} />
+          <MoneyInput id={`freight-${product.id}`} name="freight" label={logisticsMarkup > 0 ? 'Carrier freight cost' : 'Consolidated air freight'} value={freight} onChange={setFreight} />
           <MoneyInput id={`customs-${product.id}`} name="customs" label="Customs clearance & duties" value={customs} onChange={setCustoms} />
 
           <div className={clsx('mt-4 rounded-xl p-3 ring-1', meetsMinimum ? 'bg-brand-50/60 ring-neutral-200' : 'bg-red-50 ring-red-200')}>
             <dl className="space-y-1 text-xs text-slate-600">
               <div className="flex justify-between"><dt>Goods</dt><dd className="tabular-nums">{formatUSD(product.trial_goods_cents, true)}</dd></div>
-              <div className="flex justify-between"><dt>Freight</dt><dd className="tabular-nums">{formatUSD(toCents(freight), true)}</dd></div>
+              <div className="flex justify-between"><dt>Freight{logisticsMarkup > 0 ? ` (cost + ${formatRate(logisticsMarkup)})` : ''}</dt><dd className="tabular-nums">{formatUSD(buyerFreight, true)}</dd></div>
               <div className="flex justify-between"><dt>Customs</dt><dd className="tabular-nums">{formatUSD(toCents(customs), true)}</dd></div>
             </dl>
             <div className="mt-2 flex items-end justify-between border-t border-slate-200/70 pt-2">
