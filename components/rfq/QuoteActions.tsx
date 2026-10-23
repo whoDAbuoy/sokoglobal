@@ -10,15 +10,18 @@ import { useCurrency } from '@/context/CurrencyContext';
 import { MILESTONE_MIN_CENTS, PAYMENT_STRUCTURE_LABEL, milestoneSplit, type PaymentStructure } from '@/lib/milestone';
 import { quoteOrderLine, type PriceTier } from '@/lib/rfq';
 import { formatUSD } from '@/lib/format';
+import { escrowFeeCents, formatRate } from '@/lib/pricing';
 
 /**
  * Accept a quote: shows exactly what will be ordered (MOQ, tier price, USD
  * escrow amount at today's rate, deposit split) and lets the buyer pick one of
  * the payment options the supplier offered. Postgres prices the order again.
  */
-export function AcceptQuoteButton({ quoteId, supplierName, rfqQuantity, unit, quote, allowed, kycApproved }: {
+export function AcceptQuoteButton({ quoteId, supplierName, rfqQuantity, unit, quote, allowed, kycApproved, escrowFeeRate = 0 }: {
   quoteId: string; supplierName: string; rfqQuantity: number; unit: string;
   quote: { unit_price_kes: number; price_tiers: PriceTier[]; moq: number }; allowed: PaymentStructure[]; kycApproved: boolean;
+  /** platform_settings.escrow_fee_percent (migration 026): added to the order total when the quote becomes an order. */
+  escrowFeeRate?: number;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   const uid = useId();
@@ -30,7 +33,9 @@ export function AcceptQuoteButton({ quoteId, supplierName, rfqQuantity, unit, qu
   const milestoneOk = kycApproved && line.goodsCents >= MILESTONE_MIN_CENTS;
   const options = allowed.filter((s) => s === 'full' || s === 'milestone_30_70');
   const [structure, setStructure] = useState<PaymentStructure>(options.includes('milestone_30_70') && milestoneOk ? 'milestone_30_70' : 'full');
-  const split = line.goodsCents > 0 ? milestoneSplit(line.goodsCents) : null;
+  const feeCents = escrowFeeCents(line.goodsCents, escrowFeeRate);
+  const escrowCents = line.goodsCents + feeCents;
+  const split = escrowCents > 0 ? milestoneSplit(escrowCents) : null;
 
   function confirm() {
     setError(null);
@@ -57,9 +62,10 @@ export function AcceptQuoteButton({ quoteId, supplierName, rfqQuantity, unit, qu
             {line.raisedToMoq && <p className="text-xs text-amber-700">Raised to the supplier&apos;s minimum order of {quote.moq.toLocaleString('en-US')}.</p>}
             <div className="flex justify-between gap-3"><dt>Unit price</dt><dd className="tabular-nums text-neutral-900">{formatKes(line.unitPriceKes)}</dd></div>
             <div className="flex justify-between gap-3 border-t border-neutral-200 pt-2"><dt>Quoted total</dt><dd className="tabular-nums text-neutral-900">{formatKes(line.totalKes)}</dd></div>
-            <div className="flex justify-between gap-3 font-medium text-neutral-900"><dt>Held in escrow (USD)</dt><dd className="tabular-nums">≈ {formatUSD(line.goodsCents, true)}</dd></div>
+            {feeCents > 0 && <div className="flex justify-between gap-3"><dt>Escrow protection fee ({formatRate(escrowFeeRate)})</dt><dd className="tabular-nums text-neutral-900">≈ {formatUSD(feeCents, true)}</dd></div>}
+            <div className="flex justify-between gap-3 font-medium text-neutral-900"><dt>Held in escrow (USD)</dt><dd className="tabular-nums">≈ {formatUSD(escrowCents, true)}</dd></div>
           </dl>
-          <p className="mt-2 text-xs text-neutral-500">Converted at today&apos;s rate when you accept; the order is then fixed in USD.{currency !== 'USD' && currency !== 'KES' ? ` About ${formatUsd(line.goodsCents)}.` : ''}</p>
+          <p className="mt-2 text-xs text-neutral-500">Converted at today&apos;s rate when you accept; the order is then fixed in USD.{currency !== 'USD' && currency !== 'KES' ? ` About ${formatUsd(escrowCents)}.` : ''}</p>
 
           <fieldset className="mt-5" disabled={pending}>
             <legend className="text-sm font-medium text-neutral-900">Payment terms offered</legend>

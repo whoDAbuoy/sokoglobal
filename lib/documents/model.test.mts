@@ -42,6 +42,22 @@ test('payout receipt', () => {
   assert.equal(m.totals[1].label, 'Paid out in EUR');
 });
 
+test('invoice with an escrow fee (migration 026): own line, landed cost separate from the total paid', () => {
+  const m = invoiceModel({ ...order, escrow_fee_cents: 1_011, total_cents: 51_551 }, new Date('2026-10-20T00:00:00Z'));
+  assert.deepEqual(m.table.rows.at(-1), ['Escrow protection fee (SokoGlobal)', '1', '$10.11', '$10.11']);
+  assert.deepEqual(m.totals.map((t) => t.value), ['$505.40', '$10.11', '$515.51']);
+  assert.equal(m.totals.at(-1)!.label, 'Total paid (USD)');
+});
+
+test('early payout receipt splits commission and the early fee', () => {
+  const m = payoutReceiptModel({ id: 'aaaabbbb-0000', order_id: '1234abcd-0000', reference: 'po_2', status: 'succeeded', gross_cents: 50_000, fee_cents: 3_000,
+    early_payout_fee_cents: 1_500, early: true, amount_cents: 47_000, currency: 'USD', created_at: '2026-10-10T00:00:00Z', completed_at: '2026-10-10T00:00:00Z',
+    supplier: { company_name: 'Seoul Lab Co.', country_code: 'KR' } });
+  assert.deepEqual(m.table.rows.slice(1).map((r) => [r[0], r[3]]), [['Platform commission', '-$15.00'], ['Instant early payout fee', '-$15.00']]);
+  assert.match(m.parties[1].lines[1], /early payout/);
+  assert.equal(m.totals[0].value, '$470.00');
+});
+
 test('text safe for standard PDF fonts', () => {
   assert.equal(winAnsi('Maison — “Rouge” café…'), 'Maison - "Rouge" café...');
   assert.equal(winAnsi('上海贸易'), '????');

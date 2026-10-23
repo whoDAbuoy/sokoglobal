@@ -17,6 +17,8 @@ begin
 end $$;
 create or replace function pg_temp.as_user(u text) returns void language sql as $$ select set_config('request.jwt.claim.sub', u, false) $$;
 grant execute on all functions in schema pg_temp to authenticated, anon;
+-- The amounts below are pre-026 (no escrow fee, no FX spread); 026_platform_monetization.test.sql covers the fees.
+update public.platform_settings set escrow_fee_percent = 0, fx_spread_percent = 0 where id;
 
 insert into auth.users (id, email, raw_user_meta_data) values
  ('11111111-1111-4111-8111-111111111111', 'sup@x.test',  '{"role":"supplier","full_name":"Sup One","company_name":"Sup Co","country_code":"US"}'),
@@ -169,4 +171,5 @@ set role anon;
 select pg_temp.ok((select count(*) from public.exchange_rates) = 5, 'anyone can read rates');
 reset role;
 select pg_temp.fails($q$select public.super_set_exchange_rate('USD', 130)$q$, 'Super admin');
+update public.platform_settings set escrow_fee_percent = 0.02, fx_spread_percent = 0.01 where id;
 select 'ALL SCENARIO CHECKS PASSED' as result;

@@ -18,6 +18,8 @@ export interface Party { company_name: string; full_name?: string | null; countr
 export interface InvoiceInput {
   id: string; escrow_status: EscrowStatus; created_at: string; funded_at: string | null; released_at?: string | null;
   quantity: number; goods_cents: number; freight_cents: number; customs_cents: number; total_cents: number;
+  /** Migration 026: part of total_cents; 0 / absent on older orders. */
+  escrow_fee_cents?: number | null;
   payment_provider: string | null; payment_ref: string | null;
   product: { title: string; brand?: string | null; category?: string | null; origin_country?: string | null; hs_code?: string | null } | null;
   buyer: Party | null; supplier: Party | null;
@@ -48,6 +50,7 @@ const STATUS_LABEL: Partial<Record<EscrowStatus, string>> = {
 export function invoiceModel(o: InvoiceInput, issuedAt = new Date()): DocModel {
   const unit = o.quantity > 0 ? Math.round(o.goods_cents / o.quantity) : o.goods_cents;
   const party = (p: Party | null, extra: string[] = []) => (p ? [p.company_name, ...(p.full_name ? [`Attn: ${p.full_name}`] : []), p.country_code.toUpperCase(), ...extra] : ['—']);
+  const fee = o.escrow_fee_cents ?? 0;
   return {
     title: 'Commercial Invoice',
     number: `INV-${o.id.slice(0, 8).toUpperCase()}`,
@@ -71,9 +74,14 @@ export function invoiceModel(o: InvoiceInput, issuedAt = new Date()): DocModel {
         [[o.product?.brand, o.product?.title].filter(Boolean).join(' - ') || 'Goods', String(o.quantity), money(unit), money(o.goods_cents)],
         ['Consolidated air freight', '1', money(o.freight_cents), money(o.freight_cents)],
         ['Customs clearance & import duties', '1', money(o.customs_cents), money(o.customs_cents)],
+        ...(fee > 0 ? [['Escrow protection fee (SokoGlobal)', '1', money(fee), money(fee)] as [string, string, string, string]] : []),
       ],
     },
-    totals: [
+    totals: fee > 0 ? [
+      { label: 'Guaranteed Landed Cost', value: money(o.total_cents - fee) },
+      { label: 'Escrow protection fee', value: money(fee) },
+      { label: 'Total paid (USD)', value: money(o.total_cents), strong: true },
+    ] : [
       { label: 'Goods value', value: money(o.goods_cents) },
       { label: 'Freight', value: money(o.freight_cents) },
       { label: 'Duties & clearance', value: money(o.customs_cents) },
@@ -89,6 +97,8 @@ export function invoiceModel(o: InvoiceInput, issuedAt = new Date()): DocModel {
 export interface PayoutInput {
   id: string; order_id: string; reference: string; status: string;
   gross_cents: number; fee_cents: number; amount_cents: number; currency: string;
+  /** Migration 026: part of fee_cents when the supplier took an instant early payout. */
+  early_payout_fee_cents?: number | null; early?: boolean | null;
   payout_currency?: string | null; payout_amount?: string | number | null;
   created_at: string; completed_at: string | null; flw_transfer_id?: string | null;
   supplier: Party | null; product_title?: string | null;
@@ -107,7 +117,7 @@ export function payoutReceiptModel(p: PayoutInput, issuedAt = new Date()): DocMo
     status: p.status === 'succeeded' ? 'Paid' : p.status,
     parties: [
       { heading: 'Payee (supplier)', lines: p.supplier ? [p.supplier.company_name, p.supplier.country_code.toUpperCase()] : ['—'] },
-      { heading: 'Payer', lines: ['SokoGlobal escrow', 'Released after buyer verification'] },
+      { heading: 'Payer', lines: ['SokoGlobal escrow', p.early ? 'Instant early payout, funded by SokoGlobal on dispatch' : 'Released after buyer verification'] },
     ],
     facts: [
       { label: 'Order', value: `#${p.order_id.slice(0, 8).toUpperCase()}` },
@@ -121,7 +131,10 @@ export function payoutReceiptModel(p: PayoutInput, issuedAt = new Date()): DocMo
       head: ['Item', '', '', 'Amount'],
       rows: [
         ['Goods value released from escrow', '', '', money(p.gross_cents, p.currency)],
-        ['Platform fee', '', '', `-${money(p.fee_cents, p.currency)}`],
+        ...(p.early_payout_fee_cents
+          ? [['Platform commission', '', '', `-${money(p.fee_cents - p.early_payout_fee_cents, p.currency)}`],
+             ['Instant early payout fee', '', '', `-${money(p.early_payout_fee_cents, p.currency)}`]] as [string, string, string, string][]
+          : [['Platform fee', '', '', `-${money(p.fee_cents, p.currency)}`] as [string, string, string, string]]),
       ],
     },
     totals: [{ label: `Net payout (${p.currency})`, value: money(p.amount_cents, p.currency), strong: true }, ...local],

@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import {
   BadgeCheck, Bell, ClipboardCheck, Compass, FileCheck2, Headphones, Heart, LayoutDashboard, LogOut, MessageSquare, Package,
-  PackagePlus, ShieldCheck, ShieldHalf, ShoppingBag, Store, Truck, Undo2, UserCog, Users, Gauge, LayoutGrid, FileQuestion, type LucideIcon,
+  PackagePlus, ShieldCheck, ShieldHalf, ShoppingBag, Store, Truck, Undo2, UserCog, Users, Gauge, LayoutGrid, FileQuestion, Landmark, type LucideIcon,
 } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
@@ -19,8 +19,8 @@ const NAV: Record<Profile['role'], [string, string][]> = {
   importer: [['Discover', '/dashboard'], ['Catalog', '/dashboard/discover'], ['RFQs', '/dashboard/rfqs'], ['Trend Pools', '/dashboard#pools'], ['Messages', '/dashboard/messages']],
   supplier: [['Catalogue', '/supplier'], ['Orders', '/supplier/orders'], ['RFQs', '/supplier/rfqs'], ['Messages', '/supplier/messages'], ['New product', '/supplier/products/new'], ['Verification', '/supplier/verification']],
   admin: ADMIN_NAV,
-  // Super admins also run the chat center (every conversation + direct support, migration 025).
-  super_admin: [...ADMIN_NAV, ['Messages', '/admin/messages']],
+  // Super admins also run the chat center (every conversation + direct support, migration 025) and pricing (026).
+  super_admin: [...ADMIN_NAV, ['Messages', '/admin/messages'], ['Financials', '/admin/financials']],
 };
 
 /**
@@ -37,7 +37,7 @@ const NAV_ICON: Record<string, LucideIcon> = {
   Discover: Compass, 'Trend Pools': Users, Messages: MessageSquare, Catalogue: Store, 'New product': PackagePlus,
   Verification: FileCheck2, Overview: LayoutDashboard, 'Review queue': ClipboardCheck, Shipments: Truck,
   'Supplier KYC': BadgeCheck, Users: UserCog, Support: Headphones, Catalog: LayoutGrid, Control: Gauge, Admin: ShieldHalf,
-  'My portal': Undo2, Orders: Truck, RFQs: FileQuestion,
+  'My portal': Undo2, Orders: Truck, RFQs: FileQuestion, Financials: Landmark,
 };
 
 export default function DashboardHeader({ profile }: { profile: Profile }) {

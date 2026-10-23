@@ -17,14 +17,20 @@ type Claim =
   | { action: 'hold'; payout_id?: string; reason: string }
   | { action: 'skip'; payout_id?: string; status: string };
 
-/** Platform commission on the goods value, in basis points (500 = 5%). */
+/**
+ * Legacy commission on the goods value, in basis points (500 = 5%). Since migration 026 each order
+ * snapshots its own commission_rate (Gold or standard, from platform_settings) and begin_payout() uses
+ * that; this env value only applies to orders placed before 026.
+ */
 const feeBps = () => {
   const n = Number.parseInt(process.env.PLATFORM_FEE_BPS ?? '0', 10);
   return Number.isFinite(n) && n >= 0 && n <= 3000 ? n : 0;
 };
 
 /**
- * Pay the supplier for a released order. Idempotent and safe to retry:
+ * Pay the supplier for a released order — or, since migration 026, for an order whose supplier
+ * requested an instant early payout (fully paid and dispatched; begin_payout adds the early fee).
+ * Idempotent and safe to retry:
  *
  *  1. begin_payout() — row-locked claim; decrypts the account number from
  *     Supabase Vault (service role only); returns hold/skip when not ready.

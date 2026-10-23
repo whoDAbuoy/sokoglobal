@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { FileCheck2, FileDown, MessageSquare, PackagePlus, Plus, Workflow } from 'lucide-react';
+import { Crown, FileCheck2, FileDown, MessageSquare, PackagePlus, Plus, Workflow } from 'lucide-react';
 import { formatUSD } from '@/lib/format';
 import { getSessionProfile } from '@/lib/supabase/server';
 import type { EscrowStatus } from '@/lib/types';
@@ -12,6 +12,8 @@ import { addOrder, emptyCounts, type OrderCounts } from '@/components/supplier/o
 import FulfilmentPipeline, { type FulfilmentOrder } from '@/components/supplier/FulfilmentPipeline';
 import QuickActions from '@/components/portal/QuickActions';
 import { payoutSummary, releaseSplit, type PayoutStatus } from '@/lib/supplier-pipeline';
+import { goldState } from '@/lib/pricing';
+import GoldBadge from '@/components/supplier/GoldBadge';
 
 export default async function SupplierHome() {
   const { supabase, user, profile } = await getSessionProfile();
@@ -36,10 +38,12 @@ export default async function SupplierHome() {
     const legacy = await supabase.from('orders').select(cols).in('product_id', productIds).order('created_at', { ascending: false });
     return { data: (legacy.data ?? []).filter((o) => o.escrow_status !== 'pending_payment') };
   };
-  const [{ data: orderRows }, { data: payoutRows }] = await Promise.all([
+  const [{ data: orderRows }, { data: payoutRows }, { data: goldRow }] = await Promise.all([
     orderQuery(),
     supabase.from('payouts').select('id, status, amount_cents, currency, reference, completed_at').eq('supplier_id', user.id).order('created_at', { ascending: false }),
+    supabase.from('subscriptions').select('status, current_period_end').eq('user_id', user.id).eq('plan_type', 'gold_supplier').maybeSingle(),
   ]);
+  const gold = goldState(goldRow as { status: string; current_period_end: string | null } | null);
   const orders = (orderRows ?? []) as unknown as {
     id: string; product_id: string; escrow_status: EscrowStatus; total_cents: number; goods_cents: number; created_at: string;
     batches: number | null; current_status: string | null; eta_timestamp: string | null; fulfillment_status?: string;
@@ -84,10 +88,13 @@ export default async function SupplierHome() {
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div>
               <p className="eyebrow">Supplier</p>
-              <h1 className="mt-2 text-3xl font-semibold text-neutral-900">Your catalogue</h1>
+              <h1 className="mt-2 flex flex-wrap items-center gap-3 text-3xl font-semibold text-neutral-900">Your catalogue {gold.kind === 'active' && <GoldBadge />}</h1>
               <p className="mt-1 text-sm text-neutral-500">Products go live after logistics quoting and photo review.</p>
             </div>
-            <Link href="/supplier/products/new" className="btn-primary"><Plus className="h-4 w-4" aria-hidden /> New product</Link>
+            <div className="flex flex-wrap gap-2">
+              <Link href="/supplier/subscription" className="btn-secondary"><Crown className="h-4 w-4 text-yellow-600 dark:text-yellow-300" aria-hidden /> {gold.kind === 'active' ? 'Gold membership' : 'Go Gold'}</Link>
+              <Link href="/supplier/products/new" className="btn-primary"><Plus className="h-4 w-4" aria-hidden /> New product</Link>
+            </div>
           </div>
           <QuickActions className="mt-8" label="Supplier shortcuts" actions={[
             { href: '/supplier/products/new', label: 'New Trial Batch', hint: 'List a product for review', icon: PackagePlus, tone: 'tone-active' },

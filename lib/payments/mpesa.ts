@@ -249,10 +249,13 @@ export function mpesaLimitMessage(message: string): string {
   return `This total is KES ${m[1]}, above M-Pesa's limit of KES ${m[2]} per payment. Please pay by Bank Card (Visa / Mastercard) instead.`;
 }
 
-/** True when this USD amount would exceed the M-Pesa per-payment limit at the configured rate (false if M-Pesa is off). */
-export function exceedsMpesaLimit(usdCents: number): boolean {
+/**
+ * True when this USD amount would exceed the M-Pesa per-payment limit at the configured rate plus the
+ * platform FX spread (migration 026; begin_mpesa_payment charges base × (1 + spread)). False if M-Pesa is off.
+ */
+export function exceedsMpesaLimit(usdCents: number, fxSpread = 0): boolean {
   try {
     const cfg = mpesaConfig();
-    return Math.ceil((usdCents * cfg.kesPerUsd) / 100) > cfg.maxKes;
+    return Math.ceil((usdCents * cfg.kesPerUsd * (1 + fxSpread)) / 100) > cfg.maxKes;
   } catch { return false; }
 }

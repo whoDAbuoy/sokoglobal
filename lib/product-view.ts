@@ -18,15 +18,17 @@ export interface CatalogProductRow {
   attributes: Record<string, unknown> | null; category_id: string | null; is_featured: boolean | null;
   moq: number | null; unit_of_measure: string | null; price_tiers: unknown;
   supplier: unknown; product_media: unknown;
+  supplier_id?: string;
 }
 
-export function toTrialProductView(p: CatalogProductRow, categoryName: string | null = null): TrialProductView {
+export function toTrialProductView(p: CatalogProductRow, categoryName: string | null = null, goldSuppliers?: ReadonlySet<string>): TrialProductView {
   const supplier = one(p.supplier as { company_name: string; kyc_verified: boolean } | null);
   const media = (p.product_media ?? []) as MediaRow[];
   const images = allImages(media);
   return {
     id: p.id, title: p.title, brand: p.brand, category: p.category, origin_country: p.origin_country,
     supplier_name: supplier?.company_name ?? 'Verified supplier', supplier_verified: !!supplier?.kyc_verified,
+    supplier_gold: !!p.supplier_id && !!goldSuppliers?.has(p.supplier_id),
     trial_units: p.trial_units, unit_price_cents: p.unit_price_cents, goods_cents: p.trial_goods_cents,
     freight_cents: p.trial_freight_cents, customs_cents: p.trial_customs_cents, landed_cost_cents: p.trial_landed_cost_cents,
     lead_time_days: p.lead_time_days, image_url: images[0] ?? null, image_urls: images, media: galleryMedia(media),

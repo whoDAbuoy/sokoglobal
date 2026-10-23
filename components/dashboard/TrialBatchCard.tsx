@@ -19,6 +19,7 @@ import MessageSupplierButton from '@/components/chat/MessageSupplierButton';
 import ProductGallery from './ProductGallery';
 import ProductQuickView from './ProductQuickView';
 import InfoTip from '@/components/portal/InfoTip';
+import GoldBadge from '@/components/supplier/GoldBadge';
 
 const MPESA_ENABLED = process.env.NEXT_PUBLIC_MPESA_ENABLED === 'true';
 const IS_DEV = process.env.NODE_ENV === 'development';
@@ -237,6 +238,7 @@ export default function TrialBatchCard({ product }: { product: TrialProductView 
           {product.supplier_verified && (
             <span className="inline-flex items-center gap-0.5 text-emerald-700"><BadgeCheck className="h-3.5 w-3.5" />Verified</span>
           )}
+          {product.supplier_gold && <GoldBadge compact />}
         </p>
         <h3 className="mt-1 text-base font-medium leading-snug text-neutral-900">
           <button type="button" onClick={() => setQuickView(true)} className="text-left underline-offset-4 hover:underline focus:outline-none focus-visible:underline">

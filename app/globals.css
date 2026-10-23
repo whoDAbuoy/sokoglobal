@@ -117,6 +117,8 @@
   .tone-pending { @apply border-amber-500/25 bg-amber-500/10 text-amber-800 dark:text-amber-400; }
   .tone-danger  { @apply border-rose-500/25 bg-rose-500/10 text-rose-700 dark:text-rose-400; }
   .tone-muted   { @apply border-neutral-200 bg-neutral-100 text-neutral-600; }
+  /* Gold Supplier membership (paid). Kept distinct from the green KYC "Verified" mark. */
+  .tone-gold    { @apply border-yellow-500/40 bg-yellow-400/15 text-yellow-800 dark:text-yellow-300; }
 }
 
 @layer utilities {

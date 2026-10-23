@@ -16,7 +16,7 @@ export const dynamic = 'force-dynamic';
 
 type Row = {
   id: string; escrow_status: string; total_cents: number; goods_cents: number; freight_cents: number; customs_cents: number;
-  quantity: number;
+  quantity: number; escrow_fee_cents?: number | null;
   product: { title: string; category: ProductCategory; trial_units: number; product_media: { public_url: string; media_type: string; sort_order: number }[] } | null;
 };
 const one = <T,>(v: T | T[] | null | undefined): T | null => (Array.isArray(v) ? v[0] ?? null : v ?? null);
@@ -38,7 +38,7 @@ export default async function CheckoutPage({ params, searchParams }: {
   const { data: group } = await supabase
     .from('checkout_groups')
     .select(`id, buyer_id, created_at, funded_at, payment_provider,
-             orders ( id, escrow_status, quantity, total_cents, goods_cents, freight_cents, customs_cents,
+             orders ( id, escrow_status, quantity, total_cents, goods_cents, freight_cents, customs_cents, escrow_fee_cents,
                       product:products ( title, category, trial_units, product_media ( public_url, media_type, sort_order ) ) )`)
     .eq('id', id)
     .maybeSingle();
@@ -48,7 +48,8 @@ export default async function CheckoutPage({ params, searchParams }: {
   const unpaid = orders.filter((o) => o.escrow_status === 'pending_payment');
   const due = unpaid.reduce((s, o) => s + o.total_cents, 0);
   const total = orders.reduce((s, o) => s + o.total_cents, 0);
-  const sum = (k: 'goods_cents' | 'freight_cents' | 'customs_cents') => orders.reduce((s, o) => s + o[k], 0);
+  const sum = (k: 'goods_cents' | 'freight_cents' | 'customs_cents' | 'escrow_fee_cents') => orders.reduce((s, o) => s + (o[k] ?? 0), 0);
+  const { data: fxSpread } = await supabase.rpc('current_fx_spread');
   const batchesOf = (o: Row) => (o.product?.trial_units ? Math.max(1, Math.round(o.quantity / o.product.trial_units)) : 1);
   const totalBatches = orders.reduce((n, o) => n + batchesOf(o), 0);
   const image = (o: Row) => [...(o.product?.product_media ?? [])].filter((m) => m.media_type === 'image').sort((a, b) => a.sort_order - b.sort_order)[0]?.public_url ?? null;
@@ -95,7 +96,7 @@ export default async function CheckoutPage({ params, searchParams }: {
 
             {unpaid.length > 0 ? (
               <CheckoutActions checkoutId={group.id} returnStatus={returnStatus ?? null}
-                amountLabel={formatUSD(due, true)} buyerName={profile.full_name} mpesaOverLimit={exceedsMpesaLimit(due)} />
+                amountLabel={formatUSD(due, true)} buyerName={profile.full_name} mpesaOverLimit={exceedsMpesaLimit(due, Number(fxSpread) || 0)} />
             ) : (
               <p className="mt-6 flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">
                 <CheckCircle2 className="h-5 w-5" /> All {totalBatches} Trial Batches are paid and held in escrow. Track each one from its order page.
@@ -107,7 +108,8 @@ export default async function CheckoutPage({ params, searchParams }: {
             <section className="rounded-lg border border-neutral-200 bg-neutral-50 p-6">
               <h2 className="eyebrow">Order summary</h2>
               <dl className="mt-5 space-y-3 text-sm text-neutral-600">
-                {[['Products', sum('goods_cents')], ['Consolidated air freight', sum('freight_cents')], ['Customs clearance & duties', sum('customs_cents')]].map(([l, v]) => (
+                {[['Products', sum('goods_cents')], ['Consolidated air freight', sum('freight_cents')], ['Customs clearance & duties', sum('customs_cents')]]
+                  .concat(sum('escrow_fee_cents') > 0 ? [['Escrow protection fee', sum('escrow_fee_cents')]] : []).map(([l, v]) => (
                   <div key={l as string} className="flex justify-between"><dt>{l}</dt><dd className="tabular-nums text-neutral-900">{formatUSD(v as number, true)}</dd></div>
                 ))}
                 <div className="flex items-baseline justify-between border-t border-neutral-200 pt-4 text-neutral-900">

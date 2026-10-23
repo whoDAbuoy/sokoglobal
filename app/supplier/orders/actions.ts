@@ -6,6 +6,8 @@ import { friendlyError } from '@/lib/format';
 import { UUID_RE } from '@/lib/uploads';
 import { validateShipmentDraft } from '@/lib/shipping';
 import { dispatchNotificationsAfterResponse } from '@/lib/notifications/dispatch';
+import { processPayout } from '@/lib/payments/payouts';
+import { checkCanTransact } from '@/lib/platform-server';
 
 export type ShipmentActionState = { ok: boolean; message: string; errors?: Record<string, string> } | null;
 
@@ -43,4 +45,40 @@ export async function saveShipment(_prev: ShipmentActionState, form: FormData): 
   dispatchNotificationsAfterResponse();
   revalidatePath('/supplier/orders');
   return { ok: true, message: v.status === 'label_created' ? 'Waybill saved.' : v.status === 'delivered' ? 'Marked as delivered — the buyer has been asked to verify.' : 'Shipment updated — the buyer has been notified.' };
+}
+
+export type EarlyPayoutResult = { ok: boolean; message: string };
+
+/**
+ * Instant early payout (migration 026). request_early_payout() checks, in Postgres, that the caller
+ * supplies this order, that it is fully paid and dispatched with a waybill, that KYC and the payout
+ * account are verified, and records the request with today's early-payout fee. The transfer then runs
+ * through the normal payout worker with the service role (processPayout → begin_payout), which is
+ * idempotent: a retry or the later "buyer confirmed" payout never pays twice.
+ */
+export async function requestEarlyPayout(orderId: string): Promise<EarlyPayoutResult> {
+  const { supabase, user, profile } = await getSessionProfile();
+  if (!user || profile?.role !== 'supplier') return { ok: false, message: 'Supplier access required.' };
+  if (!UUID_RE.test(orderId)) return { ok: false, message: 'Invalid order.' };
+  const blocked = await checkCanTransact(supabase, user.id, 'checkout');
+  if (blocked) return { ok: false, message: blocked.error };
+
+  const { error } = await supabase.rpc('request_early_payout', { p_order_id: orderId });
+  if (error) return { ok: false, message: friendlyError(error.message) };
+
+  let message: string;
+  try {
+    const r = await processPayout(orderId);
+    message = r.action === 'initiated' ? `Early payout sent: ${r.payoutAmount.toLocaleString('en-US', { maximumFractionDigits: 2 })} ${r.payoutCurrency}. It usually arrives within a business day.`
+      : r.action === 'hold' ? `Early payout requested, but it is on hold: ${r.reason}.`
+      : r.action === 'skip' ? `Your payout is already ${r.status}.`
+      : 'Early payout requested. The transfer is being confirmed; we will retry automatically if needed.';
+  } catch (err) {
+    console.error('[supplier] early payout transfer did not start', { orderId, err });
+    message = 'Early payout requested. The transfer will start shortly (our payout worker retries automatically).';
+  }
+  revalidatePath(`/supplier/orders/${orderId}`);
+  revalidatePath('/supplier/orders');
+  revalidatePath('/supplier');
+  return { ok: true, message };
 }

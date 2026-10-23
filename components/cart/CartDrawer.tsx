@@ -152,7 +152,7 @@ export default function CartDrawer() {
                   <span className="text-xl font-semibold tabular-nums text-neutral-900">{formatUsd(cart.subtotalCents)}</span>
                 </div>
                 <p className="mt-1 text-xs text-neutral-500">
-                  Product, air freight and customs included. Prices are confirmed at checkout.
+                  Product, air freight and customs included. Prices are confirmed at checkout, where the escrow protection fee is shown before you pay.
                   {currency !== 'USD' && <> Shown in {currency} at today&apos;s rate; escrow is held in USD.</>}
                 </p>
 
