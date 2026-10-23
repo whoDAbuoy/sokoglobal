@@ -168,7 +168,7 @@ select pg_temp.ok((select status from public.rfqs where id = :'old') = 'expired'
 
 -- ── Exchange rates ──
 set role anon;
-select pg_temp.ok((select count(*) from public.exchange_rates) = 5, 'anyone can read rates');
+select pg_temp.ok((select count(*) from public.exchange_rates where currency_code in ('KES', 'USD', 'UGX', 'TZS', 'RWF')) = 5, 'anyone can read rates');
 reset role;
 select pg_temp.fails($q$select public.super_set_exchange_rate('USD', 130)$q$, 'Super admin');
 update public.platform_settings set escrow_fee_percent = 0.02, fx_spread_percent = 0.01 where id;

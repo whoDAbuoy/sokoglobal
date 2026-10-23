@@ -4,7 +4,7 @@
  * public.exchange_rates (migration 021): rate_to_kes = KES per 1 unit, so KES
  * is the pivot for every conversion.
  */
-export const CURRENCIES = ['KES', 'USD', 'UGX', 'TZS', 'RWF'] as const;
+export const CURRENCIES = ['USD', 'KES', 'NGN', 'ZAR', 'EUR', 'GBP', 'UGX', 'TZS', 'RWF'] as const;
 export type CurrencyCode = (typeof CURRENCIES)[number];
 /** KES per 1 unit of each currency. */
 export type ExchangeRates = Record<CurrencyCode, number>;
@@ -14,11 +14,28 @@ export const CURRENCY_COOKIE = 'sg_currency';
 export const DEFAULT_CURRENCY: CurrencyCode = 'USD';
 
 export const CURRENCY_LABEL: Record<CurrencyCode, string> = {
-  KES: 'Kenyan shilling', USD: 'US dollar', UGX: 'Ugandan shilling', TZS: 'Tanzanian shilling', RWF: 'Rwandan franc',
+  USD: 'US dollar', KES: 'Kenyan shilling', NGN: 'Nigerian naira', ZAR: 'South African rand', EUR: 'Euro', GBP: 'British pound',
+  UGX: 'Ugandan shilling', TZS: 'Tanzanian shilling', RWF: 'Rwandan franc',
 };
 
-/** Same starting values as the migration seed; used until the table answers. */
-export const FALLBACK_RATES: ExchangeRates = { KES: 1, USD: 129.25, UGX: 0.0351, TZS: 0.0513, RWF: 0.0935 };
+/** Same starting values as the migration seeds (021, 029); used until the table answers. */
+export const FALLBACK_RATES: ExchangeRates = {
+  KES: 1, USD: 129.25, NGN: 0.0891, ZAR: 7.39, EUR: 150.0, GBP: 172.0, UGX: 0.0351, TZS: 0.0513, RWF: 0.0935,
+};
+
+/** Euro-area members (ISO-3166 alpha-2), plus 'EU' itself. */
+const EUROZONE = ['EU', 'AT', 'BE', 'BG', 'HR', 'CY', 'EE', 'FI', 'FR', 'DE', 'GR', 'IE', 'IT', 'LV', 'LT', 'LU', 'MT', 'NL', 'PT', 'SK', 'SI', 'ES'];
+
+/** profiles.country_code → the display currency a visitor from there sees until they pick one. */
+export const COUNTRY_CURRENCY: Readonly<Record<string, CurrencyCode>> = {
+  KE: 'KES', US: 'USD', NG: 'NGN', ZA: 'ZAR', GB: 'GBP', UG: 'UGX', TZ: 'TZS', RW: 'RWF',
+  ...Object.fromEntries(EUROZONE.map((c) => [c, 'EUR' as const])),
+};
+
+/** Default display currency for a country; unknown or missing countries get the default (USD). */
+export function getDefaultCurrencyForCountry(countryCode?: string | null): CurrencyCode {
+  return COUNTRY_CURRENCY[(countryCode ?? '').trim().toUpperCase()] ?? DEFAULT_CURRENCY;
+}
 
 export const isCurrency = (v: unknown): v is CurrencyCode => typeof v === 'string' && (CURRENCIES as readonly string[]).includes(v);
 
