@@ -163,7 +163,7 @@ Run `024_order_chat_and_media.sql` after 023 (it also creates the private `chat-
   a trigger checks the path, that the file exists, and takes size and type from Storage. The browser also checks file headers.
 - UI: `components/chat/{ChatInput,ChatMessageItem,VoiceRecorder,VoicePlayer,EmojiPicker}.tsx` — emoji picker, attachments (also by
   drag and drop), voice notes with pause / cancel and a waveform, lightbox for photos and videos, document cards with download.
-  Buyers chat inline on the order page; suppliers use **Message buyer** on `/supplier/orders`; all threads appear in Messages.
+  Buyers use **Chat with Supplier** on the order page (opens the chat drawer); suppliers use **Message buyer** on `/supplier/orders`; all threads appear in Messages.
 - `Permissions-Policy` now allows `microphone=(self)` for voice notes.
 
 **Theme:** `THEME_INIT_SCRIPT` sets the `dark` class and `color-scheme` before first paint (also when storage is blocked);
