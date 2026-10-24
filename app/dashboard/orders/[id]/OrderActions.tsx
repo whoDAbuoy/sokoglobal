@@ -64,7 +64,7 @@ export default function OrderActions({ orderId, status, step, returnStatus, payW
 
   if (awaitingWebhook) {
     return (
-      <div role="status" className="mt-6 flex items-center gap-3 rounded-xl bg-brand-50 p-4 text-sm text-brand-900 ring-1 ring-neutral-200">
+      <div role="status" className="glass-card mt-6 flex items-center gap-3 p-4 text-sm text-neutral-800">
         {gatewayReturn && <GatewayReturn gateway={gatewayReturn.gateway} token={gatewayReturn.token} />}
         <Loader2 className="h-5 w-5 animate-spin" />
         Payment received — we&apos;re confirming it with the escrow account. This usually takes under a minute.
@@ -89,7 +89,7 @@ export default function OrderActions({ orderId, status, step, returnStatus, payW
   if (payable) {
     const copy = PAY_COPY[step.kind];
     return (
-      <div className="card mt-6 p-5">
+      <div className="glass-card mt-6 p-5 sm:p-6">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <p className="font-medium text-slate-900">{returnStatus === 'failed' || returnStatus === 'cancelled' ? 'Payment didn’t go through' : copy.title}</p>
@@ -121,7 +121,7 @@ export default function OrderActions({ orderId, status, step, returnStatus, payW
 
   if (confirmed || status === 'released') {
     return (
-      <p className="mt-6 flex items-center gap-2 rounded-xl bg-emerald-50 p-4 text-sm text-emerald-800 ring-1 ring-emerald-600/20">
+      <p className="mt-6 flex items-center gap-2 rounded-2xl border p-4 text-sm tone-escrow">
         <CheckCircle2 className="h-5 w-5" /> Delivery verified. Escrow released to the supplier — thank you for trading safely.
       </p>
     );

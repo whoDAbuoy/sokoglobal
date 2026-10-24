@@ -35,7 +35,7 @@ export default function CheckoutActions({ checkoutId, returnStatus, amountLabel 
 
   if (awaitingWebhook) {
     return (
-      <div role="status" className="mt-6 flex items-center gap-3 rounded-lg border border-neutral-200 bg-neutral-50 p-4 text-sm text-neutral-800">
+      <div role="status" className="glass-card mt-6 flex items-center gap-3 p-4 text-sm text-neutral-800">
         {gatewayReturn && <GatewayReturn gateway={gatewayReturn.gateway} token={gatewayReturn.token} />}
         <Loader2 className="h-5 w-5 animate-spin" />
         Payment received — we&apos;re confirming it with the escrow account. This usually takes under a minute.
@@ -44,7 +44,7 @@ export default function CheckoutActions({ checkoutId, returnStatus, amountLabel 
   }
 
   return (
-    <div className="card mt-6 p-5">
+    <div className="glass-card mt-6 p-5 sm:p-6">
       <div>
         <p className="font-medium text-neutral-900">{returnStatus === 'failed' || returnStatus === 'cancelled' ? 'Payment didn’t go through' : 'Pay for your cart'}</p>
         <p className="text-sm text-neutral-500">One payment. Each Trial Batch is held in its own escrow until you verify it.</p>

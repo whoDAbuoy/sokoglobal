@@ -123,7 +123,7 @@ export default async function AdminPage() {
           )}
         </section>
 
-        <section id="recent" className="mt-12 scroll-mt-24">
+        <section id="recent" className="mt-12 scroll-mt-32">
           <h2 className="text-lg font-semibold tracking-tight">Recently approved</h2>
           <div className="card mt-4 divide-y divide-slate-100">
             {(recentRes.data ?? []).length === 0 && <p className="px-5 py-6 text-sm text-slate-500">Nothing approved yet.</p>}

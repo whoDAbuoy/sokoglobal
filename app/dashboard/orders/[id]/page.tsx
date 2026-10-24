@@ -166,12 +166,12 @@ export default async function OrderPage({ params, searchParams }: {
           />
         )}
 
-        <section className="mt-10 border-t border-neutral-200 pt-8">
+        <section className="glass-card mt-6 p-6">
           <h2 className="eyebrow">Escrow audit trail</h2>
           <ol className="mt-5 space-y-4 border-l border-neutral-200 pl-5">
             {(events ?? []).map((e) => (
               <li key={e.id} className="relative text-sm">
-                <span className="absolute -left-[25px] top-1.5 h-2 w-2 rounded-full bg-neutral-900 ring-4 ring-white" />
+                <span className="absolute -left-[25px] top-1.5 h-2 w-2 rounded-full bg-blue-600 ring-4 ring-blue-600/15 dark:bg-cyan-400 dark:ring-cyan-400/15" />
                 <p className="font-medium capitalize text-neutral-900">
                   {e.event_type === 'status_change' ? String(e.to_status).replace(/_/g, ' ')
                     : (e.metadata as { early?: boolean } | null)?.early && e.event_type in EARLY_EVENT_LABEL ? EARLY_EVENT_LABEL[e.event_type]
@@ -185,8 +185,8 @@ export default async function OrderPage({ params, searchParams }: {
         </div>
 
         {/* Order summary — checkout-style sidebar */}
-        <aside className="lg:sticky lg:top-24 lg:self-start">
-          <section className="rounded-lg border border-neutral-200 bg-neutral-50 p-6">
+        <aside className="lg:sticky lg:top-32 lg:self-start">
+          <section className="glass-card p-6">
             <h2 className="eyebrow">{order.rfq_quote_id ? 'Quoted price' : 'Guaranteed Landed Cost'}</h2>
             <dl className="mt-5 space-y-3 text-sm text-neutral-600">
               {(order.rfq_quote_id
@@ -195,13 +195,13 @@ export default async function OrderPage({ params, searchParams }: {
               ).concat(escrowFee > 0 ? [[`Escrow protection fee (${formatRate(Number(order.escrow_fee_rate) || 0)})`, escrowFee]] : []).map(([l, v]) => (
                 <div key={l as string} className="flex justify-between gap-3"><dt>{l}</dt><dd className="tabular-nums text-neutral-900"><Price cents={v as number} /></dd></div>
               ))}
-              <div className="flex items-baseline justify-between border-t border-neutral-200 pt-4 text-neutral-900">
+              <div className="flex items-baseline justify-between border-t border-black/[0.06] pt-4 text-neutral-900 dark:border-snow/[0.08]">
                 <dt className="font-medium">{milestone ? 'Order total' : 'Total held in escrow'}</dt>
                 <dd className="text-xl font-semibold tabular-nums">{formatUSD(order.total_cents, true)}</dd>
               </div>
               <LocalPreview cents={order.total_cents} className="block text-right text-xs tabular-nums text-neutral-500" />
               {milestone && order.deposit_amount != null && order.remaining_balance != null && (
-                <div className="space-y-2 border-t border-neutral-200 pt-4">
+                <div className="space-y-2 border-t border-black/[0.06] pt-4 dark:border-snow/[0.08]">
                   {[
                     { label: '30% deposit', cents: order.deposit_amount, paid: order.deposit_paid_at, due: 'due now' },
                     { label: '70% balance', cents: order.remaining_balance, paid: order.final_paid_at, due: 'due on dispatch' },

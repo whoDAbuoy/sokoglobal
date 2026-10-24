@@ -14,6 +14,8 @@ import {
 import { cancelManualPayment, startManualPayment, submitManualPayment } from '@/app/dashboard/orders/[id]/payment-actions';
 
 const BUCKET = 'payment-proofs';
+/** Glass well for copyable bank / wallet details. */
+const WELL = 'divide-y divide-black/[0.06] rounded-2xl border border-black/[0.06] bg-white/50 px-4 py-1 text-sm dark:divide-snow/[0.08] dark:border-snow/[0.08] dark:bg-snow/[0.03]';
 
 function CopyValue({ label, value, mono = true }: { label: string; value: string; mono?: boolean }) {
   return (
@@ -22,9 +24,29 @@ function CopyValue({ label, value, mono = true }: { label: string; value: string
       <dd className={`flex min-w-0 items-center gap-1.5 text-right text-neutral-900 ${mono ? 'font-mono text-xs' : 'font-medium'}`}>
         <span className="break-all">{value}</span>
         <button type="button" aria-label={`Copy ${label}`} onClick={() => { void navigator.clipboard?.writeText(value); toast.success(`${label} copied`); }}
-          className="shrink-0 rounded p-1 text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900"><Copy className="h-3.5 w-3.5" aria-hidden /></button>
+          className="press shrink-0 rounded-lg p-1 text-neutral-500 hover:bg-neutral-900/[0.06] hover:text-neutral-900 dark:hover:bg-snow/10"><Copy className="h-3.5 w-3.5" aria-hidden /></button>
       </dd>
     </div>
+  );
+}
+
+/** Receipt / screenshot dropzone: click to choose or drop a file (the input stays a real, labelled file input). */
+function ProofDropzone({ id, file, onFile, prompt }: { id: string; file: File | null; onFile: (f: File | null) => void; prompt: string }) {
+  const [over, setOver] = useState(false);
+  return (
+    <>
+      <label htmlFor={id} onDragOver={(e) => { e.preventDefault(); setOver(true); }} onDragLeave={() => setOver(false)}
+        onDrop={(e) => { e.preventDefault(); setOver(false); onFile(e.dataTransfer.files?.[0] ?? null); }}
+        className={`press-card flex cursor-pointer flex-col items-center gap-1.5 rounded-2xl border border-dashed px-4 py-7 text-center text-sm text-neutral-600 ${over
+          ? 'border-blue-500 bg-blue-500/[0.06] text-neutral-900' : 'border-neutral-300 bg-white/40 hover:border-neutral-500 dark:border-snow/15 dark:bg-snow/[0.02] dark:hover:border-snow/30'}`}>
+        <span className="grid h-9 w-9 place-items-center rounded-full border border-black/[0.06] bg-white/70 dark:border-snow/10 dark:bg-snow/[0.06]">
+          {file ? <CheckCircle2 className="h-4 w-4 text-emerald-600" aria-hidden /> : <Upload className="h-4 w-4 text-neutral-500" aria-hidden />}
+        </span>
+        {file ? <span className="break-all font-medium text-neutral-900">{file.name}</span> : <span>{prompt}</span>}
+        <span className="text-xs text-neutral-500">PDF, JPG or PNG · max 10 MB</span>
+      </label>
+      <input id={id} type="file" accept="application/pdf,image/jpeg,image/png" className="sr-only" onChange={(e) => onFile(e.target.files?.[0] ?? null)} />
+    </>
   );
 }
 
@@ -41,7 +63,7 @@ async function uploadProof(buyerId: string, paymentId: string, file: File): Prom
 
 function Submitted({ payment }: { payment: ManualPaymentView }) {
   return (
-    <div role="status" className="flex items-start gap-3 rounded-lg border p-4 text-sm tone-transit">
+    <div role="status" className="flex items-start gap-3 rounded-2xl border p-4 text-sm tone-transit">
       <Clock className="mt-0.5 h-5 w-5 shrink-0" aria-hidden />
       <div>
         <p className="font-medium">We&apos;re verifying your {payment.method === 'swift_wire' ? 'transfer' : 'deposit'} (reference {payment.reference})</p>
@@ -53,7 +75,7 @@ function Submitted({ payment }: { payment: ManualPaymentView }) {
 
 function Rejected({ note }: { note: string | null }) {
   return (
-    <p role="alert" className="flex items-start gap-2 rounded-lg border px-3 py-2 text-sm tone-danger">
+    <p role="alert" className="flex items-start gap-2 rounded-xl border px-3 py-2 text-sm tone-danger">
       <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
       <span>We couldn&apos;t confirm your last transfer{note ? `: ${note}` : '.'} You can start a new one below or choose another method.</span>
     </p>
@@ -117,7 +139,7 @@ export function WireTransferPanel({ orderId, buyerId, dueCents, open, rejectedNo
   const b = payment.pay_to;
   return (
     <div className="space-y-4">
-      <dl className="divide-y divide-neutral-200 rounded-lg border border-neutral-200 px-4 py-1 text-sm">
+      <dl className={WELL}>
         <CopyValue label="Amount (USD)" value={(payment.charge_cents / 100).toFixed(2)} mono={false} />
         <CopyValue label="Payment reference" value={payment.reference} />
         <CopyValue label="Beneficiary" value={b.account_name ?? ''} mono={false} />
@@ -132,15 +154,9 @@ export function WireTransferPanel({ orderId, buyerId, dueCents, open, rejectedNo
       </p>
       <a href={`/api/orders/${orderId}/wire-invoice`} className="btn-secondary w-full py-2 text-sm"><FileDown className="h-4 w-4" aria-hidden /> Download payment instructions (PDF)</a>
 
-      <div className="border-t border-neutral-200 pt-4">
-        <label htmlFor={`${uid}-proof`} className="label">After sending: upload the bank&apos;s transfer confirmation</label>
-        <label htmlFor={`${uid}-proof`} onDragOver={(e) => e.preventDefault()}
-          onDrop={(e) => { e.preventDefault(); setFile(e.dataTransfer.files?.[0] ?? null); }}
-          className="flex cursor-pointer flex-col items-center gap-1 rounded-lg border border-dashed border-neutral-300 px-4 py-6 text-center text-sm text-neutral-600 hover:border-neutral-500">
-          <Upload className="h-5 w-5 text-neutral-400" aria-hidden />
-          {file ? <span className="font-medium text-neutral-900">{file.name}</span> : <span>Drop a PDF or photo here, or click to choose (max 10 MB)</span>}
-        </label>
-        <input id={`${uid}-proof`} type="file" accept="application/pdf,image/jpeg,image/png" className="sr-only" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
+      <div className="border-t border-black/[0.06] pt-4 dark:border-snow/[0.08]">
+        <p className="label">After sending: upload the bank&apos;s transfer confirmation</p>
+        <ProofDropzone id={`${uid}-proof`} file={file} onFile={setFile} prompt="Drop the bank receipt here, or click to choose" />
         <div className="mt-3 flex flex-wrap gap-2">
           <button type="button" onClick={submit} disabled={pending || !file} className="btn-primary flex-1">
             {pending ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <CheckCircle2 className="h-4 w-4" aria-hidden />} I&apos;ve sent the transfer
@@ -208,7 +224,7 @@ export function CryptoPanel({ orderId, buyerId, dueCents, open, rejectedNote, op
           <legend className="label">Pay with</legend>
           <div className="space-y-2">
             {options.map((o, i) => (
-              <label key={o.wallet} className="flex cursor-pointer items-center gap-3 rounded-md border border-neutral-200 p-3 text-sm hover:border-neutral-400">
+              <label key={o.wallet} className="press-card flex cursor-pointer items-center gap-3 rounded-xl border border-black/[0.08] bg-white/40 p-3 text-sm hover:border-neutral-400 has-[:checked]:border-blue-500 has-[:checked]:bg-blue-500/[0.06] dark:border-snow/10 dark:bg-snow/[0.02] dark:hover:border-snow/25 dark:has-[:checked]:border-cyan-400/60">
                 <input type="radio" name={`${uid}-coin`} checked={choice === i} onChange={() => setChoice(i)} /> {o.label}
               </label>
             ))}
@@ -230,20 +246,20 @@ export function CryptoPanel({ orderId, buyerId, dueCents, open, rejectedNote, op
   const asset = payment.pay_to.asset ?? (payment.method === 'crypto_usdc' ? 'USDC' : 'USDT');
   return (
     <div className="space-y-4">
-      <p role="note" className="rounded-md border px-3 py-2 text-xs tone-pending">
+      <p role="note" className="rounded-xl border px-3 py-2 text-xs tone-pending">
         Send only <strong>{asset}</strong> on the <strong>{payment.network ? NETWORK_LABEL[payment.network] : ''}</strong> network to this address. Other coins or networks can&apos;t be recovered.
       </p>
-      <dl className="divide-y divide-neutral-200 rounded-lg border border-neutral-200 px-4 py-1 text-sm">
+      <dl className={WELL}>
         <CopyValue label={`Amount (${asset})`} value={(payment.charge_cents / 100).toFixed(2)} mono={false} />
         <CopyValue label="Deposit address" value={payment.pay_to.address ?? ''} />
         <CopyValue label="Reference (keep for support)" value={payment.reference} />
       </dl>
-      <div className="border-t border-neutral-200 pt-4">
+      <div className="border-t border-black/[0.06] pt-4 dark:border-snow/[0.08]">
         <label htmlFor={`${uid}-hash`} className="label">After sending: transaction hash (txHash)</label>
         <input id={`${uid}-hash`} value={hash} onChange={(e) => setHash(e.target.value)} spellCheck={false} autoComplete="off"
           placeholder={payment.network === 'trc20' ? '64 hex characters' : '0x…'} className="input font-mono text-xs" />
-        <label htmlFor={`${uid}-shot`} className="label mt-3">Screenshot <span className="font-normal text-neutral-500">(optional)</span></label>
-        <input id={`${uid}-shot`} type="file" accept="application/pdf,image/jpeg,image/png" onChange={(e) => setFile(e.target.files?.[0] ?? null)} className="block text-sm" />
+        <p className="label mt-3">Screenshot <span className="font-normal normal-case tracking-normal text-neutral-500">(optional)</span></p>
+        <ProofDropzone id={`${uid}-shot`} file={file} onFile={setFile} prompt="Drop a wallet screenshot here, or click to choose" />
         <div className="mt-3 flex flex-wrap gap-2">
           <button type="button" onClick={submit} disabled={pending || !hash.trim()} className="btn-primary flex-1">
             {pending ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <CheckCircle2 className="h-4 w-4" aria-hidden />} I&apos;ve sent it

@@ -16,13 +16,13 @@ export default function CurrencySwitcher() {
   return (
     <div className="relative shrink-0">
       <label htmlFor={id} className="sr-only">Display currency</label>
-      <Coins className="pointer-events-none absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-500" strokeWidth={1.75} aria-hidden />
+      <Coins className="pointer-events-none absolute left-2.5 top-1/2 hidden h-4 w-4 sm:block -translate-y-1/2 text-neutral-500" strokeWidth={1.75} aria-hidden />
       <select id={id} value={currency} onChange={(e) => setCurrency(parseCurrency(e.target.value))}
         title={`${pinned ? 'Show prices in another currency' : 'Prices follow your country; pick a currency to change them'}${asOf ? ` (rates as of ${asOf})` : ''}. You are always charged the escrow amount.`}
-        className="h-8 cursor-pointer appearance-none rounded-md border border-neutral-300 bg-transparent py-1 pl-7 pr-6 text-sm font-medium text-neutral-900 transition-colors hover:border-neutral-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">
+        className="nav-chip cursor-pointer appearance-none pl-3 pr-7 sm:pl-8 tabular-nums [&>option]:bg-white [&>option]:text-neutral-900">
         {CURRENCIES.map((c) => <option key={c} value={c} aria-label={`${c}, ${CURRENCY_LABEL[c]}`}>{c}</option>)}
       </select>
-      <ChevronDown className="pointer-events-none absolute right-1.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-neutral-500" aria-hidden />
+      <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-neutral-500" aria-hidden />
     </div>
   );
 }

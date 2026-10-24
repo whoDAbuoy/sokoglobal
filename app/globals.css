@@ -12,13 +12,14 @@
     --sg-neutral-900: 23 23 23;    --sg-neutral-950: 10 10 10;
     color-scheme: light;
   }
-  /* Dark mode ("midnight"): the scale inverts onto a deep blue-black (#0B0F17) with a cool tint. */
+  /* Dark mode ("midnight"): the scale inverts onto the deep gray-950 canvas (#030712), Tailwind's cool gray ramp.
+     Muted text (500/600) stays above 7:1 on the canvas and 4.5:1 on gray-900 glass. */
   .dark {
-    --sg-white: 11 15 23;
-    --sg-neutral-50: 17 22 33;     --sg-neutral-100: 24 30 44;    --sg-neutral-200: 36 44 61;
-    --sg-neutral-300: 52 62 82;    --sg-neutral-400: 100 112 135; --sg-neutral-500: 140 152 173;
-    --sg-neutral-600: 168 178 196; --sg-neutral-700: 199 206 219; --sg-neutral-800: 226 231 239;
-    --sg-neutral-900: 241 244 249; --sg-neutral-950: 248 250 252;
+    --sg-white: 3 7 18;
+    --sg-neutral-50: 9 13 24;      --sg-neutral-100: 17 24 39;    --sg-neutral-200: 31 41 55;
+    --sg-neutral-300: 55 65 81;    --sg-neutral-400: 107 114 128; --sg-neutral-500: 148 156 170;
+    --sg-neutral-600: 176 183 195; --sg-neutral-700: 209 213 219; --sg-neutral-800: 229 231 235;
+    --sg-neutral-900: 243 244 246; --sg-neutral-950: 249 250 251;
     color-scheme: dark;
   }
   /* Smooth switch: only while the theme is changing (set by hooks/useTheme.ts). */
@@ -40,40 +41,70 @@
       disabled:cursor-not-allowed disabled:bg-neutral-50 disabled:text-neutral-500;
   }
   .label { @apply mb-1.5 block text-xs font-medium uppercase tracking-wider text-neutral-600; }
-  /* Electric-blue primary with a soft glow; buttons compress slightly when pressed. */
+  /* Electric-blue primary with a soft glow; buttons compress when pressed (tactile physics, 200 ms ease-out). */
   .btn-primary {
     @apply inline-flex items-center justify-center gap-2 rounded-md bg-blue-600 px-4 py-2.5 text-sm font-medium
-      text-snow shadow-[0_8px_24px_-10px_rgb(59_130_246/0.7)] transition duration-150 ease-out hover:bg-blue-500
+      text-snow shadow-[0_8px_24px_-10px_rgb(59_130_246/0.7)] transition-all duration-200 ease-out hover:bg-blue-500
       hover:shadow-[0_10px_30px_-8px_rgb(59_130_246/0.8)] focus:outline-none focus-visible:ring-2
-      focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white active:scale-[0.97]
+      focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white active:scale-95
       disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100;
   }
   .btn-secondary {
     @apply inline-flex items-center justify-center gap-2 rounded-md border border-neutral-300 bg-white/80 px-4 py-2.5
-      text-sm font-medium text-neutral-900 transition duration-150 ease-out hover:border-neutral-900 focus:outline-none
+      text-sm font-medium text-neutral-900 transition-all duration-200 ease-out hover:border-neutral-900 focus:outline-none
       focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white
-      active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100;
+      active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100
+      dark:border-snow/15 dark:bg-snow/[0.04] dark:hover:border-snow/40 dark:hover:bg-snow/[0.08];
   }
-  /* iOS-style glass card: translucent fill, 2xl backdrop blur (md on phones), hairline border, soft shadow
-     and an inset specular ring for the refractive edge. Light: white/60 · Dark: midnight/60. */
-  .card {
-    @apply rounded-[18px] border border-black/[0.06] bg-white/60 shadow-[0_8px_32px_0_rgba(0,0,0,0.06)]
-      ring-1 ring-inset ring-white/60 backdrop-blur-md sm:backdrop-blur-2xl
-      dark:border-snow/[0.08] dark:bg-midnight/60 dark:shadow-[0_8px_32px_0_rgba(0,0,0,0.37)] dark:ring-snow/10;
+  /* iOS frosted glass card (.glass-card; .card is the same surface): translucent fill, xl backdrop blur (md on phones),
+     a hairline rim and an inset specular highlight along the top edge for the refractive look.
+     Light: white/60 · Dark: gray-900/40 over the gray-950 canvas. `white` flips with the theme, so dark rims use `snow`. */
+  .card, .glass-card {
+    @apply rounded-3xl border border-black/[0.06] bg-white/60 shadow-[0_8px_32px_0_rgba(0,0,0,0.06),inset_0_1px_0_0_rgba(255,255,255,0.6)]
+      backdrop-blur-md sm:backdrop-blur-xl
+      dark:border-snow/10 dark:bg-gray-900/40 dark:shadow-[0_8px_32px_0_rgba(0,0,0,0.37),inset_0_1px_0_0_rgba(255,255,255,0.05)];
   }
-  /* Same glass without the padding/radius opinions, for custom surfaces. */
+  /* Same glass without the radius opinion, for custom surfaces. */
   .glass-surface {
-    @apply border border-black/[0.06] bg-white/60 shadow-[0_8px_32px_0_rgba(0,0,0,0.06)] ring-1 ring-inset ring-white/60
-      backdrop-blur-md sm:backdrop-blur-2xl
-      dark:border-snow/[0.08] dark:bg-midnight/60 dark:shadow-[0_8px_32px_0_rgba(0,0,0,0.37)] dark:ring-snow/10;
+    @apply border border-black/[0.06] bg-white/60 shadow-[0_8px_32px_0_rgba(0,0,0,0.06),inset_0_1px_0_0_rgba(255,255,255,0.6)]
+      backdrop-blur-md sm:backdrop-blur-xl
+      dark:border-snow/10 dark:bg-gray-900/40 dark:shadow-[0_8px_32px_0_rgba(0,0,0,0.37),inset_0_1px_0_0_rgba(255,255,255,0.05)];
   }
-  /* Floating glass toolbar (headers, bottom bars). */
+  /* Inset glass well inside a card (summaries, copyable details, segmented controls). */
+  .glass-inset { @apply rounded-2xl border border-black/[0.06] bg-neutral-50/70 dark:border-snow/[0.08] dark:bg-snow/[0.03]; }
+  /* Full-width sticky navigation bar (Tihada layout): heavy blur with a hairline bottom rim. */
+  .glass-nav {
+    @apply sticky top-0 z-50 border-b border-black/[0.06] bg-white/70 backdrop-blur-xl sm:backdrop-blur-2xl
+      dark:border-snow/10 dark:bg-gray-950/70;
+  }
+  /* Floating glass toolbar (bottom bars, popovers). */
   .glass-toolbar {
-    @apply rounded-[18px] border border-black/[0.06] bg-white/70 shadow-[0_8px_32px_0_rgba(0,0,0,0.08)] ring-1 ring-inset ring-white/60
-      backdrop-blur-xl dark:border-snow/[0.08] dark:bg-midnight/70 dark:shadow-[0_8px_32px_0_rgba(0,0,0,0.4)] dark:ring-snow/10;
+    @apply rounded-3xl border border-black/[0.06] bg-white/70 shadow-[0_8px_32px_0_rgba(0,0,0,0.08)]
+      backdrop-blur-xl dark:border-snow/10 dark:bg-gray-950/70 dark:shadow-[0_8px_32px_0_rgba(0,0,0,0.4)];
   }
-  /* Haptic-style press for buttons, pills and tabs. */
-  .press { @apply transition-transform duration-150 ease-out active:scale-[0.97]; }
+  /* Header controls (currency, Control, My Orders): one height, one rim, so neighbours never collide. */
+  .nav-chip {
+    @apply inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border border-black/[0.08] bg-white/50 px-3 text-sm font-medium
+      text-neutral-800 transition-all duration-200 ease-out hover:border-neutral-400 hover:text-neutral-900 active:scale-95
+      focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500
+      dark:border-snow/10 dark:bg-snow/[0.04] dark:hover:border-snow/25 dark:hover:bg-snow/[0.08];
+  }
+  /* Tactile press for buttons, pills and tabs. */
+  .press { @apply transition-all duration-200 ease-out active:scale-95; }
+  /* Gentler press for whole cards (a full 95% would jump on wide surfaces). */
+  .press-card { @apply transition-all duration-200 ease-out active:scale-[0.98]; }
+  /* Glass segmented control (payment tabs, filters): a well with a raised selected segment. */
+  .segmented { @apply flex gap-1 rounded-2xl border border-black/[0.06] bg-neutral-100/70 p-1 dark:border-snow/[0.08] dark:bg-snow/[0.04]; }
+  .segment {
+    @apply inline-flex shrink-0 items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-sm font-medium text-neutral-600
+      transition-all duration-200 ease-out hover:text-neutral-900 active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500;
+  }
+  .segment[aria-selected='true'], .segment[aria-checked='true'] {
+    @apply bg-white text-neutral-900 shadow-[0_1px_2px_rgba(0,0,0,0.08),0_4px_12px_-4px_rgba(0,0,0,0.12)]
+      dark:bg-snow/[0.12] dark:text-neutral-950 dark:shadow-[0_4px_16px_-4px_rgba(0,0,0,0.5),inset_0_1px_0_0_rgba(255,255,255,0.08)];
+  }
+  /* Slow-drifting ambient glow behind sections, so the glass above has something to refract. */
+  .ambient-glow { @apply pointer-events-none absolute rounded-full blur-[120px] motion-safe:animate-drift; }
   /* Cards that lift on hover (transform only; disabled for reduced motion below). */
   .card-lift {
     @apply transform-gpu transition-all duration-300 ease-out hover:-translate-y-1 hover:border-blue-500/30 hover:shadow-xl
@@ -159,7 +190,8 @@
 
 /* Users who ask for less transparency get solid surfaces instead of frosted ones. */
 @media (prefers-reduced-transparency: reduce) {
-  .frost-card, .frost-bar, .frost-pop, .frost-panel, .frost-ios, .glass, .card, .glass-surface, .glass-toolbar { backdrop-filter: none !important; background-color: rgb(var(--sg-white)) !important; }
+  .frost-card, .frost-bar, .frost-pop, .frost-panel, .frost-ios, .glass, .card, .glass-card, .glass-surface, .glass-toolbar, .glass-nav { backdrop-filter: none !important; background-color: rgb(var(--sg-white)) !important; }
+  .ambient-glow { display: none; }
 }
 
 /* Interactive pills (links / buttons styled as .pill) press like iOS controls. */

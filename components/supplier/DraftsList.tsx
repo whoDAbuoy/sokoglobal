@@ -2,7 +2,7 @@
 
 import { useOptimistic } from 'react';
 import Link from 'next/link';
-import { CheckCircle2, Circle, FilePen, ImageIcon, MessageSquareWarning } from 'lucide-react';
+import { CheckCircle2, Circle, Clock, FilePen, ImageIcon, MessageSquareWarning, Undo2 } from 'lucide-react';
 import { formatUSD } from '@/lib/format';
 import type { ProductCategory } from '@/lib/types';
 import ProductVisual from '@/components/dashboard/ProductVisual';
@@ -24,8 +24,10 @@ export default function DraftsList({ drafts }: { drafts: DraftItem[] }) {
 
   if (!shown.length) {
     return (
-      <div className="card mt-8 px-6 py-14 text-center">
-        <FilePen className="mx-auto h-8 w-8 text-neutral-400" aria-hidden />
+      <div className="glass-card mt-8 px-6 py-14 text-center">
+        <span className="mx-auto grid h-12 w-12 place-items-center rounded-2xl border border-black/[0.06] bg-neutral-50 dark:border-snow/10 dark:bg-snow/[0.04]">
+          <FilePen className="h-6 w-6 text-neutral-400" aria-hidden />
+        </span>
         <p className="mt-3 font-medium text-neutral-900">No drafts</p>
         <p className="mt-1 text-sm text-neutral-600">Listings you start, import, or that reviewers send back appear here until you submit them.</p>
         <Link href="/supplier/products/new" className="btn-secondary mt-4 inline-flex">New product</Link>
@@ -34,23 +36,33 @@ export default function DraftsList({ drafts }: { drafts: DraftItem[] }) {
   }
 
   return (
-    <ul className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+    <ul className="mt-8 grid gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3">
       {shown.map((d) => {
         const photosReady = d.photo_count >= MIN_PHOTOS;
         return (
-          <li key={d.id} className="card flex flex-col overflow-hidden">
-            <Link href={`/supplier/products/${d.id}`} className="group block">
-              <ProductVisual src={d.image_url} alt={d.title} category={d.category} className="aspect-[4/3]" />
-              <div className="px-4 pt-4">
+          <li key={d.id} className="glass-card card-lift flex flex-col overflow-hidden">
+            <Link href={`/supplier/products/${d.id}`} className="press-card group block">
+              <div className="relative">
+                <ProductVisual src={d.image_url} alt={d.title} category={d.category} className="aspect-[4/3]" />
+                {/* Status pills over the photo: always Draft here; "Returned" when a reviewer sent it back. */}
+                <div className="absolute left-3 top-3 flex gap-1.5">
+                  <span className="pill border-snow/20 bg-gray-950/60 text-snow backdrop-blur-md"><FilePen className="h-3 w-3" aria-hidden /> Draft</span>
+                  {d.review_notes && <span className="pill border-amber-400/40 bg-amber-500/80 text-gray-950 backdrop-blur-md"><Undo2 className="h-3 w-3" aria-hidden /> Returned</span>}
+                </div>
+              </div>
+              <div className="px-5 pt-4">
                 <p className="text-xs capitalize text-neutral-500">{d.category} · edited {day(d.updated_at)}</p>
                 <h3 className="mt-0.5 font-medium leading-snug text-neutral-900 group-hover:underline">{d.title}</h3>
               </div>
             </Link>
-            <dl className="mx-4 mt-3 grid grid-cols-2 divide-x divide-neutral-200 border-y border-neutral-200 text-sm">
-              <div className="py-2 pr-3"><dt className="text-[11px] uppercase tracking-wider text-neutral-500">Goods value</dt><dd className="font-semibold tabular-nums text-neutral-900">{formatUSD(d.trial_goods_cents)}</dd></div>
-              <div className="py-2 pl-3"><dt className="text-[11px] uppercase tracking-wider text-neutral-500">Landed cost</dt><dd className="text-neutral-500">Quoted after review</dd></div>
+            <dl className="glass-inset mx-5 mt-4 grid grid-cols-2 divide-x divide-black/[0.06] text-sm dark:divide-snow/[0.08]">
+              <div className="px-3 py-2.5"><dt className="text-[11px] uppercase tracking-wider text-neutral-500">Goods value</dt><dd className="mt-0.5 font-semibold tabular-nums text-neutral-900">{formatUSD(d.trial_goods_cents)}</dd></div>
+              <div className="px-3 py-2.5">
+                <dt className="text-[11px] uppercase tracking-wider text-neutral-500">Landed cost</dt>
+                <dd className="mt-1"><span className="pill tone-muted text-[11px]"><Clock className="h-3 w-3" aria-hidden /> Quoted after review</span></dd>
+              </div>
             </dl>
-            <ul className="mx-4 mt-3 space-y-1 text-xs text-neutral-600">
+            <ul className="mx-5 mt-3 space-y-1 text-xs text-neutral-600">
               <li className="flex items-center gap-1.5">
                 {photosReady ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" aria-hidden /> : <Circle className="h-3.5 w-3.5 text-neutral-400" aria-hidden />}
                 <ImageIcon className="h-3 w-3" aria-hidden /> {d.photo_count} of {MIN_PHOTOS} photos{photosReady ? '' : ' needed to submit'}
@@ -60,13 +72,13 @@ export default function DraftsList({ drafts }: { drafts: DraftItem[] }) {
               </li>
             </ul>
             {d.review_notes && (
-              <p className="mx-4 mt-2 flex items-start gap-1.5 rounded-md border px-2.5 py-2 text-xs tone-pending">
+              <p className="mx-5 mt-2 flex items-start gap-1.5 rounded-xl border px-2.5 py-2 text-xs tone-pending">
                 <MessageSquareWarning className="mt-px h-3.5 w-3.5 shrink-0" aria-hidden /><span className="line-clamp-3">{d.review_notes}</span>
               </p>
             )}
             <div className="flex-1" aria-hidden />
-            <div className="mt-4 flex items-center justify-between gap-2 border-t border-neutral-200 px-4 py-3">
-              <Link href={`/supplier/products/${d.id}`} className="btn-secondary px-3 py-1.5 text-sm"><FilePen className="h-4 w-4" aria-hidden /> Edit</Link>
+            <div className="mt-4 flex items-center justify-between gap-2 border-t border-black/[0.06] px-5 py-3 dark:border-snow/[0.08]">
+              <Link href={`/supplier/products/${d.id}`} className="btn-secondary rounded-full px-3.5 py-1.5 text-sm"><FilePen className="h-4 w-4" aria-hidden /> Edit</Link>
               {d.delete_block
                 ? <span className="text-right text-xs text-neutral-500">{d.delete_block}</span>
                 : <DeleteDraftButton productId={d.id} title={d.title} onOptimisticRemove={() => hide(d.id)} />}

@@ -23,7 +23,7 @@ const config: Config = {
         white: 'rgb(var(--sg-white) / <alpha-value>)',
         // Fixed colours that never flip with the theme (text on blue buttons, the midnight canvas).
         snow: '#ffffff',
-        midnight: '#0B0F17',
+        midnight: '#030712',
       },
       fontFamily: { sans: ['var(--font-inter)', 'system-ui', 'sans-serif'] },
       // Crisper radii: buttons/inputs ~6px, cards and panels 8px.
@@ -54,6 +54,12 @@ const config: Config = {
         'word-out': { from: { opacity: '1', filter: 'blur(0)', transform: 'none' }, to: { opacity: '0', filter: 'blur(10px)', transform: 'translateY(-35%)' } },
         'fade-up': { from: { opacity: '0', transform: 'translateY(14px)' }, to: { opacity: '1', transform: 'none' } },
         float: { '0%, 100%': { transform: 'translateY(0)' }, '50%': { transform: 'translateY(-6px)' } },
+        // Ambient glows: a slow wander, transform only (composited, no repaint).
+        drift: {
+          '0%, 100%': { transform: 'translate3d(0, 0, 0) scale(1)' },
+          '33%': { transform: 'translate3d(6%, -4%, 0) scale(1.08)' },
+          '66%': { transform: 'translate3d(-5%, 5%, 0) scale(0.95)' },
+        },
       },
       animation: {
         'fade-in': 'fade-in 200ms ease-out both',
@@ -68,6 +74,7 @@ const config: Config = {
         'word-out': 'word-out 360ms ease-in both',
         'fade-up': 'fade-up 600ms cubic-bezier(0.16, 1, 0.3, 1) both',
         float: 'float 6s ease-in-out infinite',
+        drift: 'drift 28s ease-in-out infinite',
       },
     },
   },

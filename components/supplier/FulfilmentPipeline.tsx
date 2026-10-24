@@ -39,7 +39,7 @@ export default function FulfilmentPipeline({ orders }: { orders: FulfilmentOrder
     active ? 'border-blue-500 bg-blue-600 text-snow shadow-[0_6px_18px_-8px_rgb(59_130_246/0.8)]' : 'border-neutral-200 bg-white text-neutral-700 hover:border-neutral-400');
 
   return (
-    <section id="pipeline" aria-labelledby="pipeline-title" className="scroll-mt-24">
+    <section id="pipeline" aria-labelledby="pipeline-title" className="scroll-mt-32">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h2 id="pipeline-title" className="text-lg font-semibold text-neutral-900">Fulfilment pipeline</h2>
