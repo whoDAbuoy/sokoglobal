@@ -28,12 +28,12 @@ export default function DeleteDraftButton({ productId, title, onOptimisticRemove
   return (
     <>
       <button type="button" onClick={() => dialogRef.current?.showModal()} disabled={pending} aria-label={`Delete draft “${title}”`}
-        className={clsx('inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm font-medium text-neutral-600 transition-colors hover:bg-red-50 hover:text-red-700 disabled:opacity-50', className)}>
+        className={clsx('press inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium text-neutral-600 hover:bg-red-500/10 hover:text-red-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 disabled:opacity-50 dark:hover:text-red-300', className)}>
         {pending ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <Trash2 className="h-4 w-4" aria-hidden />} Delete
       </button>
 
       <dialog ref={dialogRef} aria-labelledby={`draft-del-${productId}`}
-        className="w-[calc(100%-2rem)] max-w-md rounded-lg border border-neutral-200 p-0 text-neutral-900 shadow-overlay frost-panel frost-backdrop dark:border-snow/10">
+        className="w-[calc(100%-2rem)] max-w-md overflow-hidden rounded-3xl border border-neutral-200 p-0 text-neutral-900 shadow-overlay frost-panel frost-backdrop dark:border-snow/10">
         <div className="flex items-start gap-3 px-6 pb-5 pt-6">
           <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-red-200 bg-red-50">
             <AlertTriangle className="h-4 w-4 text-red-600" aria-hidden />
@@ -46,7 +46,7 @@ export default function DeleteDraftButton({ productId, title, onOptimisticRemove
             <p className="mt-2 text-xs text-neutral-500">Its photos and videos are deleted too.</p>
           </div>
         </div>
-        <div className="flex justify-end gap-3 border-t border-neutral-200 bg-neutral-50 px-6 py-4">
+        <div className="flex justify-end gap-3 border-t border-neutral-200 bg-neutral-50/70 px-6 py-4 dark:border-snow/10 dark:bg-snow/[0.03]">
           <button type="button" onClick={() => dialogRef.current?.close()} className="btn-secondary" autoFocus>Cancel</button>
           <button type="button" onClick={confirm} className="btn-primary bg-red-600 hover:bg-red-700 focus-visible:ring-red-600">
             <Trash2 className="h-4 w-4" aria-hidden /> Delete draft

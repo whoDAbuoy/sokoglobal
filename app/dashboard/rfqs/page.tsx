@@ -114,7 +114,7 @@ export default async function BuyerRfqsPage({ searchParams }: { searchParams: Pr
             )}
           </section>
 
-          <aside className="lg:sticky lg:top-24 lg:self-start">
+          <aside className="lg:sticky lg:top-32 lg:self-start">
             <RfqForm categories={categoryOptions((cats ?? []) as { id: string; parent_id: string | null; name: string; sort_order: number }[])} prefill={prefill}
               addonPrices={addonPrices} buyerName={profile.full_name}
               disabledReason={profile.role !== 'importer' ? 'Requests for quote are for importer accounts.'

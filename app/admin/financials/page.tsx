@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
-import { ArrowRight, Coins, Crown, Landmark, Megaphone, Percent, Repeat, ShieldAlert, Truck, Zap } from 'lucide-react';
+import { ArrowRight, Coins, Crown, History, Landmark, Megaphone, Percent, Repeat, ShieldAlert, ShieldCheck, Truck, Zap } from 'lucide-react';
 import { getSessionProfile } from '@/lib/supabase/server';
 import { isSuperAdmin } from '@/lib/auth/admin-access';
 import { formatUSD } from '@/lib/format';
@@ -23,6 +23,15 @@ export const dynamic = 'force-dynamic';
 
 const money = (cents: number) => formatUSD(cents, true);
 
+/** Audit actions the financial desk writes (super_set_pricing 026; super_set_payment_settings, approve/reject_manual_payment 028). */
+const FINANCE_AUDIT: Record<string, string> = {
+  'platform.pricing': 'Pricing changed',
+  'platform.payments': 'Payment gateways changed',
+  'escrow.manual_payment_approved': 'Wire / crypto approved',
+  'escrow.manual_payment_rejected': 'Wire / crypto rejected',
+};
+interface AuditRow { id: number; actor_id: string | null; action: string; target_type: string | null; target_id: string | null; created_at: string }
+
 /**
  * Super-admin financial desk: platform revenue by stream (super_platform_revenue(),
  * migration 026) and the live pricing every charge is computed from. 404 for
@@ -34,7 +43,7 @@ export default async function FinancialsPage() {
   if (!isSuperAdmin(profile)) notFound();
 
   const since30 = new Date(Date.now() - 30 * 86_400_000).toISOString();
-  const [pricing, allTime, last30, payments, queueRes, twoFactor] = await Promise.all([
+  const [pricing, allTime, last30, payments, queueRes, twoFactor, auditRes] = await Promise.all([
     getPricing(supabase),
     supabase.rpc('super_platform_revenue', { p_since: null }),
     supabase.rpc('super_platform_revenue', { p_since: since30 }),
@@ -44,7 +53,16 @@ export default async function FinancialsPage() {
                order:orders ( product:products ( title ) ), buyer:profiles!manual_payments_buyer_id_fkey ( company_name, full_name )`)
       .eq('status', 'submitted').order('submitted_at', { ascending: true }).limit(100),
     twoFactorState(supabase),
+    supabase.from('admin_audit_logs').select('id, actor_id, action, target_type, target_id, created_at')
+      .in('action', Object.keys(FINANCE_AUDIT)).order('created_at', { ascending: false }).limit(15),
   ]);
+  const audit = (auditRes.data ?? []) as AuditRow[];
+  const actorIds = [...new Set(audit.map((a) => a.actor_id).filter((v): v is string => !!v))];
+  const { data: actors } = actorIds.length
+    ? await supabase.from('profiles').select('id, full_name').in('id', actorIds)
+    : { data: [] as { id: string; full_name: string }[] };
+  const actorName = new Map((actors ?? []).map((a) => [a.id, a.full_name]));
+  const moneyBlocked = financialOverrideBlock(twoFactor);
   // Proofs live in the private payment-proofs bucket: short-lived signed links for the reviewer.
   const queue = (queueRes.data ?? []) as unknown as (Omit<QueueRow, 'product_title' | 'buyer' | 'proof_url'> & { proof_path: string | null; order: unknown; buyer: unknown })[];
   const proofPaths = queue.map((q) => q.proof_path).filter((p): p is string => !!p);
@@ -67,24 +85,31 @@ export default async function FinancialsPage() {
   return (
     <>
       <DashboardHeader profile={profile} />
-      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        <div className="flex flex-wrap items-end justify-between gap-4">
+      <main className="relative mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        <div aria-hidden className="ambient-glow -z-10 -top-10 left-1/3 h-80 w-80 bg-blue-600/10" />
+        <div className="glass-card flex flex-wrap items-end justify-between gap-6 p-6">
           <div>
             <p className="eyebrow">Internal · Super admin</p>
             <h1 className="mt-2 flex items-center gap-2 text-3xl font-semibold text-neutral-900"><Landmark className="h-7 w-7 text-neutral-500" aria-hidden /> Financials</h1>
             <p className="mt-1 max-w-2xl text-sm text-neutral-600">
               What SokoGlobal earns, and the prices and margins every new charge is computed from.
             </p>
+            {/* 2FA control: money-moving approvals need a verified second factor (financialOverrideBlock). */}
+            <p className={`pill mt-3 ${moneyBlocked ? 'tone-pending' : 'tone-escrow'}`}>
+              {moneyBlocked ? <ShieldAlert className="h-3.5 w-3.5" aria-hidden /> : <ShieldCheck className="h-3.5 w-3.5" aria-hidden />}
+              {moneyBlocked ? 'Two-factor needed for approvals' : 'Two-factor verified for this session'}
+            </p>
+            {moneyBlocked && <Link href="/dashboard/settings" className="ml-2 text-xs font-medium text-blue-700 hover:underline dark:text-cyan-300">Open security settings</Link>}
           </div>
           <div className="text-right">
             <p className="text-xs text-neutral-500">Platform revenue, all time</p>
-            <p className="text-2xl font-semibold tabular-nums text-neutral-900">{money(totals.all.total)}</p>
+            <p className="text-3xl font-semibold tabular-nums text-neutral-900">{money(totals.all.total)}</p>
             <p className="text-xs text-neutral-500"><span className="tabular-nums">{money(totals.month.total)}</span> in the last 30 days</p>
           </div>
         </div>
 
         {migrationMissing && (
-          <p role="alert" className="mt-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          <p role="alert" className="mt-6 rounded-2xl border px-4 py-3 text-sm tone-pending">
             Run <code className="font-mono">supabase/migrations/026_platform_monetization.sql</code> to enable pricing controls and revenue tracking. Defaults are shown.
           </p>
         )}
@@ -119,7 +144,7 @@ export default async function FinancialsPage() {
                 <div className="flex justify-between gap-3"><dt className="text-neutral-600">Paid out early, not yet confirmed by the buyer</dt><dd className="font-semibold tabular-nums text-neutral-900">{money(all.early_payout_exposure_cents)}</dd></div>
                 <div className="flex justify-between gap-3"><dt className="text-neutral-600">Open early payouts</dt><dd className="tabular-nums text-neutral-900">{all.early_payouts_open}</dd></div>
                 <div className="flex justify-between gap-3"><dt className="text-neutral-600">Open white-glove requests</dt><dd className="tabular-nums text-neutral-900">{all.white_glove_open}</dd></div>
-                <div className="flex justify-between gap-3"><dt className="text-neutral-600">Wire / crypto payments to review</dt><dd className="tabular-nums text-neutral-900">{all.manual_payments_pending}</dd></div>
+                <div className="flex justify-between gap-3"><dt className="text-neutral-600">Wire / crypto payments to review</dt><dd className="tabular-nums text-neutral-900"><a href="#manual-queue" className="hover:underline">{all.manual_payments_pending}</a></dd></div>
               </dl>
               <p className="mt-3 text-xs text-neutral-500">If a buyer disputes an order that was paid out early, the refund comes from platform funds.</p>
               <Link href="/admin/support" className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-neutral-700 hover:text-neutral-900">White-glove tickets are in Support <ArrowRight className="h-3.5 w-3.5" aria-hidden /></Link>
@@ -128,9 +153,11 @@ export default async function FinancialsPage() {
         </section>
 
         <section aria-labelledby="manual-queue" className="mt-10">
-          <h2 id="manual-queue" className="text-xl font-semibold text-neutral-900">Wire &amp; crypto approvals</h2>
+          <h2 id="manual-queue" className="flex scroll-mt-32 items-center gap-2 text-xl font-semibold text-neutral-900">
+            Wire &amp; crypto approvals {queueRows.length > 0 && <span className="pill tone-pending tabular-nums">{queueRows.length}</span>}
+          </h2>
           <p className="mb-4 mt-1 text-sm text-neutral-600">Bank receipts and transaction hashes buyers have submitted. Oldest first.</p>
-          <ManualPaymentsQueue rows={queueRows} moneyBlocked={financialOverrideBlock(twoFactor)} />
+          <ManualPaymentsQueue rows={queueRows} moneyBlocked={moneyBlocked} />
         </section>
 
         <section aria-labelledby="gateways" className="mt-10">
@@ -139,7 +166,7 @@ export default async function FinancialsPage() {
           {payments.available
             ? <PaymentSettingsForm settings={payments.settings} updatedAt={payments.updatedAt}
                 configured={{ dpo: isDpoConfigured(), paypal: isPaypalConfigured(), airtel: isAirtelConfigured() }} />
-            : <p role="alert" className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">Run <code className="font-mono">supabase/migrations/028_payment_gateways_expansion.sql</code> to enable payment gateway controls.</p>}
+            : <p role="alert" className="rounded-2xl border px-4 py-3 text-sm tone-pending">Run <code className="font-mono">supabase/migrations/028_payment_gateways_expansion.sql</code> to enable payment gateway controls.</p>}
         </section>
 
         <section aria-labelledby="pricing" className="mt-10">
@@ -151,6 +178,36 @@ export default async function FinancialsPage() {
             </p>
           </div>
           <PricingForm pricing={p} updatedAt={pricing.updatedAt} />
+        </section>
+
+        <section aria-labelledby="finance-audit" className="glass-card mt-10 overflow-hidden">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-black/[0.06] px-5 py-4 dark:border-snow/[0.08]">
+            <h2 id="finance-audit" className="flex items-center gap-2 font-semibold text-neutral-900">
+              <History className="h-4 w-4 text-neutral-500" aria-hidden /> Financial audit log <span className="text-xs font-normal text-neutral-500">append-only · latest 15</span>
+            </h2>
+            <Link href="/admin/control" className="inline-flex items-center gap-1 text-xs font-medium text-neutral-700 hover:text-neutral-900">Full audit trail in Control <ArrowRight className="h-3.5 w-3.5" aria-hidden /></Link>
+          </div>
+          {audit.length === 0
+            ? <p className="px-5 py-8 text-center text-sm text-neutral-500">{auditRes.error ? 'The audit log is unavailable right now.' : 'No pricing, gateway or wire / crypto decisions recorded yet.'}</p>
+            : (
+              <ol className="divide-y divide-black/[0.06] dark:divide-snow/[0.08]">
+                {audit.map((a) => (
+                  <li key={a.id} className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 px-5 py-3 text-sm">
+                    <div className="min-w-0">
+                      <p className="font-medium text-neutral-900">{FINANCE_AUDIT[a.action] ?? a.action}</p>
+                      <p className="text-xs text-neutral-500">
+                        {a.actor_id ? actorName.get(a.actor_id) ?? a.actor_id.slice(0, 8) : 'System'}
+                        {a.target_type === 'order' && a.target_id && (
+                          <> · <Link href={`/admin/control?order=${a.target_id}`} className="font-mono text-blue-700 hover:underline dark:text-cyan-300">order {a.target_id.slice(0, 8)}</Link></>
+                        )}
+                        {' · '}<code className="font-mono">{a.action}</code>
+                      </p>
+                    </div>
+                    <time dateTime={a.created_at} className="text-xs tabular-nums text-neutral-500">{new Date(a.created_at).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' })}</time>
+                  </li>
+                ))}
+              </ol>
+            )}
         </section>
       </main>
     </>

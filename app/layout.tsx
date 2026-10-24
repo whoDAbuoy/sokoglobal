@@ -34,8 +34,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <head>
         {/* Lets the browser paint its canvas and controls in the right scheme before any CSS arrives. */}
         <meta name="color-scheme" content="light dark" />
-        {/* Applies the saved light/dark theme before first paint (no flash). Nonce-allowed under the CSP. */}
-        <script nonce={nonce} dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+        {/* Applies the saved light/dark theme before first paint (no flash). Nonce-allowed under the CSP.
+            suppressHydrationWarning: browsers hide a nonce from the DOM once the page loads (the attribute reads
+            back as ""), so React would flag a server/client mismatch. The nonce has already done its job by then. */}
+        <script nonce={nonce} suppressHydrationWarning dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
       </head>
       <body className={`${inter.variable} min-h-screen font-sans`}>
         <ThemeSync />

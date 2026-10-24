@@ -33,7 +33,7 @@ export default function QuickReorder({ sources, quoted }: { sources: ReorderSour
   }
 
   return (
-    <section id="reorder" aria-labelledby="reorder-title" className="mt-10 scroll-mt-24">
+    <section id="reorder" aria-labelledby="reorder-title" className="mt-10 scroll-mt-32">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h2 id="reorder-title" className="flex items-center gap-2 text-sm font-semibold text-neutral-900"><RotateCcw className="h-4 w-4" aria-hidden /> Quick reorder</h2>

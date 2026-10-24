@@ -110,7 +110,7 @@ export default async function OrdersPage() {
             const list = byGroup(g.key);
             if (!list.length && !g.empty) return null;
             return (
-              <section key={g.key} id={g.key} aria-labelledby={`${g.key}-title`} className="mt-10 scroll-mt-24">
+              <section key={g.key} id={g.key} aria-labelledby={`${g.key}-title`} className="mt-10 scroll-mt-32">
                 <h2 id={`${g.key}-title`} className="flex items-center gap-2 text-sm font-semibold text-neutral-900">
                   {g.title} <span className="font-normal tabular-nums text-neutral-500">{list.length}</span>
                 </h2>

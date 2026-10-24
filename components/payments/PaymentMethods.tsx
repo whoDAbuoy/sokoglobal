@@ -49,32 +49,30 @@ export default function PaymentMethods({ target, methods, preferred, amountLabel
 
   return (
     <div>
-      <div role="tablist" aria-label="Payment category" className="no-scrollbar -mx-1 flex gap-1 overflow-x-auto px-1">
+      <div role="tablist" aria-label="Payment category" className="segmented no-scrollbar overflow-x-auto">
         {groups.map((g) => {
           const Icon = CATEGORY_ICON[g.category];
           const selected = g.category === active.category;
           return (
             <button key={g.category} type="button" role="tab" id={`${uid}-tab-${g.category}`} aria-selected={selected} aria-controls={`${uid}-panel`}
               onClick={() => setMethod(g.methods.includes(method) ? method : g.methods[0])}
-              className={clsx('inline-flex shrink-0 items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium transition-colors',
-                selected ? 'bg-neutral-900 text-white dark:bg-snow dark:text-neutral-900' : 'text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900')}>
-              <Icon className="h-4 w-4" aria-hidden /> {CATEGORY_LABEL[g.category]}
+              className={clsx('segment flex-1 whitespace-nowrap', selected && 'text-neutral-900')}>
+              <Icon className={clsx('h-4 w-4', selected ? 'text-blue-600 dark:text-cyan-400' : 'text-neutral-400')} aria-hidden /> {CATEGORY_LABEL[g.category]}
             </button>
           );
         })}
       </div>
 
-      <div role="tabpanel" id={`${uid}-panel`} aria-labelledby={`${uid}-tab-${active.category}`} className="mt-4">
-        {active.methods.length > 1 && (
-          <div role="radiogroup" aria-label={CATEGORY_LABEL[active.category]} className="mb-4 inline-flex rounded-lg bg-neutral-100 p-1 text-sm font-medium">
+      <div role="tabpanel" id={`${uid}-panel`} aria-labelledby={`${uid}-tab-${active.category}`} className="glass-inset mt-4 p-4 sm:p-5">
+        {active.methods.length > 1 ? (
+          <div role="radiogroup" aria-label={CATEGORY_LABEL[active.category]} className="segmented mb-4 inline-flex">
             {active.methods.map((m) => (
-              <button key={m} type="button" role="radio" aria-checked={method === m} onClick={() => setMethod(m)}
-                className={method === m ? 'rounded-md bg-white px-3 py-1.5 text-neutral-900 shadow-sm dark:bg-neutral-800' : 'px-3 py-1.5 text-neutral-600 hover:text-neutral-900'}>
+              <button key={m} type="button" role="radio" aria-checked={method === m} onClick={() => setMethod(m)} className="segment py-1.5">
                 {METHOD_LABEL[m]}
               </button>
             ))}
           </div>
-        )}
+        ) : <p className="eyebrow mb-3">{METHOD_LABEL[active.methods[0]]}</p>}
         {method === 'mpesa' && <MpesaPay orderId={target.id} endpoint={`${base}/mpesa`} onSwitchToCard={methods.includes('card') ? () => setMethod('card') : undefined} />}
         {method === 'airtel_money' && <AirtelPay endpoint={`${base}/gateway`} />}
         {method === 'card' && (

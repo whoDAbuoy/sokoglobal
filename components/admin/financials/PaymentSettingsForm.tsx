@@ -25,8 +25,9 @@ const WALLET_LABEL = { usdt_trc20: 'USDT · TRON (TRC-20)', usdt_erc20: 'USDT ·
 function Switch({ id, on, onChange, disabled }: { id: string; on: boolean; onChange: (v: boolean) => void; disabled?: boolean }) {
   return (
     <button type="button" role="switch" aria-checked={on} aria-labelledby={id} disabled={disabled} onClick={() => onChange(!on)}
-      className={clsx('relative mt-0.5 inline-flex h-6 w-11 shrink-0 rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:opacity-50', on ? 'bg-blue-600' : 'bg-neutral-300')}>
-      <span className={clsx('absolute top-0.5 h-5 w-5 rounded-full bg-snow shadow transition-transform motion-reduce:transition-none', on ? 'translate-x-5' : 'translate-x-0.5')} />
+      className={clsx('relative mt-0.5 inline-flex h-7 w-12 shrink-0 rounded-full shadow-[inset_0_1px_2px_rgba(0,0,0,0.2)] transition-all duration-200 ease-out active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:opacity-50',
+        on ? 'bg-emerald-500' : 'bg-neutral-300 dark:bg-snow/15')}>
+      <span className={clsx('absolute top-0.5 h-6 w-6 rounded-full bg-snow shadow-[0_2px_6px_rgba(0,0,0,0.25)] transition-transform duration-200 ease-out motion-reduce:transition-none', on ? 'translate-x-[1.375rem]' : 'translate-x-0.5')} />
     </button>
   );
 }
@@ -55,11 +56,11 @@ export default function PaymentSettingsForm({ settings, configured, updatedAt }:
 
   return (
     <form onSubmit={(e) => { e.preventDefault(); save(); }} className="space-y-6">
-      <fieldset disabled={pending} className="card p-5">
+      <fieldset disabled={pending} className="glass-card p-5 sm:p-6">
         <legend className="sr-only">Payment channels</legend>
         <h3 className="font-semibold text-neutral-900">Payment channels</h3>
         <p className="mt-1 text-sm text-neutral-600">Card and M-Pesa are always on when configured. A channel shows to buyers only when it is switched on <em>and</em> set up.</p>
-        <ul className="mt-4 divide-y divide-neutral-200">
+        <ul className="glass-inset mt-4 divide-y divide-black/[0.06] px-4 dark:divide-snow/[0.08]">
           {FLAGS.map((f) => {
             const keysMissing = f.needs && !configured[f.needs];
             const detailsMissing = (f.key === 'enable_swift_wire' && !wireReady) || (f.key === 'enable_crypto' && !WALLET_KEYS.some((k) => wallets[k].trim()));
@@ -79,7 +80,7 @@ export default function PaymentSettingsForm({ settings, configured, updatedAt }:
         </ul>
       </fieldset>
 
-      <fieldset disabled={pending} className="card p-5">
+      <fieldset disabled={pending} className="glass-card p-5 sm:p-6">
         <legend className="sr-only">SWIFT escrow account</legend>
         <h3 className="font-semibold text-neutral-900">SWIFT escrow account</h3>
         <p className="mt-1 text-sm text-neutral-600">Shown to buyers who pay by wire, with a unique reference per order. Changes apply to new wire requests.</p>
@@ -98,7 +99,7 @@ export default function PaymentSettingsForm({ settings, configured, updatedAt }:
         </div>
       </fieldset>
 
-      <fieldset disabled={pending} className="card p-5">
+      <fieldset disabled={pending} className="glass-card p-5 sm:p-6">
         <legend className="sr-only">Crypto escrow wallets</legend>
         <h3 className="font-semibold text-neutral-900">Crypto escrow wallets</h3>
         <p className="mt-1 text-sm text-neutral-600">Only networks with an address are offered. Use wallets SokoGlobal controls; buyers send to them directly.</p>
@@ -124,7 +125,7 @@ export default function PaymentSettingsForm({ settings, configured, updatedAt }:
           Every save is written to the audit log.
           {updatedAt && ` Last change ${new Date(updatedAt).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' })}.`}
         </p>
-        <button type="submit" disabled={pending} className="btn-primary px-4 py-2">
+        <button type="submit" disabled={pending} className="btn-primary rounded-full px-5 py-2">
           {pending ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <Save className="h-4 w-4" aria-hidden />} Save payment settings
         </button>
       </div>

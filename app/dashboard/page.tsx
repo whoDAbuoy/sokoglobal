@@ -202,7 +202,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         )}
 
         {/* $500 Trial Batch listings — the product grid */}
-        <section id="batches" className="scroll-mt-24">
+        <section id="batches" className="scroll-mt-32">
           <SectionHeader
             icon={Plane}
             title={`Test a supplier with a ${formatUSD(minTrialCents)} Trial Batch`}
@@ -228,7 +228,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         </section>
 
         {/* Trend Pools */}
-        <section id="pools" className="scroll-mt-24">
+        <section id="pools" className="scroll-mt-32">
           <SectionHeader
             icon={Users}
             title="Trend Pools"

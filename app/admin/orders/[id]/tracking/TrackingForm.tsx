@@ -243,7 +243,7 @@ export default function TrackingForm({ order }: { order: TrackingFormOrder }) {
       </div>
 
       {/* Preview + save */}
-      <aside className="space-y-4 lg:sticky lg:top-20 lg:self-start">
+      <aside className="space-y-4 lg:sticky lg:top-32 lg:self-start">
         {preview ? (
           <AnimatedShipmentMap tracking={preview} escrowStatus={order.escrowStatus} />
         ) : (

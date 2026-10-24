@@ -40,6 +40,12 @@ const NAV_ICON: Record<string, LucideIcon> = {
   'My portal': Undo2, Orders: Truck, RFQs: FileQuestion, Financials: Landmark, Drafts: FilePen,
 };
 
+/** The link for the current page: the longest href the path sits under (so /supplier/drafts marks Drafts, not Catalogue). */
+function activeHref(hrefs: string[], pathname: string): string | null {
+  const hits = hrefs.filter((h) => !h.includes('#') && (pathname === h || pathname.startsWith(`${h}/`)));
+  return hits.sort((a, b) => b.length - a.length)[0] ?? null;
+}
+
 export default function DashboardHeader({ profile }: { profile: Profile }) {
   const { signOut } = useAuth();
   const cart = useCart();
@@ -48,19 +54,20 @@ export default function DashboardHeader({ profile }: { profile: Profile }) {
   const initials = profile.full_name.split(/\s+/).map((p) => p[0]).slice(0, 2).join('').toUpperCase();
   const pathname = usePathname() ?? '';
   const level = adminLevel(profile);
-  const wideNav = (level !== null && pathname.startsWith('/admin')) || roleAdminLevel(profile.role) !== null;
-  // Admin (up to nine) and supplier (seven) links don't fit beside the account block in the 1280 px toolbar,
-  // so they always get their own row; the five importer links sit inline from lg up.
-  const rowNav = wideNav || profile.role === 'supplier';
-  const links = navLinks(profile, pathname).map(([label, href]) => {
+  const items = navLinks(profile, pathname);
+  const current = activeHref(items.map(([, href]) => href), pathname);
+  const links = items.map(([label, href]) => {
     const Icon = NAV_ICON[label];
+    const active = href === current;
     return (
-    <Link key={label} href={href}
-      className="group/nav press inline-flex items-center gap-1.5 whitespace-nowrap rounded-md text-sm text-neutral-600 hover:text-neutral-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">
-      {Icon && <Icon className="h-4 w-4 text-neutral-400 transition-colors group-hover/nav:text-blue-500" strokeWidth={1.75} aria-hidden />}
+    <Link key={label} href={href} aria-current={active ? 'page' : undefined}
+      className={`group/nav press inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-3 py-1.5 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${active
+        ? 'bg-neutral-900/[0.06] font-medium text-neutral-900 dark:bg-snow/10'
+        : 'text-neutral-600 hover:bg-neutral-900/[0.04] hover:text-neutral-900 dark:hover:bg-snow/[0.06]'}`}>
+      {Icon && <Icon className={`h-4 w-4 transition-colors group-hover/nav:text-blue-500 ${active ? 'text-blue-600 dark:text-cyan-400' : 'text-neutral-400'}`} strokeWidth={1.75} aria-hidden />}
       {label}
       {label === 'Messages' && unreadCount > 0 && (
-        <span aria-label={`${unreadCount} unread`} className="grid h-4 min-w-4 place-items-center rounded-full bg-neutral-900 px-1 text-[10px] font-semibold tabular-nums text-white">
+        <span aria-label={`${unreadCount} unread`} className="grid h-4 min-w-4 place-items-center rounded-full bg-blue-600 px-1 text-[10px] font-semibold tabular-nums text-snow">
           {unreadCount > 99 ? '99+' : unreadCount}
         </span>
       )}
@@ -75,59 +82,53 @@ export default function DashboardHeader({ profile }: { profile: Profile }) {
     );
   });
 
+  const iconBtn = 'press relative grid h-9 w-9 shrink-0 place-items-center rounded-full text-neutral-600 hover:bg-neutral-900/[0.05] hover:text-neutral-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:hover:bg-snow/[0.08]';
+  const badge = 'absolute -right-0.5 -top-0.5 grid h-4 min-w-4 place-items-center rounded-full px-1 text-[10px] font-semibold tabular-nums text-snow';
+
   return (
-    <header className="sticky top-3 z-50 px-3 sm:top-4 sm:px-4">
-      <div className="glass-toolbar mx-auto max-w-7xl">
-      <div className="flex h-14 items-center justify-between gap-4 px-3 sm:h-16 sm:px-5">
-        <div className="flex min-w-0 flex-1 items-center gap-8">
-          <Link href="/" className="flex shrink-0 items-center gap-2">
+    <header className="glass-nav">
+      <div className="mx-auto flex h-14 max-w-7xl items-center justify-between gap-3 px-3 sm:h-16 sm:px-6 lg:px-8">
+        <div className="flex min-w-0 flex-1 items-center">
+          <Link href="/" aria-label="SokoGlobal home" className="press flex shrink-0 items-center gap-2 rounded-full">
             <ShieldCheck className="h-5 w-5 text-blue-600 dark:text-cyan-400" strokeWidth={2.25} aria-hidden />
-            <span className="text-base font-semibold tracking-tight text-neutral-900">SokoGlobal</span>
+            <span className="hidden text-base font-semibold tracking-tight text-neutral-900 sm:inline">SokoGlobal</span>
           </Link>
-          {!rowNav && <nav className="hidden min-w-0 items-center gap-6 lg:flex">{links}</nav>}
         </div>
 
-        <div className="flex shrink-0 items-center gap-1 sm:gap-2">
+        {/* Each control is a fixed-size chip and the gap alone spaces them, so neighbours never touch or overlap.
+            Phones get a tighter gap (and a logo mark without the wordmark) so the importer's six controls fit at 360 px. */}
+        <div className="flex shrink-0 items-center gap-1.5 sm:gap-3 md:gap-4">
           {roleAdminLevel(profile.role) && (
             <Link href="/admin/control" aria-label="Control room: platform switches, overrides and audit log" title="Control room"
-              className={`inline-flex h-8 items-center gap-1.5 rounded-md border px-2 text-sm font-medium transition-colors sm:px-2.5 ${pathname.startsWith('/admin/control') ? 'border-neutral-900 text-neutral-900' : 'border-neutral-300 text-neutral-800 hover:border-neutral-900'}`}>
+              aria-current={pathname.startsWith('/admin/control') ? 'page' : undefined}
+              className={`nav-chip px-2.5 sm:px-3 ${pathname.startsWith('/admin/control') ? 'border-neutral-900 text-neutral-900 dark:border-snow/40' : ''}`}>
               <Gauge className="h-4 w-4" strokeWidth={1.75} aria-hidden /> <span className="hidden sm:inline">Control</span>
             </Link>
           )}
           <CurrencySwitcher />
           {profile.role === 'importer' && (
-            <Link href="/dashboard/orders" aria-label="My orders and escrow tracking"
-              className="inline-flex h-8 items-center gap-1.5 rounded-md border border-neutral-300 px-2 text-sm font-medium text-neutral-900 transition-colors hover:border-neutral-900 sm:px-2.5">
+            <Link href="/dashboard/orders" aria-label="My orders and escrow tracking" className="nav-chip px-2.5 sm:px-3">
               <Package className="h-4 w-4" strokeWidth={1.75} /> <span className="hidden sm:inline">My Orders</span>
             </Link>
           )}
           {profile.role === 'importer' && (
-            <Link href="/dashboard/wishlist" aria-label={`Wishlist, ${saved} saved`}
-              className="relative rounded-md p-2 text-neutral-600 transition-colors hover:text-neutral-900">
+            <Link href="/dashboard/wishlist" aria-label={`Wishlist, ${saved} saved`} className={iconBtn}>
               <Heart className="h-5 w-5" strokeWidth={1.75} />
-              {saved > 0 && (
-                <span className="absolute right-0.5 top-0.5 grid h-4 min-w-4 place-items-center rounded-full bg-red-500 px-1 text-[10px] font-semibold tabular-nums text-white">
-                  {saved > 99 ? '99+' : saved}
-                </span>
-              )}
+              {saved > 0 && <span className={`${badge} bg-red-500`}>{saved > 99 ? '99+' : saved}</span>}
             </Link>
           )}
           {profile.role === 'importer' && (
-            <button type="button" onClick={() => cart.setOpen(true)} aria-label={`Cart, ${cart.items.length} item${cart.items.length === 1 ? '' : 's'}`}
-              className="relative rounded-md p-2 text-neutral-600 transition-colors hover:text-neutral-900">
+            <button type="button" onClick={() => cart.setOpen(true)} aria-label={`Cart, ${cart.items.length} item${cart.items.length === 1 ? '' : 's'}`} className={iconBtn}>
               <ShoppingBag className="h-5 w-5" strokeWidth={1.75} />
-              {cart.items.length > 0 && (
-                <span className="absolute right-0.5 top-0.5 grid h-4 min-w-4 place-items-center rounded-full bg-neutral-900 px-1 text-[10px] font-semibold tabular-nums text-white">
-                  {cart.items.length}
-                </span>
-              )}
+              {cart.items.length > 0 && <span className={`${badge} bg-blue-600`}>{cart.items.length}</span>}
             </button>
           )}
-          <button type="button" aria-label="Notifications" className="hidden rounded-md p-2 text-neutral-600 transition-colors hover:text-neutral-900 sm:block">
+          <button type="button" aria-label="Notifications" className={`${iconBtn} hidden sm:grid`}>
             <Bell className="h-5 w-5" strokeWidth={1.75} />
           </button>
+          <span aria-hidden className="hidden h-6 w-px shrink-0 bg-black/[0.08] dark:bg-snow/10 sm:block" />
           <Link href="/dashboard/settings" aria-label="Profile & settings" title="Profile & settings"
-            className="flex items-center gap-3 rounded-md border-l border-neutral-200 py-1 pl-2 pr-1 transition-colors hover:bg-neutral-50 sm:pl-4">
+            className="press flex shrink-0 items-center gap-3 rounded-full p-1 hover:bg-neutral-900/[0.04] sm:pl-3 dark:hover:bg-snow/[0.06]">
             <div className="hidden text-right sm:block">
               <p className="flex items-center justify-end gap-1 text-sm font-medium text-neutral-900">
                 {profile.company_name}
@@ -149,13 +150,15 @@ export default function DashboardHeader({ profile }: { profile: Profile }) {
                 : initials}
             </span>
           </Link>
-          <button type="button" onClick={() => void signOut()} aria-label="Sign out" className="rounded-md p-2 text-neutral-600 transition-colors hover:text-neutral-900">
+          <button type="button" onClick={() => void signOut()} aria-label="Sign out" className={iconBtn}>
             <LogOut className="h-5 w-5" strokeWidth={1.75} />
           </button>
         </div>
       </div>
-      {/* Admin and supplier links (and every role on small screens): their own scrollable row. */}
-      <nav className={`no-scrollbar flex gap-6 overflow-x-auto border-t border-black/[0.06] px-4 py-2.5 dark:border-snow/[0.08] sm:px-5 ${rowNav ? '' : 'lg:hidden'}`}>{links}</nav>
+      {/* App-style layout at every width: the section links always get their own scrollable pill row, so the
+          account controls above never share space with them (no overlap, whatever the role or link count). */}
+      <div className="border-t border-black/[0.06] dark:border-snow/[0.08]">
+        <nav aria-label="Sections" className="no-scrollbar mx-auto flex max-w-7xl gap-1 overflow-x-auto px-2.5 py-1.5 sm:px-4 lg:px-6">{links}</nav>
       </div>
     </header>
   );

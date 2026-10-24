@@ -61,22 +61,23 @@ export default async function CheckoutPage({ params, searchParams }: {
   return (
     <>
       <DashboardHeader profile={profile} />
-      <main className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
+      <main className="relative mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
+        <div aria-hidden className="ambient-glow -z-10 right-0 top-40 h-80 w-80 bg-blue-600/10" />
         <Link href="/dashboard" className="inline-flex items-center gap-1 text-sm text-neutral-500 transition-colors hover:text-neutral-900">
           <ArrowLeft className="h-4 w-4" /> Continue browsing
         </Link>
-        <div className="mt-6 border-b border-neutral-200 pb-6">
+        <div className="mt-6 border-b border-black/[0.06] pb-6 dark:border-snow/[0.08]">
           <p className="eyebrow">Checkout #{group.id.slice(0, 8).toUpperCase()} · {totalBatches} Trial Batch{totalBatches === 1 ? '' : 'es'}</p>
           <h1 className="mt-2 text-3xl font-semibold text-neutral-900">{unpaid.length ? 'Review & pay' : 'Paid into escrow'}</h1>
         </div>
 
         <div className="mt-8 grid gap-10 lg:grid-cols-[minmax(0,1fr)_22rem]">
           <div className="min-w-0">
-            <ul className="divide-y divide-neutral-200 border-y border-neutral-200">
+            <ul className="glass-card divide-y divide-black/[0.06] px-5 dark:divide-snow/[0.08]">
               {orders.map((o) => (
                 <li key={o.id}>
-                  <Link href={`/dashboard/orders/${o.id}`} className="group flex items-center gap-4 py-4">
-                    <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-md">
+                  <Link href={`/dashboard/orders/${o.id}`} className="press-card group flex items-center gap-4 py-4">
+                    <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl">
                       <ProductVisual src={image(o)} alt={o.product?.title ?? 'Trial Batch'} category={o.product?.category ?? 'beauty'} className="h-full w-full" />
                     </div>
                     <div className="min-w-0 flex-1">
@@ -102,21 +103,21 @@ export default async function CheckoutPage({ params, searchParams }: {
               <CheckoutActions checkoutId={group.id} returnStatus={returnStatus ?? null}
                 amountLabel={formatUSD(due, true)} buyerName={profile.full_name} methods={methods} gatewayReturn={gatewayReturn} />
             ) : (
-              <p className="mt-6 flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">
+              <p className="mt-6 flex items-center gap-2 rounded-2xl border p-4 text-sm tone-escrow">
                 <CheckCircle2 className="h-5 w-5" /> All {totalBatches} Trial Batches are paid and held in escrow. Track each one from its order page.
               </p>
             )}
           </div>
 
-          <aside className="lg:sticky lg:top-24 lg:self-start">
-            <section className="rounded-lg border border-neutral-200 bg-neutral-50 p-6">
+          <aside className="lg:sticky lg:top-32 lg:self-start">
+            <section className="glass-card p-6">
               <h2 className="eyebrow">Order summary</h2>
               <dl className="mt-5 space-y-3 text-sm text-neutral-600">
                 {[['Products', sum('goods_cents')], ['Consolidated air freight', sum('freight_cents')], ['Customs clearance & duties', sum('customs_cents')]]
                   .concat(sum('escrow_fee_cents') > 0 ? [['Escrow protection fee', sum('escrow_fee_cents')]] : []).map(([l, v]) => (
                   <div key={l as string} className="flex justify-between"><dt>{l}</dt><dd className="tabular-nums text-neutral-900">{formatUSD(v as number, true)}</dd></div>
                 ))}
-                <div className="flex items-baseline justify-between border-t border-neutral-200 pt-4 text-neutral-900">
+                <div className="flex items-baseline justify-between border-t border-black/[0.06] pt-4 text-neutral-900 dark:border-snow/[0.08]">
                   <dt className="font-medium">{unpaid.length && unpaid.length < orders.length ? 'Left to pay' : 'Total'}</dt>
                   <dd className="text-xl font-semibold tabular-nums">{formatUSD(unpaid.length ? due : total, true)}</dd>
                 </div>
