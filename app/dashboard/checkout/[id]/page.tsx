@@ -10,6 +10,9 @@ import DashboardHeader from '@/components/dashboard/DashboardHeader';
 import ProductVisual from '@/components/dashboard/ProductVisual';
 import CheckoutActions from './CheckoutActions';
 import { getPaymentSettings, methodsFor } from '@/lib/payment-settings-server';
+import { suggestedWeightKg } from '@/lib/shipping/dhl';
+import { isDhlRatesConfigured } from '@/lib/shipping/dhl-server';
+import ShippingQuote from '@/components/shipping/ShippingQuote';
 
 export const metadata = { title: 'Checkout · SokoGlobal' };
 export const dynamic = 'force-dynamic';
@@ -17,7 +20,8 @@ export const dynamic = 'force-dynamic';
 type Row = {
   id: string; escrow_status: string; total_cents: number; goods_cents: number; freight_cents: number; customs_cents: number;
   quantity: number; escrow_fee_cents?: number | null;
-  product: { title: string; category: ProductCategory; trial_units: number; product_media: { public_url: string; media_type: string; sort_order: number }[] } | null;
+  product: { title: string; category: ProductCategory; trial_units: number; origin_country: string; attributes: Record<string, unknown> | null;
+    product_media: { public_url: string; media_type: string; sort_order: number }[] } | null;
 };
 const one = <T,>(v: T | T[] | null | undefined): T | null => (Array.isArray(v) ? v[0] ?? null : v ?? null);
 
@@ -39,7 +43,7 @@ export default async function CheckoutPage({ params, searchParams }: {
     .from('checkout_groups')
     .select(`id, buyer_id, created_at, funded_at, payment_provider,
              orders ( id, escrow_status, quantity, total_cents, goods_cents, freight_cents, customs_cents, escrow_fee_cents,
-                      product:products ( title, category, trial_units, product_media ( public_url, media_type, sort_order ) ) )`)
+                      product:products ( title, category, trial_units, origin_country, attributes, product_media ( public_url, media_type, sort_order ) ) )`)
     .eq('id', id)
     .maybeSingle();
   if (!group || group.buyer_id !== user.id) notFound();
@@ -56,6 +60,9 @@ export default async function CheckoutPage({ params, searchParams }: {
     : gw === 'dpo' && dpoToken ? { gateway: 'dpo' as const, token: dpoToken } : null;
   const batchesOf = (o: Row) => (o.product?.trial_units ? Math.max(1, Math.round(o.quantity / o.product.trial_units)) : 1);
   const totalBatches = orders.reduce((n, o) => n + batchesOf(o), 0);
+  // DHL comparison (quote only): weight prefilled from listings that state a per-unit shipping weight.
+  const dhlWeight = suggestedWeightKg(unpaid.map((o) => ({ orderId: o.id, originCountry: o.product?.origin_country ?? 'US', attributes: o.product?.attributes ?? null,
+    units: o.quantity, goodsCents: o.goods_cents, title: o.product?.title ?? 'Goods' })));
   const image = (o: Row) => [...(o.product?.product_media ?? [])].filter((m) => m.media_type === 'image').sort((a, b) => a.sort_order - b.sort_order)[0]?.public_url ?? null;
 
   return (
@@ -98,6 +105,13 @@ export default async function CheckoutPage({ params, searchParams }: {
                 </li>
               ))}
             </ul>
+
+            {unpaid.length > 0 && (
+              // Outside the sticky summary: with the DHL form open it can be taller than the viewport.
+              <ShippingQuote className="mt-6" target={{ kind: 'group', id: group.id }} destinationCountry={profile.country_code} suggestedWeightKg={dhlWeight}
+                configured={isDhlRatesConfigured()}
+                guaranteed={{ goods: sum('goods_cents'), freight: sum('freight_cents'), customs: sum('customs_cents'), escrowFee: sum('escrow_fee_cents') }} />
+            )}
 
             {unpaid.length > 0 ? (
               <CheckoutActions checkoutId={group.id} returnStatus={returnStatus ?? null}

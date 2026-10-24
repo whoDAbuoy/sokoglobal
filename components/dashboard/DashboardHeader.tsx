@@ -13,6 +13,7 @@ import { useWishlist } from '@/hooks/useWishlist';
 import type { Profile } from '@/lib/types';
 import { ADMIN_LEVEL_LABEL, adminLevel, formatTimeLeft, homePathFor, roleAdminLevel } from '@/lib/auth/admin-access';
 import CurrencySwitcher from '@/components/currency/CurrencySwitcher';
+import MobileNav from '@/components/navigation/MobileNav';
 
 const ADMIN_NAV: [string, string][] = [['Overview', '/admin'], ['Review queue', '/admin/review'], ['Catalogue', '/admin/products'], ['Shipments', '/admin/orders'], ['Supplier KYC', '/admin/kyc'], ['Users', '/admin/users'], ['Support', '/admin/support']];
 const NAV: Record<Profile['role'], [string, string][]> = {
@@ -86,6 +87,7 @@ export default function DashboardHeader({ profile }: { profile: Profile }) {
   const badge = 'absolute -right-0.5 -top-0.5 grid h-4 min-w-4 place-items-center rounded-full px-1 text-[10px] font-semibold tabular-nums text-snow';
 
   return (
+    <>
     <header className="glass-nav">
       <div className="mx-auto flex h-14 max-w-7xl items-center justify-between gap-3 px-3 sm:h-16 sm:px-6 lg:px-8">
         <div className="flex min-w-0 flex-1 items-center">
@@ -161,5 +163,8 @@ export default function DashboardHeader({ profile }: { profile: Profile }) {
         <nav aria-label="Sections" className="no-scrollbar mx-auto flex max-w-7xl gap-1 overflow-x-auto px-2.5 py-1.5 sm:px-4 lg:px-6">{links}</nav>
       </div>
     </header>
+    {/* Outside <header>: its backdrop-filter would make it the containing block for the fixed dock. */}
+    <MobileNav profile={profile} />
+    </>
   );
 }

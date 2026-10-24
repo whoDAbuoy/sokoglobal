@@ -4,7 +4,7 @@
  * limiter is the per-instance fallback for local dev or a missing Redis config.
  */
 
-export type LimitName = 'checkout' | 'payment' | 'upload' | 'moderation' | 'action' | 'twofactor';
+export type LimitName = 'checkout' | 'payment' | 'upload' | 'moderation' | 'action' | 'twofactor' | 'shipping';
 
 export const LIMIT_RULES: Record<LimitName, { limit: number; windowSec: number }> = {
   checkout: { limit: 10, windowSec: 60 },     // creating orders / carts / pool pledges
@@ -13,6 +13,7 @@ export const LIMIT_RULES: Record<LimitName, { limit: number; windowSec: number }
   moderation: { limit: 30, windowSec: 60 },   // admin server actions (ban, delete, approve, reconcile)
   action: { limit: 60, windowSec: 60 },       // other server actions (profile change requests, replies)
   twofactor: { limit: 6, windowSec: 60 },     // 2FA codes and password changes (brute-force guard)
+  shipping: { limit: 12, windowSec: 60 },     // DHL quotes / tracking (each call spends our DHL API quota)
 };
 
 /** Which limit (if any) applies to a request. Only state-changing methods are limited. */

@@ -89,6 +89,16 @@
       focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500
       dark:border-snow/10 dark:bg-snow/[0.04] dark:hover:border-snow/25 dark:hover:bg-snow/[0.08];
   }
+  /* Glass pill button (Follow); `.glass-button-active` is the pressed / on state. */
+  .glass-button {
+    @apply inline-flex shrink-0 items-center justify-center gap-1.5 rounded-full border border-black/[0.08] bg-white/60 font-medium
+      text-neutral-900 shadow-[0_1px_2px_rgba(0,0,0,0.05)] backdrop-blur-md transition-all duration-200 ease-out hover:border-neutral-400
+      active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:opacity-50
+      dark:border-snow/15 dark:bg-snow/[0.06] dark:hover:border-snow/30;
+  }
+  .glass-button-active {
+    @apply border-blue-500/40 bg-blue-500/10 text-blue-700 hover:border-blue-500/60 dark:border-cyan-400/40 dark:bg-cyan-400/10 dark:text-cyan-300;
+  }
   /* Tactile press for buttons, pills and tabs. */
   .press { @apply transition-all duration-200 ease-out active:scale-95; }
   /* Gentler press for whole cards (a full 95% would jump on wide surfaces). */
@@ -192,6 +202,14 @@
 @media (prefers-reduced-transparency: reduce) {
   .frost-card, .frost-bar, .frost-pop, .frost-panel, .frost-ios, .glass, .card, .glass-card, .glass-surface, .glass-toolbar, .glass-nav { backdrop-filter: none !important; background-color: rgb(var(--sg-white)) !important; }
   .ambient-glow { display: none; }
+}
+
+/* Phones: pad every page that shows the bottom dock (components/navigation/MobileNav.tsx) so it never covers
+   content, and hide the dock while a full-screen chat thread is open (it has its own sticky composer). */
+@media (max-width: 767px) {
+  body:has([data-mobile-dock]) { padding-bottom: calc(5rem + env(safe-area-inset-bottom)); }
+  body:has([data-chat-fullscreen]) [data-mobile-dock] { display: none; }
+  body:has([data-chat-fullscreen]) { overflow: hidden; }
 }
 
 /* Interactive pills (links / buttons styled as .pill) press like iOS controls. */

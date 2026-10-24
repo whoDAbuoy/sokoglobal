@@ -102,10 +102,21 @@ export default function ChatThread({ threadId, className, onRead, collapseAfter,
   }, [supabase, threadId, myId, markRead]);
 
   // Keep the newest message in view.
+  const pinned = useRef(true);
   useEffect(() => {
     const el = scrollRef.current;
-    if (el) el.scrollTop = el.scrollHeight;
+    if (el) { el.scrollTop = el.scrollHeight; pinned.current = true; }
   }, [messages.length, loading]);
+  // When the pane shrinks (the phone keyboard opens) stay on the newest message if the reader was already there.
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    const onScroll = () => { pinned.current = el.scrollHeight - el.scrollTop - el.clientHeight < 48; };
+    const ro = new ResizeObserver(() => { if (pinned.current) el.scrollTop = el.scrollHeight; });
+    el.addEventListener('scroll', onScroll, { passive: true });
+    ro.observe(el);
+    return () => { el.removeEventListener('scroll', onScroll); ro.disconnect(); };
+  }, []);
 
   let lastReadMine = -1;
   messages.forEach((m, i) => { if (m.sender_id === myId && m.read_at) lastReadMine = i; });

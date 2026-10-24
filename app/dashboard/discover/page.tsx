@@ -7,7 +7,7 @@ import {
   CATALOG_PAGE_SIZE, CATALOG_SORTS, buildCategoryTree, catalogHref, categoryPath, computeFacets, descendantIds, effectiveSchema,
   matchesFilters, parseCatalogQuery, sortListings, toggleFilter, type CatalogQuery, type CategoryNode, type CategoryRow,
 } from '@/lib/catalog';
-import { toTrialProductView, type CatalogProductRow } from '@/lib/product-view';
+import { CATALOG_PRODUCT_SELECT, toTrialProductView, type CatalogProductRow } from '@/lib/product-view';
 import { goldSupplierIds } from '@/lib/pricing-server';
 import DashboardHeader from '@/components/dashboard/DashboardHeader';
 import TrialBatchCard from '@/components/dashboard/TrialBatchCard';
@@ -18,9 +18,7 @@ export const dynamic = 'force-dynamic';
 /** Upper bound of live listings scanned per category view; facets and filters run over this set. */
 const SCAN_LIMIT = 500;
 
-const SELECT = `id, supplier_id, title, brand, category, origin_country, trial_units, unit_price_cents, trial_goods_cents, trial_freight_cents,
-  trial_customs_cents, trial_landed_cost_cents, lead_time_days, created_at, attributes, category_id, is_featured, moq, unit_of_measure, price_tiers,
-  supplier:profiles!products_supplier_id_fkey ( company_name, kyc_verified ), product_media ( public_url, media_type, sort_order )`;
+const SELECT = CATALOG_PRODUCT_SELECT;
 
 /**
  * Buyer catalogue for every commodity: category tree, full-text search, and

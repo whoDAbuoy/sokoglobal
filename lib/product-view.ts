@@ -11,6 +11,11 @@ export const galleryMedia = (media: MediaRow[] | null | undefined): GalleryMedia
 ];
 const one = <T,>(v: T | T[] | null | undefined): T | null => (Array.isArray(v) ? v[0] ?? null : v ?? null);
 
+/** Columns for a CatalogProductRow (catalogue, supplier profile, follow feed). */
+export const CATALOG_PRODUCT_SELECT = `id, supplier_id, title, brand, category, origin_country, trial_units, unit_price_cents, trial_goods_cents, trial_freight_cents,
+  trial_customs_cents, trial_landed_cost_cents, lead_time_days, created_at, attributes, category_id, is_featured, moq, unit_of_measure, price_tiers,
+  supplier:profiles!products_supplier_id_fkey ( company_name, kyc_verified ), product_media ( public_url, media_type, sort_order )`;
+
 export interface CatalogProductRow {
   id: string; title: string; brand: string | null; category: ProductCategory; origin_country: string;
   trial_units: number; unit_price_cents: number; trial_goods_cents: number; trial_freight_cents: number; trial_customs_cents: number;
@@ -27,7 +32,7 @@ export function toTrialProductView(p: CatalogProductRow, categoryName: string | 
   const images = allImages(media);
   return {
     id: p.id, title: p.title, brand: p.brand, category: p.category, origin_country: p.origin_country,
-    supplier_name: supplier?.company_name ?? 'Verified supplier', supplier_verified: !!supplier?.kyc_verified,
+    supplier_id: p.supplier_id, supplier_name: supplier?.company_name ?? 'Verified supplier', supplier_verified: !!supplier?.kyc_verified,
     supplier_gold: !!p.supplier_id && !!goldSuppliers?.has(p.supplier_id),
     trial_units: p.trial_units, unit_price_cents: p.unit_price_cents, goods_cents: p.trial_goods_cents,
     freight_cents: p.trial_freight_cents, customs_cents: p.trial_customs_cents, landed_cost_cents: p.trial_landed_cost_cents,

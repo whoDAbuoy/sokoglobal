@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import clsx from 'clsx';
@@ -17,6 +18,7 @@ import { CHAT_BOXES, CHAT_BOX_LABEL, chatBoxCounts, filterThreads, productLabels
 import { initials, snippet } from '@/lib/admin-inbox';
 import { useMutedIds } from '@/hooks/useMutedIds';
 import ChatThread from '@/components/chat/ChatThread';
+import { useMediaQuery, useVisualViewport } from '@/hooks/useViewport';
 
 const MUTE_KEY = 'sg-chat-muted-threads';
 const BOX_ICON: Record<ChatBox, LucideIcon> = { inbox: Inbox, unread: Mail, awaiting: MessageSquareReply, sent: Send, muted: BellOff };
@@ -59,6 +61,10 @@ export default function MessagingHub({ basePath, role, initialThreadId = null }:
   const [label, setLabel] = useState<string | null>(null);
   const [query, setQuery] = useState('');
   const seq = useRef(0);
+  // Phones (< 768 px): the open thread is a full-screen panel above everything (master-detail).
+  const phone = useMediaQuery('(max-width: 767px)');
+  const fullScreen = phone && !!selectedId;
+  const vv = useVisualViewport(fullScreen);
   const live = useRef({ threads, selectedId, muted });
   live.current = { threads, selectedId, muted };
 
@@ -118,7 +124,53 @@ export default function MessagingHub({ basePath, role, initialThreadId = null }:
   }
 
   const Shortcut = copy.shortcut.icon;
+  const threadPane = selectedId ? (
+    <>
+      <header className="flex flex-wrap items-center gap-2 border-b border-neutral-200 px-4 py-2.5 dark:border-snow/10">
+        <button type="button" onClick={() => select(null)} aria-label="Back to conversations" className="press mr-1 rounded-full p-1.5 text-neutral-600 hover:bg-neutral-100 lg:hidden dark:hover:bg-snow/10">
+          <ArrowLeft className="h-5 w-5" aria-hidden />
+        </button>
+        <span className="pill tone-active">{copy.tag}</span>
+        {selected && selected.unread_count > 0 && <span className="pill tone-pending"><Clock className="h-3 w-3" aria-hidden /> {selected.unread_count} new</span>}
+        {selected?.product_id && role === 'supplier' && (
+          <Link href={`/supplier/products/${selected.product_id}`} className="btn-secondary ml-auto px-2.5 py-1.5 text-xs"><Package className="h-3.5 w-3.5" aria-hidden /> View product</Link>
+        )}
+        {role === 'importer' && (
+          <Link href="/dashboard/orders" className="btn-secondary ml-auto px-2.5 py-1.5 text-xs"><Package className="h-3.5 w-3.5" aria-hidden /> My orders</Link>
+        )}
+      </header>
+      <div className="flex items-start gap-3 border-b border-neutral-200 px-5 py-3.5 dark:border-snow/10">
+        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-neutral-300 text-sm font-semibold text-neutral-700">{initials(selected?.counterpart_name)}</span>
+        <div className="min-w-0">
+          <h3 className="truncate font-semibold text-neutral-900">{selected?.product_title ?? 'Conversation'}</h3>
+          {selected && <p className="truncate text-sm text-neutral-600">with {selected.counterpart_name}</p>}
+        </div>
+      </div>
+      <ChatThread key={selectedId} threadId={selectedId} onRead={onRead} className="flex-1" collapseAfter={8}
+        composerExtra={(
+          <label className="inline-flex cursor-pointer items-center gap-2 text-xs text-neutral-600">
+            <button type="button" role="switch" aria-checked={isMuted(selectedId)} onClick={() => setMutedFor(selectedId, !isMuted(selectedId))}
+              className={clsx('relative h-5 w-9 rounded-full transition-colors', isMuted(selectedId) ? 'bg-blue-600' : 'bg-neutral-300')}>
+              <span className={clsx('absolute top-0.5 h-4 w-4 rounded-full bg-snow shadow transition-transform', isMuted(selectedId) ? 'translate-x-[1.125rem]' : 'translate-x-0.5')} />
+            </button>
+            Mute this thread
+          </label>
+        )} />
+    </>
+  ) : null;
+
   return (
+    <>
+    {fullScreen && createPortal(
+      // Portalled to <body>: the hub card's backdrop-filter would otherwise trap this fixed panel inside it.
+      <section data-chat-fullscreen aria-label="Conversation"
+        onKeyDown={(e) => { if (e.key === 'Escape') select(null); }}
+        style={vv ? { top: vv.offsetTop, height: vv.height } : undefined}
+        className="fixed inset-x-0 top-0 z-[60] flex h-[100dvh] flex-col bg-white/95 pt-[env(safe-area-inset-top)] backdrop-blur-xl motion-safe:animate-slide-in-right dark:bg-gray-950/95">
+        {threadPane}
+      </section>,
+      document.body,
+    )}
     <div className="card mt-6 grid overflow-hidden p-0 lg:h-[calc(100dvh-14rem)] lg:min-h-[32rem] lg:grid-cols-[13rem_20rem_minmax(0,1fr)]">
       {/* Column 1: mailboxes + product labels (chips below lg) */}
       <aside className="border-b border-neutral-200 p-3 lg:overflow-y-auto lg:border-b-0 lg:border-r">
@@ -211,41 +263,10 @@ export default function MessagingHub({ basePath, role, initialThreadId = null }:
         </ul>
       </section>
 
-      {/* Column 3: thread + reply drawer */}
-      <section aria-label="Conversation" className={clsx('min-h-[28rem] min-w-0 flex-col', selectedId ? 'flex' : 'hidden lg:flex')}>
+      {/* Column 3: thread + reply drawer (on phones it is the full-screen panel above instead) */}
+      <section aria-label="Conversation" className={clsx('min-h-[28rem] min-w-0 flex-col', fullScreen ? 'hidden' : selectedId ? 'flex' : 'hidden lg:flex')}>
         {selectedId ? (
-          <>
-            <header className="flex flex-wrap items-center gap-2 border-b border-neutral-200 px-4 py-2.5">
-              <button type="button" onClick={() => select(null)} aria-label="Back to conversations" className="press mr-1 rounded-md p-1.5 text-neutral-600 hover:bg-neutral-100 lg:hidden">
-                <ArrowLeft className="h-4 w-4" aria-hidden />
-              </button>
-              <span className="pill tone-active">{copy.tag}</span>
-              {selected && selected.unread_count > 0 && <span className="pill tone-pending"><Clock className="h-3 w-3" aria-hidden /> {selected.unread_count} new</span>}
-              {selected?.product_id && role === 'supplier' && (
-                <Link href={`/supplier/products/${selected.product_id}`} className="btn-secondary ml-auto px-2.5 py-1.5 text-xs"><Package className="h-3.5 w-3.5" aria-hidden /> View product</Link>
-              )}
-              {role === 'importer' && (
-                <Link href="/dashboard/orders" className="btn-secondary ml-auto px-2.5 py-1.5 text-xs"><Package className="h-3.5 w-3.5" aria-hidden /> My orders</Link>
-              )}
-            </header>
-            <div className="flex items-start gap-3 border-b border-neutral-200 px-5 py-3.5">
-              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-neutral-300 text-sm font-semibold text-neutral-700">{initials(selected?.counterpart_name)}</span>
-              <div className="min-w-0">
-                <h3 className="truncate font-semibold text-neutral-900">{selected?.product_title ?? 'Conversation'}</h3>
-                {selected && <p className="truncate text-sm text-neutral-600">with {selected.counterpart_name}</p>}
-              </div>
-            </div>
-            <ChatThread key={selectedId} threadId={selectedId} onRead={onRead} className="flex-1" collapseAfter={8}
-              composerExtra={(
-                <label className="inline-flex cursor-pointer items-center gap-2 text-xs text-neutral-600">
-                  <button type="button" role="switch" aria-checked={isMuted(selectedId)} onClick={() => setMutedFor(selectedId, !isMuted(selectedId))}
-                    className={clsx('relative h-5 w-9 rounded-full transition-colors', isMuted(selectedId) ? 'bg-blue-600' : 'bg-neutral-300')}>
-                    <span className={clsx('absolute top-0.5 h-4 w-4 rounded-full bg-snow shadow transition-transform', isMuted(selectedId) ? 'translate-x-[1.125rem]' : 'translate-x-0.5')} />
-                  </button>
-                  Mute this thread
-                </label>
-              )} />
-          </>
+          fullScreen ? null : threadPane
         ) : (
           <div className="m-auto flex flex-col items-center px-6 py-16 text-center">
             <MessageCircle className="h-8 w-8 text-neutral-300" strokeWidth={1.5} aria-hidden />
@@ -255,6 +276,6 @@ export default function MessagingHub({ basePath, role, initialThreadId = null }:
         )}
       </section>
     </div>
+    </>
   );
 }
-

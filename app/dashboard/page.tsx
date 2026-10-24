@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
-import { ArrowRight, BadgeCheck, Compass, Heart, Info, Lock, MessageSquare, Package, Plane, Users } from 'lucide-react';
+import { ArrowRight, BadgeCheck, Compass, Heart, Info, Lock, MessageSquare, Package, Plane, UserCheck, Users } from 'lucide-react';
 import { PAID_ORDER_STATUSES } from '@/lib/order-status';
 import { getSessionProfile } from '@/lib/supabase/server';
 import type { EscrowStatus, GalleryMedia, OrderView, ProductCategory, TrendPoolView, TrialProductView } from '@/lib/types';
@@ -19,6 +19,7 @@ import CategoryTiles, { type CategoryTile } from '@/components/dashboard/Categor
 import Link from 'next/link';
 import QuickActions from '@/components/portal/QuickActions';
 import { goldSupplierIds } from '@/lib/pricing-server';
+import { CATALOG_PRODUCT_SELECT, toTrialProductView, type CatalogProductRow } from '@/lib/product-view';
 
 export const metadata = { title: 'Buyer dashboard · SokoGlobal' };
 
@@ -42,7 +43,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   if (!user || !profile) redirect('/login?redirectTo=/dashboard');
   if (profile.role === 'supplier') redirect('/supplier');
 
-  const [poolsRes, productsRes, ordersRes, myPoolsRes] = await Promise.all([
+  const [poolsRes, productsRes, ordersRes, myPoolsRes, followsRes] = await Promise.all([
     supabase
       .from('trend_pools')
       .select(`id, title, description, destination_country, target_cents, pledged_cents, min_contribution_cents,
@@ -68,7 +69,15 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
       .order('created_at', { ascending: false })
       .limit(20), // support widget only — the order list lives at /dashboard/orders (header "My orders")
     supabase.from('pool_members').select('pool_id, contribution_cents, payment_status').eq('buyer_id', user.id),
+    // Followed suppliers (migration 030; RLS returns only this user's rows). Errors before the migration → no feed.
+    supabase.from('follows').select('following_id').order('created_at', { ascending: false }).limit(200),
   ]);
+  const followedIds = followsRes.error ? null : (followsRes.data ?? []).map((f) => f.following_id as string);
+  // "From suppliers you follow": their newest live listings (drafts stay private under "products: read live").
+  const feedRows = followedIds?.length
+    ? ((await supabase.from('products').select(CATALOG_PRODUCT_SELECT).in('supplier_id', followedIds).eq('status', 'live').is('deleted_at', null)
+        .order('created_at', { ascending: false }).limit(6)).data ?? []) as unknown as CatalogProductRow[]
+    : [];
 
   const configs = await getSystemConfigs(supabase);
   // Banner state comes from profiles.kyc_status (the column every guard reads); documents only refine its copy.
@@ -94,13 +103,14 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     };
   });
 
-  const gold = await goldSupplierIds(supabase, (productsRes.data ?? []).map((p) => p.supplier_id as string));
+  const gold = await goldSupplierIds(supabase, [...(productsRes.data ?? []).map((p) => p.supplier_id as string), ...feedRows.map((r) => r.supplier_id)]);
+  const feed = feedRows.map((r) => toTrialProductView(r, null, gold));
   const products: TrialProductView[] = (productsRes.data ?? []).map((p) => {
     const supplier = one(p.supplier as unknown as { company_name: string; kyc_verified: boolean });
     const media = (p.product_media ?? []) as MediaRow[];
     return {
       id: p.id, title: p.title, brand: p.brand, category: p.category, origin_country: p.origin_country,
-      supplier_name: supplier?.company_name ?? 'Verified supplier', supplier_verified: !!supplier?.kyc_verified,
+      supplier_id: p.supplier_id as string, supplier_name: supplier?.company_name ?? 'Verified supplier', supplier_verified: !!supplier?.kyc_verified,
       supplier_gold: gold.has(p.supplier_id as string),
       trial_units: p.trial_units, unit_price_cents: p.unit_price_cents, goods_cents: p.trial_goods_cents,
       freight_cents: p.trial_freight_cents, customs_cents: p.trial_customs_cents,
@@ -201,6 +211,26 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
           </section>
         )}
 
+        {/* Followed suppliers' newest listings (hidden until migration 030 is applied). */}
+        {followedIds !== null && (
+          <section id="following" aria-labelledby="following-title" className="scroll-mt-32">
+            <SectionHeader icon={UserCheck} title="From suppliers you follow" titleId="following-title"
+              subtitle="New Trial Batches from the suppliers you follow, newest first."
+              aside={<Link href="/dashboard/discover" className="pill border-neutral-300 text-neutral-800 hover:border-neutral-900">Find suppliers <ArrowRight className="h-3.5 w-3.5" aria-hidden /></Link>} />
+            {feed.length > 0 ? (
+              <div className="mt-8 grid gap-x-6 gap-y-12 sm:grid-cols-2 lg:grid-cols-3">
+                {feed.map((p) => <TrialBatchCard key={`f-${p.id}`} product={p} />)}
+              </div>
+            ) : (
+              <p className="glass-card mt-6 px-6 py-8 text-center text-sm text-neutral-600">
+                {followedIds.length
+                  ? 'The suppliers you follow have no live listings right now. New ones will appear here.'
+                  : 'Tap Follow next to a supplier’s name on any Trial Batch, and their new listings will show up here.'}
+              </p>
+            )}
+          </section>
+        )}
+
         {/* $500 Trial Batch listings — the product grid */}
         <section id="batches" className="scroll-mt-32">
           <SectionHeader
@@ -245,8 +275,8 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   );
 }
 
-function SectionHeader({ icon: Icon, title, subtitle, aside }: {
-  icon: typeof Users; title: string; subtitle: string; aside?: React.ReactNode;
+function SectionHeader({ icon: Icon, title, subtitle, aside, titleId }: {
+  icon: typeof Users; title: string; subtitle: string; aside?: React.ReactNode; titleId?: string;
 }) {
   return (
     <div className="flex flex-wrap items-end justify-between gap-4 border-b border-neutral-200 pb-5">
@@ -254,7 +284,7 @@ function SectionHeader({ icon: Icon, title, subtitle, aside }: {
         <span className="grid h-10 w-10 place-items-center rounded-lg border tone-active">
           <Icon className="h-5 w-5" strokeWidth={1.75} aria-hidden />
         </span>
-        <h2 className="mt-3 text-2xl font-semibold text-neutral-900">{title}</h2>
+        <h2 id={titleId} className="mt-3 text-2xl font-semibold text-neutral-900">{title}</h2>
         <p className="mt-1.5 text-sm leading-relaxed text-neutral-500">{subtitle}</p>
       </div>
       {aside}

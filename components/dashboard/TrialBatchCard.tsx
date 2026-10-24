@@ -20,6 +20,8 @@ import ProductGallery from './ProductGallery';
 import ProductQuickView from './ProductQuickView';
 import InfoTip from '@/components/portal/InfoTip';
 import GoldBadge from '@/components/supplier/GoldBadge';
+import FollowButton from '@/components/follow/FollowButton';
+import Link from 'next/link';
 
 const MPESA_ENABLED = process.env.NEXT_PUBLIC_MPESA_ENABLED === 'true';
 const IS_DEV = process.env.NODE_ENV === 'development';
@@ -233,13 +235,19 @@ export default function TrialBatchCard({ product }: { product: TrialProductView 
       </div>
 
       <div className="flex flex-1 flex-col pt-4">
-        <p className="flex items-center gap-1.5 text-xs text-neutral-500">
-          {flag(product.origin_country)} {product.supplier_name}
-          {product.supplier_verified && (
-            <span className="inline-flex items-center gap-0.5 text-emerald-700"><BadgeCheck className="h-3.5 w-3.5" />Verified</span>
-          )}
-          {product.supplier_gold && <GoldBadge compact />}
-        </p>
+        <div className="flex items-center gap-2">
+          <p className="flex min-w-0 flex-1 items-center gap-1.5 text-xs text-neutral-500">
+            {flag(product.origin_country)}{' '}
+            {product.supplier_id && !product.is_demo
+              ? <Link href={`/dashboard/suppliers/${product.supplier_id}`} className="truncate hover:text-neutral-900 hover:underline">{product.supplier_name}</Link>
+              : <span className="truncate">{product.supplier_name}</span>}
+            {product.supplier_verified && (
+              <span className="inline-flex shrink-0 items-center gap-0.5 text-emerald-700"><BadgeCheck className="h-3.5 w-3.5" />Verified</span>
+            )}
+            {product.supplier_gold && <GoldBadge compact />}
+          </p>
+          {product.supplier_id && <FollowButton supplierId={product.supplier_id} supplierName={product.supplier_name} isDemo={product.is_demo} size="sm" />}
+        </div>
         <h3 className="mt-1 text-base font-medium leading-snug text-neutral-900">
           <button type="button" onClick={() => setQuickView(true)} className="text-left underline-offset-4 hover:underline focus:outline-none focus-visible:underline">
             {product.title}

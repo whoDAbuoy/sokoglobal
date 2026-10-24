@@ -77,6 +77,8 @@ export interface TrialProductView {
   brand: string | null;
   category: ProductCategory;
   origin_country: string;
+  /** The supplier's profile id (links to /dashboard/suppliers/[id] and the Follow button); absent on sample listings. */
+  supplier_id?: string;
   supplier_name: string;
   supplier_verified: boolean;
   /** Active Gold Supplier membership (migration 026) — a paid badge, separate from KYC. */
