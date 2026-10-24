@@ -128,7 +128,7 @@ export default function ChatInput({ threadId, attachmentScope, myId, onSent, com
   const length = text.trim().length;
 
   return (
-    <form onSubmit={(e) => void sendText(e)} className="border-t border-neutral-200 bg-white px-3 py-3 sm:px-5"
+    <form onSubmit={(e) => void sendText(e)} className="sticky bottom-0 z-40 border-t border-neutral-200 bg-white/90 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur-md dark:border-snow/10 dark:bg-gray-950/90 sm:px-5"
       onDragOver={(e) => { if (media) e.preventDefault(); }}
       onDrop={(e) => { if (!media) return; e.preventDefault(); void onFiles(e.dataTransfer.files); }}>
       <div className="flex items-end gap-1.5">

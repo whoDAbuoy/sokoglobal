@@ -11,6 +11,7 @@ import { useCurrency } from '@/context/CurrencyContext';
 import { lineTotals } from '@/lib/cart';
 import ProductGallery from './ProductGallery';
 import GoldBadge from '@/components/supplier/GoldBadge';
+import FollowButton from '@/components/follow/FollowButton';
 
 const EXIT_MS = 160;   // matches the fade-out / scale-out animations
 
@@ -106,10 +107,13 @@ export default function ProductQuickView({ product, quantity = 1, onClose, actio
           <dl className="mt-5 grid grid-cols-2 gap-4 border-y border-neutral-200 py-4 text-sm">
             <div>
               <dt className="eyebrow">Supplier</dt>
-              <dd className="mt-1 flex items-center gap-1.5 font-medium text-neutral-900">
-                {product.supplier_name}
+              <dd className="mt-1 flex flex-wrap items-center gap-1.5 font-medium text-neutral-900">
+                {product.supplier_id && !product.is_demo
+                  ? <Link href={`/dashboard/suppliers/${product.supplier_id}`} className="hover:underline">{product.supplier_name}</Link>
+                  : product.supplier_name}
                 {product.supplier_verified && <BadgeCheck className="h-4 w-4 text-emerald-600" aria-label="KYC verified" />}
                 {product.supplier_gold && <GoldBadge compact />}
+                {product.supplier_id && <FollowButton supplierId={product.supplier_id} supplierName={product.supplier_name} isDemo={product.is_demo} size="sm" />}
               </dd>
             </div>
             <div>

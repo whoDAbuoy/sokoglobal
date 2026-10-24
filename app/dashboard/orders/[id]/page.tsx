@@ -18,6 +18,8 @@ import { invoiceAvailable } from '@/lib/documents/model';
 import { milestoneEligible, paymentStep, type PaymentStructure } from '@/lib/milestone';
 import { trackingLink, trackingTimeline, type TimelineShipment } from '@/lib/shipping';
 import OrderTimeline from '@/components/tracking/OrderTimeline';
+import TrackingTimeline from '@/components/shipping/TrackingTimeline';
+import { isDhlCarrier } from '@/lib/shipping/dhl';
 import PaymentStructureChooser from '@/components/payments/PaymentStructureChooser';
 import Price, { LocalPreview } from '@/components/currency/Price';
 import { formatRate } from '@/lib/pricing';
@@ -124,6 +126,11 @@ export default async function OrderPage({ params, searchParams }: {
 
         <OrderTimeline className="mt-6" steps={trackingTimeline({ ...order, escrow_status: view.escrow_status }, shipment)}
           trackingUrl={shipment && shipment.status !== 'label_created' ? trackingLink(shipment) : null} />
+
+        {/* Live DHL Express scans once the supplier has dispatched with DHL (renders nothing until DHL tracking is configured). */}
+        {shipment && shipment.status !== 'label_created' && isDhlCarrier(shipment.carrier_name) && (
+          <TrackingTimeline className="mt-6" orderId={order.id} trackingUrl={trackingLink(shipment)} />
+        )}
 
         {canChoose && (
           <PaymentStructureChooser orderId={order.id} totalCents={order.total_cents} structure={(order.payment_structure ?? 'full') as PaymentStructure}

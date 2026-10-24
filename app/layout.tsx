@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { headers } from 'next/headers';
 import { Inter } from 'next/font/google';
 import { AuthProvider } from '@/context/AuthContext';
@@ -20,6 +20,9 @@ export const metadata: Metadata = {
   title: 'SokoGlobal — Escrow-protected B2B imports to Africa',
   description: 'Source beauty and apparel from verified Western suppliers with guaranteed landed cost and escrow protection.',
 };
+
+// Android Chrome: the on-screen keyboard resizes the layout viewport, so sticky chat composers stay visible.
+export const viewport: Viewport = { width: 'device-width', initialScale: 1, interactiveWidget: 'resizes-content' };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   // Reading request headers opts every route into dynamic rendering, so each
