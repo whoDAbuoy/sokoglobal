@@ -48,7 +48,7 @@ export default async function SupplierSubscriptionPage({ searchParams }: { searc
   return (
     <>
       <DashboardHeader profile={profile} />
-      <main className="mx-auto max-w-5xl px-4 py-10 sm:px-6 lg:px-8">
+      <main className="page-wide py-10">
         <Link href="/supplier" className="inline-flex items-center gap-1 text-sm text-neutral-600 hover:text-neutral-900"><ArrowLeft className="h-4 w-4" aria-hidden /> Catalogue</Link>
         <p className="eyebrow mt-4">Membership</p>
         <h1 className="mt-2 flex flex-wrap items-center gap-3 text-3xl font-semibold text-neutral-900">

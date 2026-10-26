@@ -34,10 +34,10 @@ export default function BuyerOverview({ orders, feed, following, actions }: {
   const recent = orders.slice(0, 6);
 
   return (
-    <div className="space-y-4">
-      {/* Top row: two stat cards + quick actions (asymmetric 4 / 4 / 4 → 3 / 3 / 6 on wide screens). */}
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-12">
-        <Panel title="Active orders" action={<ViewAll href="/dashboard/orders" />} className="xl:col-span-3">
+    <div className="space-y-6">
+      {/* Top row on a 4-column grid: two stat cards (1 + 1) and quick actions (2). */}
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+        <Panel title="Active orders" action={<ViewAll href="/dashboard/orders" />}>
           <p className="sx-stat mt-6">{s.active}</p>
           <div className="mt-4 flex flex-wrap gap-2">
             {s.inTransit > 0 && <span className="sx-pill sx-pill-blue"><Truck className="h-3 w-3" aria-hidden /> {s.inTransit} in transit</span>}
@@ -47,7 +47,7 @@ export default function BuyerOverview({ orders, feed, following, actions }: {
           </div>
         </Panel>
 
-        <Panel title="Held in escrow" className="xl:col-span-3">
+        <Panel title="Held in escrow">
           <p className="sx-stat mt-6">{formatUSD(s.heldCents)}</p>
           <p className="mt-4 flex items-center gap-1.5 text-xs text-neutral-500">
             <Lock className="h-3.5 w-3.5 text-[#8fd3cc]" aria-hidden />
@@ -56,7 +56,7 @@ export default function BuyerOverview({ orders, feed, following, actions }: {
           <p className="mt-2 text-xs text-neutral-500">Total ordered <span className="tabular-nums text-neutral-800">{formatUSD(s.orderedCents)}</span></p>
         </Panel>
 
-        <Panel title="Quick actions" className="md:col-span-2 xl:col-span-6">
+        <Panel title="Quick actions" className="md:col-span-2">
           <nav aria-label="Quick actions" className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
             {actions.map(({ href, label, hint, icon: Icon, badge }) => (
               <Link key={href + label} href={href}
@@ -73,13 +73,13 @@ export default function BuyerOverview({ orders, feed, following, actions }: {
         </Panel>
       </div>
 
-      {/* Middle row: followed suppliers' feed + shipment preview (7 / 5). */}
-      <div className="grid gap-4 xl:grid-cols-12">
-        <Panel title="From suppliers you follow" action={<ViewAll href={following === null ? '/dashboard/discover' : '/dashboard#following'} />} className="xl:col-span-7">
+      {/* Middle row on the same 4 columns: followed suppliers' feed (2, then 3 on wide screens) + shipment preview (2, then 1). */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-4">
+        <Panel title="From suppliers you follow" action={<ViewAll href={following === null ? '/dashboard/discover' : '/dashboard#following'} />} className="lg:col-span-2 xl:col-span-3">
           {feed.length > 0 ? (
-            <ul className="mt-4 divide-y divide-snow/[0.06]">
-              {feed.slice(0, 4).map((p) => (
-                <li key={p.id} className="flex items-center gap-3 py-3">
+            <ul className="mt-4 grid gap-x-8 xl:grid-cols-2">
+              {feed.slice(0, 6).map((p) => (
+                <li key={p.id} className="flex items-center gap-3 border-t border-snow/[0.06] py-3 first:border-t-0 xl:[&:nth-child(2)]:border-t-0">
                   <span className="sx-thumb h-11 w-11 rounded-2xl">
                     {p.image_url
                       ? <Image src={p.image_url} alt="" width={44} height={44} className="h-full w-full object-cover" />
@@ -103,7 +103,7 @@ export default function BuyerOverview({ orders, feed, following, actions }: {
           )}
         </Panel>
 
-        <Panel title="Shipment tracking" action={tracked && orderHref(tracked.id) ? <ViewAll href={orderHref(tracked.id)!}>Open order</ViewAll> : undefined} className="xl:col-span-5">
+        <Panel title="Shipment tracking" action={tracked && orderHref(tracked.id) ? <ViewAll href={orderHref(tracked.id)!}>Open order</ViewAll> : undefined} className="lg:col-span-2 xl:col-span-1">
           {tracked ? (
             <>
               <p className="mt-4 truncate text-sm text-neutral-700">{tracked.product_title}</p>

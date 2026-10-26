@@ -61,7 +61,7 @@ export default async function SupplierOrderPage({ params }: { params: Promise<{ 
   return (
     <>
       <DashboardHeader profile={profile} />
-      <main className="mx-auto max-w-5xl px-4 py-10 sm:px-6 lg:px-8">
+      <main className="page-wide py-10">
         <Link href="/supplier/orders" className="inline-flex items-center gap-1 text-sm text-neutral-600 hover:text-neutral-900"><ArrowLeft className="h-4 w-4" aria-hidden /> Orders</Link>
         <div className="mt-4 flex flex-wrap items-start justify-between gap-3 border-b border-neutral-200 pb-6">
           <div className="min-w-0">

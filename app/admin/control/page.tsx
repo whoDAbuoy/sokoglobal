@@ -78,7 +78,7 @@ export default async function ControlPage({ searchParams }: { searchParams: Prom
   return (
     <>
       <DashboardHeader profile={profile} />
-      <main className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
+      <main className="page-wide py-10">
         <p className="eyebrow">Internal · {superAdmin ? 'Super admin' : 'Admin'}</p>
         <h1 className="mt-2 flex items-center gap-2 text-3xl font-semibold text-neutral-900"><Gauge className="h-7 w-7 text-neutral-500" aria-hidden /> Control room</h1>
         <p className="mt-1 text-sm text-neutral-600">Platform switches, escrow and order overrides, and the audit trail. Every change here is recorded with who, when and from which IP.</p>

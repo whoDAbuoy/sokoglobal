@@ -116,7 +116,7 @@ export default async function SupportInbox({ searchParams }: {
     <>
       <DashboardHeader profile={profile} />
       <InboxRealtime subjects={subjects} />
-      <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+      <main className="page-wide py-6">
         <div className="card grid overflow-hidden lg:h-[calc(100vh-9rem)] lg:min-h-[36rem] lg:grid-cols-[13rem_20rem_minmax(0,1fr)]">
 
           {/* Column 1: mailboxes + labels (horizontal chips below lg) */}

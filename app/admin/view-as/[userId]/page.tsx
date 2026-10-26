@@ -71,7 +71,7 @@ export default async function ViewAsPage({ params }: { params: Promise<{ userId:
   return (
     <>
       <DashboardHeader profile={profile} />
-      <main className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
+      <main className="page-wide py-10">
         <Link href="/admin/users" className="inline-flex items-center gap-1 text-sm text-neutral-600 hover:text-neutral-900"><ArrowLeft className="h-4 w-4" aria-hidden /> Users</Link>
 
         <div role="note" className="mt-4 flex items-start gap-2.5 rounded-xl border border-blue-300 bg-blue-50 px-4 py-3 text-sm text-blue-900 dark:border-cyan-400/30 dark:bg-cyan-400/10 dark:text-cyan-100">

@@ -85,7 +85,7 @@ export default async function FinancialsPage() {
   return (
     <>
       <DashboardHeader profile={profile} />
-      <main className="relative mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+      <main className="page-wide relative py-8">
         <div aria-hidden className="ambient-glow -z-10 -top-10 left-1/3 h-80 w-80 bg-blue-600/10" />
         <div className="glass-card flex flex-wrap items-end justify-between gap-6 p-6">
           <div>

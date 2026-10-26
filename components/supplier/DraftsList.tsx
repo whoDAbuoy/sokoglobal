@@ -36,7 +36,7 @@ export default function DraftsList({ drafts }: { drafts: DraftItem[] }) {
   }
 
   return (
-    <ul className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+    <ul className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
       {shown.map((d) => {
         const photosReady = d.photo_count >= MIN_PHOTOS;
         return (

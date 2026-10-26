@@ -234,6 +234,8 @@
 .sellsy .glow-hover::before { background: radial-gradient(240px circle at var(--glow-x, 50%) var(--glow-y, 0%), rgb(90 152 149 / 0.16), transparent 70%); }
 
 @layer components {
+  /* Portal page container: wide (1600 px) so modular cards use desktop screens; header and pages share it. */
+  .page-wide { @apply mx-auto w-full max-w-[1600px] px-4 sm:px-6 lg:px-10; }
   /* Modular card: charcoal, hairline rim, large radius. */
   .sx-card { @apply rounded-3xl border border-snow/5 bg-[#121212]/90 backdrop-blur-xl backdrop-saturate-150; }
   /* Card heading row: title left, quiet action (View all / select) right. */

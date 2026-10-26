@@ -181,7 +181,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
 
       {/* Modular overview over the live mint waves (Sellsy layout) */}
       <div className="relative">
-        <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8 lg:py-12">
+        <div className="page-wide py-10 lg:py-12">
           <p className="eyebrow">Overview</p>
           <h1 className="mt-2 text-3xl font-normal tracking-tight text-neutral-900 sm:text-4xl">Welcome back, {profile.full_name.split(' ')[0]}</h1>
           <div className="mt-6"><EscrowProtectionBanner /></div>
@@ -204,7 +204,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         </div>
       </div>
 
-      <main className="mx-auto max-w-7xl space-y-20 px-4 pb-14 pt-6 sm:px-6 lg:px-8">
+      <main className="page-wide space-y-20 pb-14 pt-6">
         {featuredSlides.length > 0 && <FeaturedCarousel slides={featuredSlides} />}
 
         {categoryTiles.length > 1 && (
@@ -221,7 +221,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
               subtitle="New Trial Batches from the suppliers you follow, newest first."
               aside={<Link href="/dashboard/discover" className="pill border-neutral-300 text-neutral-800 hover:border-neutral-900">Find suppliers <ArrowRight className="h-3.5 w-3.5" aria-hidden /></Link>} />
             {feed.length > 0 ? (
-              <div className="mt-8 grid gap-x-6 gap-y-12 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="mt-8 grid gap-x-6 gap-y-12 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
                 {feed.map((p) => <TrialBatchCard key={`f-${p.id}`} product={p} />)}
               </div>
             ) : (
@@ -255,7 +255,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
               </div>
             }
           />
-          <div className="mt-8 grid gap-x-6 gap-y-12 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="mt-8 grid gap-x-6 gap-y-12 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
             {shownProducts.map((p) => <TrialBatchCard key={p.id} product={p} />)}
           </div>
         </section>
@@ -267,7 +267,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
             title="Trend Pools"
             subtitle="Team up with other boutiques to buy in bulk and split volumetric shipping costs."
           />
-          <div className="mt-8 grid gap-x-6 gap-y-12 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="mt-8 grid gap-x-6 gap-y-12 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
             {viewPools.map((p) => <TrendPoolCard key={p.id} pool={p} />)}
           </div>
         </section>

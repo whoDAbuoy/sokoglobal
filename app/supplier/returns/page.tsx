@@ -42,7 +42,7 @@ export default async function SupplierReturnsPage() {
   return (
     <>
       <DashboardHeader profile={profile} />
-      <main className="mx-auto max-w-7xl px-4 pb-16 pt-8 sm:px-6 lg:px-8">
+      <main className="page-wide pb-16 pt-8">
         <PageHead eyebrow="After-sales" title="Returns & disputes">
           Orders a buyer disputed, plus refunded and cancelled ones. Disputed orders stay in escrow while SokoGlobal reviews them.
         </PageHead>

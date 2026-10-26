@@ -60,7 +60,7 @@ export default async function TrackingPage({ params }: { params: Promise<{ id: s
   return (
     <>
       <DashboardHeader profile={profile} />
-      <main className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
+      <main className="page-wide py-10">
         <Link href="/admin/orders" className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-800">
           <ArrowLeft className="h-4 w-4" aria-hidden /> Shipments
         </Link>

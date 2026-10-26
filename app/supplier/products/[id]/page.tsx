@@ -19,7 +19,7 @@ export default async function ProductMediaPage({ params }: { params: Promise<{ i
   if (!product || product.supplier_id !== user.id) notFound();
 
   return (
-    <main className="mx-auto max-w-4xl px-4 py-10 sm:px-6">
+    <main className="page-wide py-10">
       <Link href="/supplier" className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-800"><ArrowLeft className="h-4 w-4" /> Catalogue</Link>
       <h1 className="mt-4 text-3xl font-semibold text-neutral-900">{product.title}</h1>
       <p className="mt-1 text-sm text-slate-500">Step 2 of 2 — visual proof</p>

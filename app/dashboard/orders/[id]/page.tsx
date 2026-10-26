@@ -103,7 +103,7 @@ export default async function OrderPage({ params, searchParams }: {
   return (
     <>
       <DashboardHeader profile={profile} />
-      <main className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
+      <main className="page-wide py-10">
         <Link href="/dashboard/orders" className="inline-flex items-center gap-1 text-sm text-neutral-500 transition-colors hover:text-neutral-900">
           <ArrowLeft className="h-4 w-4" /> My Orders
         </Link>

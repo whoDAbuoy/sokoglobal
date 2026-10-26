@@ -68,7 +68,7 @@ export default async function CheckoutPage({ params, searchParams }: {
   return (
     <>
       <DashboardHeader profile={profile} />
-      <main className="relative mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
+      <main className="page-wide relative py-10">
         <div aria-hidden className="ambient-glow -z-10 right-0 top-40 h-80 w-80 bg-blue-600/10" />
         <Link href="/dashboard" className="inline-flex items-center gap-1 text-sm text-neutral-500 transition-colors hover:text-neutral-900">
           <ArrowLeft className="h-4 w-4" /> Continue browsing

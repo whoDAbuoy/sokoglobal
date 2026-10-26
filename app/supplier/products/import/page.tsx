@@ -21,7 +21,7 @@ export default async function ImportPage() {
   return (
     <>
       <DashboardHeader profile={profile} />
-      <main className="mx-auto max-w-4xl px-4 py-10 sm:px-6">
+      <main className="page-wide py-10">
         <Link href="/supplier" className="inline-flex items-center gap-1 text-sm text-neutral-600 hover:text-neutral-900"><ArrowLeft className="h-4 w-4" aria-hidden /> Catalogue</Link>
         <h1 className="mt-4 text-3xl font-semibold text-neutral-900">Bulk import listings</h1>
         <p className="mt-1 text-sm text-neutral-600">

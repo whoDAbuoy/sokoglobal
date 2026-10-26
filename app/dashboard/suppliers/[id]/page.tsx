@@ -50,7 +50,7 @@ export default async function SupplierProfilePage({ params }: { params: Promise<
   return (
     <>
       <DashboardHeader profile={profile} />
-      <main className="relative mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
+      <main className="page-wide relative py-8">
         <div aria-hidden className="ambient-glow -top-10 left-1/4 -z-10 h-72 w-72 bg-blue-600/10" />
         <Link href={back} className="inline-flex items-center gap-1 text-sm text-neutral-600 hover:text-neutral-900"><ArrowLeft className="h-4 w-4" aria-hidden /> Catalogue</Link>
 
@@ -85,7 +85,7 @@ export default async function SupplierProfilePage({ params }: { params: Promise<
               No live listings right now.{followsAvailable ? ' Follow this supplier to see new ones on your dashboard.' : ''}
             </p>
           ) : (
-            <div className="mt-6 grid gap-x-6 gap-y-12 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="mt-6 grid gap-x-6 gap-y-12 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
               {products.map((p) => <TrialBatchCard key={p.id} product={p} />)}
             </div>
           )}

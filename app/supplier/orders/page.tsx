@@ -62,7 +62,7 @@ export default async function SupplierOrdersPage() {
   return (
     <>
       <DashboardHeader profile={profile} />
-      <main className="mx-auto max-w-7xl px-4 pb-16 pt-8 sm:px-6 lg:px-8">
+      <main className="page-wide pb-16 pt-8">
         <PageHead eyebrow="Fulfilment" title="Orders to fulfil"
           actions={<Link href="/supplier#pipeline" className="btn-secondary">All orders</Link>}>
           Paid orders waiting for dispatch, grouped by listing. Every order here is confirmed by Paystack or M-Pesa and held in escrow;
