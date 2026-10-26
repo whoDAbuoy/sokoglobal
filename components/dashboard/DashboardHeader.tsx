@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import {
   BadgeCheck, Bell, ClipboardCheck, Compass, FileCheck2, Headphones, Heart, LayoutDashboard, LogOut, MessageSquare, Package,
-  PackagePlus, ShieldCheck, ShieldHalf, ShoppingBag, Store, Truck, Undo2, UserCog, Users, Gauge, LayoutGrid, FileQuestion, Landmark, FilePen, type LucideIcon,
+  PackagePlus, ShieldCheck, ShieldHalf, ShoppingBag, Store, Truck, Undo2, UserCog, Users, Gauge, LayoutGrid, FileQuestion, Landmark, FilePen, BarChart3, Boxes, Receipt, RotateCcw, type LucideIcon,
 } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
@@ -18,7 +18,10 @@ import MobileNav from '@/components/navigation/MobileNav';
 const ADMIN_NAV: [string, string][] = [['Overview', '/admin'], ['Review queue', '/admin/review'], ['Catalogue', '/admin/products'], ['Shipments', '/admin/orders'], ['Supplier KYC', '/admin/kyc'], ['Users', '/admin/users'], ['Support', '/admin/support']];
 const NAV: Record<Profile['role'], [string, string][]> = {
   importer: [['Discover', '/dashboard'], ['Catalog', '/dashboard/discover'], ['RFQs', '/dashboard/rfqs'], ['Trend Pools', '/dashboard#pools'], ['Messages', '/dashboard/messages']],
-  supplier: [['Catalogue', '/supplier'], ['Drafts', '/supplier/drafts'], ['Orders', '/supplier/orders'], ['RFQs', '/supplier/rfqs'], ['Messages', '/supplier/messages'], ['New product', '/supplier/products/new'], ['Verification', '/supplier/verification']],
+  // Sellsy-style supplier tabs: the seven pill sections first, then the portal's working pages.
+  supplier: [['Overview', '/supplier'], ['Sales', '/supplier#sales'], ['Analytics', '/supplier#analytics'], ['Products', '/supplier/products'],
+    ['Inventory', '/supplier/inventory'], ['Orders', '/supplier/orders'], ['Returns', '/supplier/returns'], ['Drafts', '/supplier/drafts'],
+    ['RFQs', '/supplier/rfqs'], ['Messages', '/supplier/messages'], ['Verification', '/supplier/verification']],
   admin: ADMIN_NAV,
   // Super admins also run the chat center (every conversation + direct support, migration 025) and pricing (026).
   super_admin: [...ADMIN_NAV, ['Messages', '/admin/messages'], ['Financials', '/admin/financials']],
@@ -39,6 +42,7 @@ const NAV_ICON: Record<string, LucideIcon> = {
   Verification: FileCheck2, Overview: LayoutDashboard, 'Review queue': ClipboardCheck, Shipments: Truck,
   'Supplier KYC': BadgeCheck, Users: UserCog, Support: Headphones, Catalog: LayoutGrid, Control: Gauge, Admin: ShieldHalf,
   'My portal': Undo2, Orders: Truck, RFQs: FileQuestion, Financials: Landmark, Drafts: FilePen,
+  Sales: Receipt, Analytics: BarChart3, Products: Store, Inventory: Boxes, Returns: RotateCcw,
 };
 
 /** The link for the current page: the longest href the path sits under (so /supplier/drafts marks Drafts, not Catalogue). */
@@ -57,12 +61,14 @@ export default function DashboardHeader({ profile }: { profile: Profile }) {
   const level = adminLevel(profile);
   const items = navLinks(profile, pathname);
   const current = activeHref(items.map(([, href]) => href), pathname);
+  // Inside the supplier portal (always dark) the sections are Sellsy pill tabs: white active pill, no icons.
+  const pills = pathname === '/supplier' || pathname.startsWith('/supplier/');
   const links = items.map(([label, href]) => {
-    const Icon = NAV_ICON[label];
+    const Icon = pills ? undefined : NAV_ICON[label];
     const active = href === current;
     return (
     <Link key={label} href={href} aria-current={active ? 'page' : undefined}
-      className={`group/nav press inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-3 py-1.5 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${active
+      className={pills ? 'sx-tab press' : `group/nav press inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-3 py-1.5 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${active
         ? 'bg-neutral-900/[0.06] font-medium text-neutral-900 dark:bg-snow/10'
         : 'text-neutral-600 hover:bg-neutral-900/[0.04] hover:text-neutral-900 dark:hover:bg-snow/[0.06]'}`}>
       {Icon && <Icon className={`h-4 w-4 transition-colors group-hover/nav:text-blue-500 ${active ? 'text-blue-600 dark:text-cyan-400' : 'text-neutral-400'}`} strokeWidth={1.75} aria-hidden />}
@@ -160,7 +166,12 @@ export default function DashboardHeader({ profile }: { profile: Profile }) {
       {/* App-style layout at every width: the section links always get their own scrollable pill row, so the
           account controls above never share space with them (no overlap, whatever the role or link count). */}
       <div className="border-t border-black/[0.06] dark:border-snow/[0.08]">
-        <nav aria-label="Sections" className="no-scrollbar mx-auto flex max-w-7xl gap-1 overflow-x-auto px-2.5 py-1.5 sm:px-4 lg:px-6">{links}</nav>
+        <nav aria-label="Sections" className={pills
+          // Supplier pills sit centred (w-max + mx-auto) and still scroll sideways when they don't fit.
+          ? 'no-scrollbar mx-auto max-w-7xl overflow-x-auto px-2.5 py-2.5 sm:px-4 lg:px-6'
+          : 'no-scrollbar mx-auto flex max-w-7xl gap-1 overflow-x-auto px-2.5 py-1.5 sm:px-4 lg:px-6'}>
+          {pills ? <div className="mx-auto flex w-max gap-1.5">{links}</div> : links}
+        </nav>
       </div>
     </header>
     {/* Outside <header>: its backdrop-filter would make it the containing block for the fixed dock. */}
