@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import {
   BadgeCheck, Bell, ClipboardCheck, Compass, FileCheck2, Headphones, Heart, LayoutDashboard, LogOut, MessageSquare, Package,
-  PackagePlus, ShieldCheck, ShieldHalf, ShoppingBag, Store, Truck, Undo2, UserCog, Users, Gauge, LayoutGrid, FileQuestion, Landmark, FilePen, BarChart3, Boxes, Receipt, RotateCcw, UserPen, type LucideIcon,
+  PackagePlus, ShieldCheck, ShieldHalf, ShoppingBag, Store, Truck, Undo2, UserCog, Users, Gauge, LayoutGrid, FileQuestion, Landmark, FilePen, BarChart3, Boxes, Receipt, RotateCcw, UserCheck, UserPen, type LucideIcon,
 } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
@@ -18,7 +18,7 @@ import MobileNav from '@/components/navigation/MobileNav';
 
 const ADMIN_NAV: [string, string][] = [['Overview', '/admin'], ['Review queue', '/admin/review'], ['Catalogue', '/admin/products'], ['Shipments', '/admin/orders'], ['Supplier KYC', '/admin/kyc'], ['Users', '/admin/users'], ['Support', '/admin/support']];
 const NAV: Record<Profile['role'], [string, string][]> = {
-  importer: [['Discover', '/dashboard'], ['Catalog', '/dashboard/discover'], ['RFQs', '/dashboard/rfqs'], ['Trend Pools', '/dashboard#pools'], ['Messages', '/dashboard/messages']],
+  importer: [['Discover', '/dashboard'], ['Catalog', '/dashboard/discover'], ['RFQs', '/dashboard/rfqs'], ['Trend Pools', '/dashboard#pools'], ['Following', '/dashboard/following'], ['Messages', '/dashboard/messages']],
   // Sellsy-style supplier tabs: the seven pill sections first, then the portal's working pages.
   supplier: [['Overview', '/supplier'], ['Sales', '/supplier#sales'], ['Analytics', '/supplier#analytics'], ['Products', '/supplier/products'],
     ['Inventory', '/supplier/inventory'], ['Orders', '/supplier/orders'], ['Returns', '/supplier/returns'], ['Drafts', '/supplier/drafts'],
@@ -43,7 +43,7 @@ const NAV_ICON: Record<string, LucideIcon> = {
   Verification: FileCheck2, Overview: LayoutDashboard, 'Review queue': ClipboardCheck, Shipments: Truck,
   'Supplier KYC': BadgeCheck, Users: UserCog, Support: Headphones, Catalog: LayoutGrid, Control: Gauge, Admin: ShieldHalf,
   'My portal': Undo2, Orders: Truck, RFQs: FileQuestion, Financials: Landmark, Drafts: FilePen,
-  Sales: Receipt, Analytics: BarChart3, Products: Store, Inventory: Boxes, Returns: RotateCcw,
+  Following: UserCheck, Sales: Receipt, Analytics: BarChart3, Products: Store, Inventory: Boxes, Returns: RotateCcw,
 };
 
 /** The link for the current page: the longest href the path sits under (so /supplier/drafts marks Drafts, not Catalogue). */

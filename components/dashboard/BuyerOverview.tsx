@@ -178,7 +178,7 @@ export default function BuyerOverview({ profile, orders, feed, following, rfqs, 
           </Panel>
         </div>
 
-        <Panel title="From suppliers you follow" action={<ViewAll href={following === null ? '/dashboard/discover' : '/dashboard#following'} />}>
+        <Panel title="From suppliers you follow" action={<ViewAll href={following === null ? '/dashboard/discover' : '/dashboard/following'} />}>
           {feed.length > 0 ? (
             // Horizontal carousel: swipe / scroll, snaps per card.
             <ul className="no-scrollbar -mx-5 mt-4 flex snap-x snap-mandatory gap-4 overflow-x-auto px-5 pb-1 sm:-mx-6 sm:px-6" aria-label="Newest listings from suppliers you follow">

@@ -28,5 +28,6 @@ export async function setFollow(supplierId: string, follow: boolean): Promise<Fo
   revalidatePath(`/dashboard/suppliers/${supplierId}`);
   revalidatePath(`/dashboard/users/${supplierId}`);   // follower count on the public profile
   revalidatePath('/dashboard');
+  revalidatePath('/dashboard/following');
   return { ok: true, following: follow };
 }
