@@ -96,7 +96,7 @@ export default function DashboardHeader({ profile }: { profile: Profile }) {
   return (
     <>
     <header className="glass-nav">
-      <div className="mx-auto flex h-14 w-full max-w-[1600px] items-center justify-between gap-3 px-3 sm:h-16 sm:px-6 lg:px-10">
+      <div className="mx-auto flex h-14 w-full max-w-[1920px] items-center justify-between gap-3 px-3 sm:h-16 sm:px-8 lg:px-12">
         <div className="flex min-w-0 flex-1 items-center">
           <Link href="/" aria-label="SokoGlobal home" className="press flex shrink-0 items-center gap-2 rounded-full">
             <ShieldCheck className="h-5 w-5 text-blue-600 dark:text-cyan-400" strokeWidth={2.25} aria-hidden />
@@ -169,8 +169,8 @@ export default function DashboardHeader({ profile }: { profile: Profile }) {
       <div className="border-t border-black/[0.06] dark:border-snow/[0.08]">
         <nav aria-label="Sections" className={pills
           // Supplier pills sit centred (w-max + mx-auto) and still scroll sideways when they don't fit.
-          ? 'no-scrollbar mx-auto max-w-[1600px] overflow-x-auto px-2.5 py-2.5 sm:px-4 lg:px-8'
-          : 'no-scrollbar mx-auto flex max-w-[1600px] gap-1 overflow-x-auto px-2.5 py-1.5 sm:px-4 lg:px-8'}>
+          ? 'no-scrollbar mx-auto max-w-[1920px] overflow-x-auto px-2.5 py-2.5 sm:px-6 lg:px-10'
+          : 'no-scrollbar mx-auto flex max-w-[1920px] gap-1 overflow-x-auto px-2.5 py-1.5 sm:px-6 lg:px-10'}>
           {pills ? <div className="mx-auto flex w-max gap-1.5">{links}</div> : links}
         </nav>
       </div>

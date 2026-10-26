@@ -88,3 +88,31 @@ export function orderPill(status: EscrowStatus): { label: string; tone: PillTone
     default: return { label: String(status).replace(/_/g, ' '), tone: 'muted' };
   }
 }
+
+export const ESCROW_STAGES = ['Payment received', 'Customs cleared', 'Delivered', 'Funds released'] as const;
+export interface EscrowStage { label: (typeof ESCROW_STAGES)[number]; count: number; cents: number }
+
+/**
+ * Where the buyer's money sits along the escrow journey (Payment received → Customs cleared → Delivered →
+ * Funds released), as order counts and order value per stage. In-transit orders count as "Payment received"
+ * (paid, not yet cleared). Disputed, refunded and cancelled orders are left out.
+ */
+export function escrowPipeline(orders: OrderRow[]): EscrowStage[] {
+  const stage = (s: EscrowStatus): number | null => {
+    switch (s) {
+      case 'deposit_paid': case 'funded': case 'in_transit': return 0;
+      case 'customs_cleared': return 1;
+      case 'delivered_pending_verification': return 2;
+      case 'released': return 3;
+      default: return null;
+    }
+  };
+  const out: EscrowStage[] = ESCROW_STAGES.map((label) => ({ label, count: 0, cents: 0 }));
+  for (const o of orders) {
+    const i = stage(o.escrow_status);
+    if (i === null) continue;
+    out[i].count += 1;
+    out[i].cents += o.total_cents ?? 0;
+  }
+  return out;
+}

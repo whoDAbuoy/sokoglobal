@@ -194,9 +194,10 @@
   color-scheme: dark;
   /* No fill here: AmbientBackdrop paints the #050505 canvas plus the mint waves and globe behind this subtree. */
 }
-/* Smoked charcoal glass (#121212 at 90%, xl blur): AA text over the brightest wave, with the waves and globe peeking through. */
+/* Deep glass (gray-950 at 70%, xl blur, white/10 rim): the blur keeps text readable over the brightest wave while the
+   waves and globe show through. */
 .sellsy .card, .sellsy .glass-card, .sellsy .glass-surface, .sellsy .frost-card {
-  border-color: rgb(255 255 255 / 0.05); background-color: rgb(18 18 18 / 0.9); box-shadow: inset 0 1px 0 0 rgb(255 255 255 / 0.04);
+  border-color: rgb(255 255 255 / 0.1); background-color: rgb(3 7 18 / 0.7); box-shadow: inset 0 1px 0 0 rgb(255 255 255 / 0.04);
   -webkit-backdrop-filter: blur(24px) saturate(140%); backdrop-filter: blur(24px) saturate(140%);
 }
 .sellsy .card, .sellsy .glass-card { border-radius: 1.5rem; }
@@ -234,10 +235,10 @@
 .sellsy .glow-hover::before { background: radial-gradient(240px circle at var(--glow-x, 50%) var(--glow-y, 0%), rgb(90 152 149 / 0.16), transparent 70%); }
 
 @layer components {
-  /* Portal page container: wide (1600 px) so modular cards use desktop screens; header and pages share it. */
-  .page-wide { @apply mx-auto w-full max-w-[1600px] px-4 sm:px-6 lg:px-10; }
+  /* Portal page container: edge-to-edge up to 1920 px so modular cards use wide monitors; header and pages share it. */
+  .page-wide { @apply mx-auto w-full max-w-[1920px] px-4 sm:px-8 lg:px-12; }
   /* Modular card: charcoal, hairline rim, large radius. */
-  .sx-card { @apply rounded-3xl border border-snow/5 bg-[#121212]/90 backdrop-blur-xl backdrop-saturate-150; }
+  .sx-card { @apply rounded-3xl border border-snow/10 bg-gray-950/70 backdrop-blur-xl backdrop-saturate-150; }
   /* Card heading row: title left, quiet action (View all / select) right. */
   .sx-card-head { @apply flex items-center justify-between gap-3; }
   .sx-card-title { @apply text-lg font-medium tracking-tight text-neutral-900; }

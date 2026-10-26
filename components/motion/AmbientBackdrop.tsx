@@ -43,7 +43,7 @@ export default function AmbientBackdrop() {
         </>
       )}
       <WaveBackground band={0.62} intensity={mint ? 0.6 : 0.75} speed={0.8} maxFps={30} fade={false} palette={mint ? 'mint' : 'electric'} className="opacity-90" />
-      <div className={clsx('absolute -bottom-[28vh] -right-[18vh] hidden aspect-square w-[78vh] dark:block', mint ? 'opacity-50' : 'opacity-40')}>
+      <div className={clsx('absolute -bottom-[28vh] -right-[18vh] hidden aspect-square w-[clamp(32rem,78vh,52vw)] dark:block', mint ? 'opacity-50' : 'opacity-40')}>
         <Globe className="h-full w-full" interactive={false} labels={false} maxFps={30} focus={{ lat: 8, lon: 24 }} palette={mint ? 'mint' : 'electric'} />
       </div>
     </div>
