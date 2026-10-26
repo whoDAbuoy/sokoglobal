@@ -61,7 +61,7 @@ export default async function AdminProductsPage({ searchParams }: {
   return (
     <>
       <DashboardHeader profile={profile} />
-      <main className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
+      <main className="page-wide py-10">
         <p className="eyebrow">Internal · Moderation</p>
         <div className="mt-2 flex flex-wrap items-end justify-between gap-3">
           <h1 className="text-3xl font-semibold text-neutral-900">Catalogue</h1>

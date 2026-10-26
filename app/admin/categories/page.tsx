@@ -29,7 +29,7 @@ export default async function CategoriesPage() {
   return (
     <>
       <DashboardHeader profile={profile} />
-      <main className="mx-auto max-w-5xl px-4 py-10 sm:px-6 lg:px-8">
+      <main className="page-wide py-10">
         <Link href="/admin/products" className="inline-flex items-center gap-1 text-sm text-neutral-600 hover:text-neutral-900"><ArrowLeft className="h-4 w-4" aria-hidden /> Catalogue</Link>
         <h1 className="mt-3 flex items-center gap-2 text-3xl font-semibold text-neutral-900"><FolderTree className="h-7 w-7 text-neutral-500" aria-hidden /> Categories</h1>
         <p className="mt-1 text-sm text-neutral-600">The tree suppliers list under and buyers browse. Every change is written to the audit log.</p>

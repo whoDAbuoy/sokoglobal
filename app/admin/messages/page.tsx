@@ -22,7 +22,7 @@ export default async function AdminMessagesPage({ searchParams }: { searchParams
   return (
     <>
       <DashboardHeader profile={profile} />
-      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+      <main className="page-wide py-8">
         <p className="eyebrow">Internal · Support</p>
         <h1 className="mt-2 text-2xl font-semibold text-neutral-900">Messages</h1>
         <p className="mb-5 mt-1 text-sm text-neutral-600">Every conversation on SokoGlobal. Messages you send are marked “System / Admin message” and the recipients are notified.</p>

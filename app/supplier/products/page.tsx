@@ -44,7 +44,7 @@ export default async function SupplierProductsPage() {
   return (
     <>
       <DashboardHeader profile={profile} />
-      <main className="mx-auto max-w-7xl px-4 pb-16 pt-8 sm:px-6 lg:px-8">
+      <main className="page-wide pb-16 pt-8">
         <PageHead eyebrow="Catalogue" title={<>Products <span className="sx-pill sx-pill-muted text-sm">{products.length}</span></>}
           actions={<>
             {drafts > 0 && <Link href="/supplier/drafts" className="btn-secondary"><FilePen className="h-4 w-4" aria-hidden /> Drafts ({drafts})</Link>}

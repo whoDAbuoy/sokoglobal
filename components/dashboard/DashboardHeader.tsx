@@ -96,7 +96,7 @@ export default function DashboardHeader({ profile }: { profile: Profile }) {
   return (
     <>
     <header className="glass-nav">
-      <div className="mx-auto flex h-14 max-w-7xl items-center justify-between gap-3 px-3 sm:h-16 sm:px-6 lg:px-8">
+      <div className="mx-auto flex h-14 w-full max-w-[1600px] items-center justify-between gap-3 px-3 sm:h-16 sm:px-6 lg:px-10">
         <div className="flex min-w-0 flex-1 items-center">
           <Link href="/" aria-label="SokoGlobal home" className="press flex shrink-0 items-center gap-2 rounded-full">
             <ShieldCheck className="h-5 w-5 text-blue-600 dark:text-cyan-400" strokeWidth={2.25} aria-hidden />
@@ -169,8 +169,8 @@ export default function DashboardHeader({ profile }: { profile: Profile }) {
       <div className="border-t border-black/[0.06] dark:border-snow/[0.08]">
         <nav aria-label="Sections" className={pills
           // Supplier pills sit centred (w-max + mx-auto) and still scroll sideways when they don't fit.
-          ? 'no-scrollbar mx-auto max-w-7xl overflow-x-auto px-2.5 py-2.5 sm:px-4 lg:px-6'
-          : 'no-scrollbar mx-auto flex max-w-7xl gap-1 overflow-x-auto px-2.5 py-1.5 sm:px-4 lg:px-6'}>
+          ? 'no-scrollbar mx-auto max-w-[1600px] overflow-x-auto px-2.5 py-2.5 sm:px-4 lg:px-8'
+          : 'no-scrollbar mx-auto flex max-w-[1600px] gap-1 overflow-x-auto px-2.5 py-1.5 sm:px-4 lg:px-8'}>
           {pills ? <div className="mx-auto flex w-max gap-1.5">{links}</div> : links}
         </nav>
       </div>
@@ -178,7 +178,7 @@ export default function DashboardHeader({ profile }: { profile: Profile }) {
     {/* Profile completion (migration 031): traders without a bio are asked to add one. null = not written yet;
         undefined = column not there yet, so nothing shows before the migration runs. */}
     {profile.bio === null && !roleAdminLevel(profile.role) && !pathname.startsWith('/dashboard/settings') && (
-      <div role="note" className="mx-auto mt-3 flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 sm:px-6 lg:px-8">
+      <div role="note" className="page-wide mt-3 flex flex-wrap items-center justify-between gap-3">
         <p className="flex w-full flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#5a9895]/30 bg-[#5a9895]/10 px-4 py-3 text-sm text-neutral-800">
           <span className="flex items-center gap-2"><UserPen className="h-4 w-4 shrink-0 text-[#8fd3cc]" aria-hidden /> Complete your profile: add a short bio so suppliers and buyers know who you are.</span>
           <Link href="/dashboard/settings?tab=profile" className="sx-pill sx-pill-mint press">Add bio</Link>

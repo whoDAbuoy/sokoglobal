@@ -51,7 +51,7 @@ export default async function SupplierDraftsPage() {
   return (
     <>
       <DashboardHeader profile={profile} />
-      <main className="mx-auto max-w-7xl px-4 pb-16 pt-8 sm:px-6 lg:px-8">
+      <main className="page-wide pb-16 pt-8">
         <PageHead eyebrow="Trial Batches" title={<>Drafts {drafts.length > 0 && <span className="sx-pill sx-pill-muted text-sm">{drafts.length}</span>}</>}
           actions={<Link href="/supplier/products/new" className="btn-primary"><Plus className="h-4 w-4" aria-hidden /> New product</Link>}>
           Listings that aren&apos;t submitted yet. Finish one and submit it for logistics quoting and photo review, or delete the ones you no longer need.

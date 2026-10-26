@@ -62,7 +62,7 @@ export default async function IdentityQueue({ profile, supabase }: { profile: Pr
   return (
     <>
       <DashboardHeader profile={profile} />
-      <main className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
+      <main className="page-wide py-10">
         <p className="eyebrow">Internal · Compliance</p>
         <KycTabs active="identity" />
         <h1 className="mt-2 text-3xl font-semibold text-neutral-900">Identity verifications</h1>

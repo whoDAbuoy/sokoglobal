@@ -58,7 +58,7 @@ export default async function UserProfilePage({ params }: { params: Promise<{ id
   return (
     <>
       <DashboardHeader profile={profile} />
-      <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
+      <main className="page-wide py-8">
         <Link href={back} className="inline-flex items-center gap-1 text-sm text-neutral-600 hover:text-neutral-900"><ArrowLeft className="h-4 w-4" aria-hidden /> Back</Link>
 
         <div className="mt-4 grid gap-4 lg:grid-cols-12">
@@ -116,7 +116,7 @@ export default async function UserProfilePage({ params }: { params: Promise<{ id
                 No live listings right now.{!isSelf ? ' Follow this supplier to see new ones on your dashboard.' : ''}
               </p>
             ) : (
-              <div className="mt-6 grid gap-x-6 gap-y-8 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="mt-6 grid gap-x-6 gap-y-8 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
                 {products.map((prod) => <TrialBatchCard key={prod.id} product={prod} />)}
               </div>
             )}

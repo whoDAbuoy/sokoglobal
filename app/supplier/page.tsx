@@ -114,7 +114,7 @@ export default async function SupplierHome() {
   return (
     <>
       <DashboardHeader profile={profile} />
-      <main className="mx-auto max-w-7xl px-4 pb-16 pt-8 sm:px-6 lg:px-8">
+      <main className="page-wide pb-16 pt-8">
         <PageHead eyebrow="Supplier" title={<>Overview {gold.kind === 'active' && <GoldBadge />}</>}
           actions={<>
             <Link href="/supplier/subscription" className="btn-secondary"><Crown className="h-4 w-4 text-yellow-300" aria-hidden /> {gold.kind === 'active' ? 'Gold membership' : 'Go Gold'}</Link>

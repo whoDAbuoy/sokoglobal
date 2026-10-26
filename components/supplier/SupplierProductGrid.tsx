@@ -9,7 +9,7 @@ import { emptyCounts, type OrderCounts } from './orderStages';
 export default function SupplierProductGrid({ products, orders }: { products: SupplierProduct[]; orders: Record<string, OrderCounts> }) {
   const [shown, hide] = useOptimistic(products, (list, id: string) => list.filter((p) => p.id !== id));
   return (
-    <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+    <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
       {shown.map((p) => {
         const counts = orders[p.id] ?? emptyCounts();
         const deletable = p.status === 'draft' && !p.deleted_at && counts.total === 0;

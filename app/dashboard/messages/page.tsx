@@ -19,7 +19,7 @@ export default async function BuyerMessagesPage({ searchParams }: { searchParams
   return (
     <>
       <DashboardHeader profile={profile} />
-      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+      <main className="page-wide py-8">
         <p className="eyebrow">Messages</p>
         <h1 className="mt-2 text-3xl font-semibold text-neutral-900">Inbox</h1>
         <MessagingHub basePath="/dashboard/messages" role="importer" initialThreadId={threadId} />

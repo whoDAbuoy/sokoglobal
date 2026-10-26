@@ -82,7 +82,7 @@ export default async function OrdersPage() {
   return (
     <>
       <DashboardHeader profile={profile} />
-      <main className="mx-auto max-w-4xl px-4 py-10 sm:px-6 lg:px-8">
+      <main className="page-wide py-10">
         <div className="flex flex-wrap items-end justify-between gap-4 border-b border-neutral-200 pb-6">
           <div>
             <p className="eyebrow">Escrow</p>

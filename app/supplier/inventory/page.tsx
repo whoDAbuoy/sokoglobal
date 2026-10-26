@@ -65,7 +65,7 @@ export default async function SupplierInventoryPage({ searchParams }: { searchPa
   return (
     <>
       <DashboardHeader profile={profile} />
-      <main className="mx-auto max-w-7xl px-4 pb-16 pt-8 sm:px-6 lg:px-8">
+      <main className="page-wide pb-16 pt-8">
         <PageHead eyebrow="Catalogue" title="Inventory"
           actions={<Link href="/supplier/products/new" className="btn-primary"><Plus className="h-4 w-4" aria-hidden /> New product</Link>}>
           Every active listing with its Trial Batch size, minimum order, goods value and landed cost.

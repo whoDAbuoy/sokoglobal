@@ -84,7 +84,7 @@ export default async function DiscoverPage({ searchParams }: { searchParams: Pro
   return (
     <>
       <DashboardHeader profile={profile} />
-      <main className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
+      <main className="page-wide py-10">
         <nav aria-label="Breadcrumb" className="flex flex-wrap items-center gap-1 text-sm text-neutral-600">
           <Link href={href({ category: null, filters: {}, ranges: {} })} className="hover:text-neutral-900">All categories</Link>
           {trail.map((c) => (
@@ -202,7 +202,7 @@ export default async function DiscoverPage({ searchParams }: { searchParams: Pro
                 <p className="mt-1 text-sm text-neutral-600">Try fewer filters, a broader category, or a different search.</p>
               </div>
             ) : (
-              <div className="mt-6 grid gap-x-6 gap-y-12 sm:grid-cols-2 xl:grid-cols-3">
+              <div className="mt-6 grid gap-x-6 gap-y-12 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
                 {shown.map((p) => <TrialBatchCard key={p.id} product={p} />)}
               </div>
             )}
