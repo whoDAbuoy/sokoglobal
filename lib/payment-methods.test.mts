@@ -2,7 +2,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  availableMethods, cryptoFeeCents, cryptoOptions, defaultMethod, explorerUrl, groupByCategory, normalizeTxHash,
+  ALL_PAYMENT_METHODS, availableMethods, cryptoFeeCents, cryptoOptions, defaultMethod, methodOptions, explorerUrl, groupByCategory, normalizeTxHash,
   parsePaymentSettings, swiftComplete, swiftFieldError, validWallet, type PaymentSettings,
 } from './payment-methods.ts';
 
@@ -72,4 +72,21 @@ test('SWIFT details: complete check and field formats', () => {
   assert.match(swiftFieldError('swift_code', 'BAD') ?? '', /8 or 11/);
   assert.match(swiftFieldError('account_number', '12') ?? '', /4–40/);
   assert.equal(swiftFieldError('routing_number', ''), null);
+});
+
+test('methodOptions: all seven channels always listed; unavailable ones disabled with a reason', () => {
+  assert.equal(ALL_PAYMENT_METHODS.length, 7);
+  const cart = methodOptions(['mpesa', 'card'], false);
+  assert.deepEqual(cart.map((o) => o.method), [...ALL_PAYMENT_METHODS]);
+  assert.deepEqual(cart.filter((o) => o.enabled).map((o) => o.method), ['mpesa', 'card']);
+  assert.match(cart.find((o) => o.method === 'swift_wire')!.reason!, /single orders only/i);
+  assert.equal(cart.find((o) => o.method === 'swift_wire')!.blocked, 'single_order');
+  assert.equal(cart.find((o) => o.method === 'paypal')!.blocked, 'unavailable');
+  assert.match(cart.find((o) => o.method === 'crypto')!.reason!, /single orders only/i);
+  assert.match(cart.find((o) => o.method === 'paypal')!.reason!, /not available/i);
+  // Wire / crypto on a cart stay disabled even if a list wrongly includes them.
+  assert.equal(methodOptions(['swift_wire', 'crypto'], false).some((o) => o.enabled), false);
+  const order = methodOptions(['swift_wire', 'crypto', 'paypal'], true);
+  assert.deepEqual(order.filter((o) => o.enabled).map((o) => o.method), ['paypal', 'swift_wire', 'crypto']);
+  assert.ok(order.filter((o) => o.enabled).every((o) => o.reason === null));
 });

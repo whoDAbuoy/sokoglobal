@@ -17,6 +17,8 @@ export const METHOD_CATEGORY: Record<PaymentMethod, PaymentCategory> = {
   mpesa: 'mobile', airtel_money: 'mobile', card: 'cards', dpo_pay: 'cards', paypal: 'global', swift_wire: 'wire', crypto: 'crypto',
 };
 const ORDER: PaymentMethod[] = ['mpesa', 'airtel_money', 'card', 'dpo_pay', 'paypal', 'swift_wire', 'crypto'];
+/** Every channel SokoGlobal supports, in picker order. */
+export const ALL_PAYMENT_METHODS: readonly PaymentMethod[] = ORDER;
 
 /** Orders at or above this go best by wire (still offered below it). */
 export const WIRE_SUGGESTED_CENTS = 500_000;
@@ -139,6 +141,23 @@ export function availableMethods(i: AvailabilityInput): PaymentMethod[] {
 export function groupByCategory(methods: readonly PaymentMethod[]): { category: PaymentCategory; methods: PaymentMethod[] }[] {
   const cats: PaymentCategory[] = ['mobile', 'cards', 'global', 'wire', 'crypto'];
   return cats.map((category) => ({ category, methods: methods.filter((m) => METHOD_CATEGORY[m] === category) })).filter((g) => g.methods.length > 0);
+}
+
+export interface MethodOption { method: PaymentMethod; enabled: boolean; blocked: 'single_order' | 'unavailable' | null; reason: string | null }
+
+/**
+ * The "Choose how to pay" list: every supported channel, always, in picker order. Channels the server did not
+ * offer for this payment stay visible but disabled with a short reason, so buyers can see what exists (and
+ * where to use it). `available` is the server's list (switched on, configured, within limits);
+ * `singleOrder` is false for cart checkouts, where wire and crypto cannot be used.
+ */
+export function methodOptions(available: readonly PaymentMethod[], singleOrder: boolean): MethodOption[] {
+  return ORDER.map((method) => {
+    const perOrder = method === 'swift_wire' || method === 'crypto';
+    if (perOrder && !singleOrder) return { method, enabled: false, blocked: 'single_order', reason: 'Single orders only: pay each order from its order page' };
+    if (available.includes(method)) return { method, enabled: true, blocked: null, reason: null };
+    return { method, enabled: false, blocked: 'unavailable', reason: 'Not available for this payment right now' };
+  });
 }
 
 /** Which method to open first: what the buyer asked for, then M-Pesa, then card, then the first available. */
