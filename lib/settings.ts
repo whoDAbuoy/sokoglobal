@@ -34,6 +34,19 @@ export function normalizePhone(input: string, countryCode: string): PhoneResult 
   return /^\+[1-9]\d{7,14}$/.test(e164) ? { ok: true, phone: e164 } : { ok: false, error: 'That doesn’t look like a full phone number.' };
 }
 
+/** Bio limits: mirror profiles_bio_len (migration 031). Required at sign-up and when saving profile details. */
+export const BIO_MIN = 20;
+export const BIO_MAX = 500;
+
+/** Trims, collapses runs of spaces (newlines kept, at most one blank line) and checks 20–500 characters. */
+export function normalizeBio(input: string): { ok: true; value: string } | { ok: false; error: string } {
+  const v = input.replace(/\r\n?/g, '\n').replace(/[ \t]+/g, ' ').replace(/ *\n */g, '\n').replace(/\n{3,}/g, '\n\n').trim();
+  if (!v) return { ok: false, error: 'Add a short bio so other traders know who you are.' };
+  if (v.length < BIO_MIN) return { ok: false, error: `Your bio needs at least ${BIO_MIN} characters.` };
+  if (v.length > BIO_MAX) return { ok: false, error: `Keep your bio under ${BIO_MAX} characters.` };
+  return { ok: true, value: v };
+}
+
 export function normalizeDesignation(input: string): { ok: true; value: string | null } | { ok: false; error: string } {
   const v = input.trim().replace(/\s+/g, ' ');
   if (!v) return { ok: true, value: null };

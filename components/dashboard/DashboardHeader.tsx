@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import {
   BadgeCheck, Bell, ClipboardCheck, Compass, FileCheck2, Headphones, Heart, LayoutDashboard, LogOut, MessageSquare, Package,
-  PackagePlus, ShieldCheck, ShieldHalf, ShoppingBag, Store, Truck, Undo2, UserCog, Users, Gauge, LayoutGrid, FileQuestion, Landmark, FilePen, BarChart3, Boxes, Receipt, RotateCcw, type LucideIcon,
+  PackagePlus, ShieldCheck, ShieldHalf, ShoppingBag, Store, Truck, Undo2, UserCog, Users, Gauge, LayoutGrid, FileQuestion, Landmark, FilePen, BarChart3, Boxes, Receipt, RotateCcw, UserPen, type LucideIcon,
 } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
@@ -175,6 +175,16 @@ export default function DashboardHeader({ profile }: { profile: Profile }) {
         </nav>
       </div>
     </header>
+    {/* Profile completion (migration 031): traders without a bio are asked to add one. null = not written yet;
+        undefined = column not there yet, so nothing shows before the migration runs. */}
+    {profile.bio === null && !roleAdminLevel(profile.role) && !pathname.startsWith('/dashboard/settings') && (
+      <div role="note" className="mx-auto mt-3 flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 sm:px-6 lg:px-8">
+        <p className="flex w-full flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#5a9895]/30 bg-[#5a9895]/10 px-4 py-3 text-sm text-neutral-800">
+          <span className="flex items-center gap-2"><UserPen className="h-4 w-4 shrink-0 text-[#8fd3cc]" aria-hidden /> Complete your profile: add a short bio so suppliers and buyers know who you are.</span>
+          <Link href="/dashboard/settings?tab=profile" className="sx-pill sx-pill-mint press">Add bio</Link>
+        </p>
+      </div>
+    )}
     {/* Outside <header>: its backdrop-filter would make it the containing block for the fixed dock. */}
     <MobileNav profile={profile} />
     </>

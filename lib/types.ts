@@ -37,6 +37,8 @@ export interface Profile {
   two_factor_enabled?: boolean;
   /** Migration 017: platform KYC ('unsubmitted' | 'pending' | 'approved' | 'rejected'). */
   kyc_status?: 'unsubmitted' | 'pending' | 'approved' | 'rejected';
+  /** Migration 031: public bio (20–500 characters). null = not written yet; absent before the migration runs. */
+  bio?: string | null;
 }
 
 export interface ProductMedia {

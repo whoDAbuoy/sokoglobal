@@ -14,6 +14,7 @@ import { IMPORTER_COUNTRIES, SUPPLIER_COUNTRIES, dialCode } from '@/lib/countrie
 import Globe from '@/components/motion/Globe';
 import WaveBackground from '@/components/motion/WaveBackground';
 import { homePathFor } from '@/lib/auth/admin-access';
+import { BIO_MAX, BIO_MIN, normalizeBio } from '@/lib/settings';
 
 type Mode = 'login' | 'signup';
 type SignupRole = Exclude<UserRole, 'admin' | 'super_admin'>;
@@ -62,6 +63,7 @@ export default function Auth({ mode }: { mode: Mode }) {
   const [fullName, setFullName] = useState('');
   const [company, setCompany] = useState('');
   const [country, setCountry] = useState('');
+  const [bio, setBio] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -117,10 +119,12 @@ export default function Auth({ mode }: { mode: Mode }) {
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
+    const bioCheck = normalizeBio(bio);
 
     if (mode === 'signup') {
       if (strength.score < 2) return setError('Use at least 10 characters with upper & lower case letters.');
       if (!country) return setError('Please select your country.');
+      if (!bioCheck.ok) return setError(bioCheck.error);
       if (!acceptTerms) return setError('Please accept the Terms and Escrow Agreement to continue.');
     }
 
@@ -139,7 +143,7 @@ export default function Auth({ mode }: { mode: Mode }) {
         password,
         options: {
           emailRedirectTo: `${window.location.origin}/auth/callback`,
-          data: { role, full_name: fullName.trim(), company_name: company.trim(), country_code: country },
+          data: { role, full_name: fullName.trim(), company_name: company.trim(), country_code: country, bio: bioCheck.ok ? bioCheck.value : '' },
         },
       });
       if (error) throw error;
@@ -271,6 +275,16 @@ export default function Auth({ mode }: { mode: Mode }) {
                           {countries.map((c) => <option key={c} value={c}>{regionNames.of(c)} ({dialCode(c)})</option>)}
                         </select>
                       </Field>
+                    </div>
+                    <div className="sm:col-span-2">
+                      <label htmlFor="bio" className="label">Short bio</label>
+                      <textarea id="bio" required minLength={BIO_MIN} maxLength={BIO_MAX} rows={3} className="input resize-y" value={bio}
+                        onChange={(e) => setBio(e.target.value)} aria-describedby="bio-hint"
+                        placeholder={role === 'supplier' ? 'What you make, where you ship from, your minimums…' : 'Your business, what you stock and where you sell…'} />
+                      <p id="bio-hint" className="mt-1 flex justify-between gap-2 text-xs text-neutral-500">
+                        <span>Shown on your public profile.</span>
+                        <span className={clsx('tabular-nums', bio.trim().length > 0 && bio.trim().length < BIO_MIN && 'text-amber-300')}>{bio.trim().length}/{BIO_MAX}</span>
+                      </p>
                     </div>
                   </div>
                 )}

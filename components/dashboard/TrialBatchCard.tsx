@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import clsx from 'clsx';
-import { AlertCircle, BadgeCheck, Check, CheckCircle2, Eye, Film, Heart, Loader2, Lock, LogIn, ShieldCheck, ShoppingBag, Smartphone, Timer } from 'lucide-react';
+import { AlertCircle, BadgeCheck, Check, CheckCircle2, Eye, Film, Heart, Loader2, Lock, LogIn, ShieldCheck, ShoppingBag, Timer } from 'lucide-react';
 import type { TrialProductView } from '@/lib/types';
 import { countryName, flag } from '@/lib/format';
 import { useCurrency } from '@/context/CurrencyContext';
@@ -23,7 +23,6 @@ import GoldBadge from '@/components/supplier/GoldBadge';
 import FollowButton from '@/components/follow/FollowButton';
 import Link from 'next/link';
 
-const MPESA_ENABLED = process.env.NEXT_PUBLIC_MPESA_ENABLED === 'true';
 const IS_DEV = process.env.NODE_ENV === 'development';
 
 export default function TrialBatchCard({ product }: { product: TrialProductView }) {
@@ -33,7 +32,6 @@ export default function TrialBatchCard({ product }: { product: TrialProductView 
   const auth = useAuth();
   const cart = useCart();
   const [state, setState] = useState<'idle' | 'loading' | 'done' | 'error'>('idle');
-  const [method, setMethod] = useState<'card' | 'mpesa'>('card');
   const [error, setError] = useState<string | null>(null);
   const [quickView, setQuickView] = useState(false);
   const [pickQty, setPickQty] = useState(1);   // quantity chosen before the product is in the cart
@@ -62,24 +60,22 @@ export default function TrialBatchCard({ product }: { product: TrialProductView 
     router.refresh();
   }
 
-  async function startTrial(pay: 'card' | 'mpesa') {
+  /** Place the order (no payment channel yet): the order page's "Pay now" offers every method that is switched on. */
+  async function placeOrder() {
     setState('loading');
-    setMethod(pay);
     setError(null);
     try {
       const res = await fetch('/api/orders', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ productId: product.id, method: pay, quantity }),
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ productId: product.id, quantity }),
       });
       const blocked = gateFromStatus(res.status, auth.profile?.role);
       if (blocked) { setServerGate(blocked); setState('idle'); return; }
       const json = await res.json();
-      if (!res.ok) throw new Error(json.error ?? 'Could not start trial');
-      // M-Pesa: the order page collects the phone number and sends the STK prompt.
-      if (pay === 'mpesa') { router.push(`/dashboard/orders/${json.order.id}?pay=mpesa`); return; }
-      // Bank Card: the order page opens Paystack's secure card form; funds land in escrow, not with the supplier.
-      router.push(`/dashboard/orders/${json.order.id}?pay=card`);
+      if (!res.ok) throw new Error(json.error ?? 'Could not place the order');
+      setState('done');
+      router.push(`/dashboard/orders/${json.order.id}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not start trial');
+      setError(err instanceof Error ? err.message : 'Could not place the order');
       setState('error');
     }
   }
@@ -127,7 +123,7 @@ export default function TrialBatchCard({ product }: { product: TrialProductView 
           </p>
           <p className="mt-1 text-neutral-600">
             {gate.kind === 'signed_out'
-              ? 'Sign in with your importer account to pay with M-Pesa or card.'
+              ? 'Sign in with your importer account to place an order.'
               : `You're signed in as ${ROLE_LABEL[gate.role]}. Trial Batches can only be bought from an importer account.`}
           </p>
           {IS_DEV && (
@@ -142,7 +138,7 @@ export default function TrialBatchCard({ product }: { product: TrialProductView 
         </div>
       ) : state === 'done' ? (
         <p className="flex items-center justify-center gap-2 rounded-md border border-emerald-200 bg-emerald-50 py-2.5 text-sm font-medium text-emerald-700">
-          <CheckCircle2 className="h-4 w-4" /> Redirecting to secure checkout…
+          <CheckCircle2 className="h-4 w-4" /> Order placed · opening payment…
         </p>
       ) : (
         <div className="space-y-2">
@@ -153,19 +149,12 @@ export default function TrialBatchCard({ product }: { product: TrialProductView 
               <span className="block text-sm font-semibold tabular-nums text-neutral-900">{formatUsd(totals.landed_cost_cents)}</span>
             </p>
           </div>
-          {/* M-Pesa is the primary method when enabled; card checkout is the fallback. */}
-          {MPESA_ENABLED && (
-            <button type="button" onClick={() => void startTrial('mpesa')} disabled={state === 'loading' || product.is_demo}
-              className="btn-primary w-full bg-emerald-600 hover:bg-emerald-700" title={product.is_demo ? 'Sample listing — run supabase/seed.sql to enable' : undefined}>
-              {state === 'loading' && method === 'mpesa' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Smartphone className="h-4 w-4" />}
-              Pay with M-Pesa
-            </button>
-          )}
-          <div className={MPESA_ENABLED ? 'grid grid-cols-2 gap-2' : 'space-y-2'}>
-            <button type="button" onClick={() => void startTrial('card')} disabled={state === 'loading' || product.is_demo}
-              className={`${MPESA_ENABLED ? 'btn-secondary px-2' : 'btn-primary'} w-full`} title={product.is_demo ? 'Sample listing — run supabase/seed.sql to enable' : undefined}>
-              {state === 'loading' && method === 'card' ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />}
-              {MPESA_ENABLED ? 'Bank Card' : 'Pay by Bank Card'}
+          {/* One primary action: the payment channel is chosen afterwards, under "Pay now" on the order page. */}
+          <div className="grid grid-cols-2 gap-2">
+            <button type="button" onClick={() => void placeOrder()} disabled={state === 'loading' || product.is_demo}
+              className="btn-primary w-full px-2 active:scale-95" title={product.is_demo ? 'Sample listing — run supabase/seed.sql to enable' : undefined}>
+              {state === 'loading' ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />}
+              Place order
             </button>
             {cartButton}
           </div>
@@ -239,7 +228,7 @@ export default function TrialBatchCard({ product }: { product: TrialProductView 
           <p className="flex min-w-0 flex-1 items-center gap-1.5 text-xs text-neutral-500">
             {flag(product.origin_country)}{' '}
             {product.supplier_id && !product.is_demo
-              ? <Link href={`/dashboard/suppliers/${product.supplier_id}`} className="truncate hover:text-neutral-900 hover:underline">{product.supplier_name}</Link>
+              ? <Link href={`/dashboard/users/${product.supplier_id}`} className="truncate hover:text-neutral-900 hover:underline">{product.supplier_name}</Link>
               : <span className="truncate">{product.supplier_name}</span>}
             {product.supplier_verified && (
               <span className="inline-flex shrink-0 items-center gap-0.5 text-emerald-700"><BadgeCheck className="h-3.5 w-3.5" />Verified</span>

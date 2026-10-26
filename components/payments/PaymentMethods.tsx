@@ -1,11 +1,11 @@
 'use client';
 
-import { useId, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import clsx from 'clsx';
-import { Bitcoin, CreditCard, Globe2, Landmark, Smartphone, type LucideIcon } from 'lucide-react';
+import { ArrowRight, Bitcoin, Check, CreditCard, Landmark, Lock, Smartphone, Wallet, X, type LucideIcon } from 'lucide-react';
 import {
-  CATEGORY_LABEL, METHOD_CATEGORY, METHOD_LABEL, WIRE_SUGGESTED_CENTS, defaultMethod, groupByCategory,
-  type CryptoOption, type ManualPaymentView, type PaymentCategory, type PaymentMethod, type SwiftDetails,
+  CATEGORY_LABEL, METHOD_CATEGORY, METHOD_LABEL, WIRE_SUGGESTED_CENTS,
+  type CryptoOption, type ManualPaymentView, type PaymentMethod, type SwiftDetails,
 } from '@/lib/payment-methods';
 import BankCardPanel from './BankCardPanel';
 import GatewayRedirect from './GatewayRedirect';
@@ -13,7 +13,16 @@ import AirtelPay from './AirtelPay';
 import { CryptoPanel, WireTransferPanel } from './ManualPayment';
 import MpesaPay from '@/app/dashboard/orders/[id]/MpesaPay';
 
-const CATEGORY_ICON: Record<PaymentCategory, LucideIcon> = { mobile: Smartphone, cards: CreditCard, global: Globe2, wire: Landmark, crypto: Bitcoin };
+/** One tile per method in the "Pay now" picker. */
+const METHOD_TILE: Record<PaymentMethod, { icon: LucideIcon; hint: string }> = {
+  mpesa: { icon: Smartphone, hint: 'STK push to your Safaricom phone' },
+  airtel_money: { icon: Smartphone, hint: 'Mobile money prompt to your Airtel line' },
+  card: { icon: CreditCard, hint: 'Visa / Mastercard on a secure card form' },
+  dpo_pay: { icon: CreditCard, hint: 'Cards and pan-African wallets via DPO Pay' },
+  paypal: { icon: Wallet, hint: 'Your PayPal balance or a linked card' },
+  swift_wire: { icon: Landmark, hint: 'Bank transfer straight to the escrow account' },
+  crypto: { icon: Bitcoin, hint: 'USDT / USDC stablecoins into escrow' },
+};
 
 export interface ManualContext {
   buyerId: string; dueCents: number; open: ManualPaymentView | null; rejectedNote: string | null;
@@ -21,14 +30,16 @@ export interface ManualContext {
 }
 
 /**
- * Checkout payment picker (migration 028): category tabs — Local Mobile Money, Cards & Pan-African,
- * Global Digital Payments, B2B Bank Wire, Crypto Escrow — showing only the methods the server says are
- * switched on and configured. Every method charges what Postgres says is due; nothing here sets an amount.
+ * Checkout payment picker (migration 028). Orders are placed without choosing a channel; here "Pay now" opens a
+ * frosted-glass list of every method the server says is switched on and configured, each as its own option
+ * (M-Pesa, Airtel Money, card, DPO Pay, PayPal, SWIFT wire, crypto). Picking one shows that method's own
+ * handler below, with "Change" to pick again. Every method charges what Postgres says is due; nothing here
+ * sets an amount.
  */
 export default function PaymentMethods({ target, methods, preferred, amountLabel, buyerName, manual }: {
   target: { kind: 'order' | 'group'; id: string };
   methods: PaymentMethod[];
-  /** ?pay=… or the method of an open wire / crypto transfer. */
+  /** ?pay=… or the method of an open wire / crypto transfer: opens straight on that method. */
   preferred?: string | null;
   amountLabel: string;
   buyerName?: string;
@@ -36,43 +47,86 @@ export default function PaymentMethods({ target, methods, preferred, amountLabel
   manual?: ManualContext;
 }) {
   const uid = useId();
-  const groups = groupByCategory(methods);
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  // Wire and crypto need the per-order context; without it they cannot be offered.
+  const offered = methods.filter((m) => (m === 'swift_wire' || m === 'crypto') ? !!manual : true);
   const openMethod: PaymentMethod | null = manual?.open ? (manual.open.method === 'swift_wire' ? 'swift_wire' : 'crypto') : null;
-  const [method, setMethod] = useState<PaymentMethod | null>(defaultMethod(methods, openMethod ?? preferred));
-  if (!groups.length || !method) {
+  const initial = openMethod ?? (preferred && (offered as string[]).includes(preferred) ? preferred as PaymentMethod : null);
+  const [method, setMethod] = useState<PaymentMethod | null>(initial);
+  const [picking, setPicking] = useState(false);
+
+  useEffect(() => {
+    const d = dialogRef.current;
+    if (!d) return;
+    if (picking && !d.open) d.showModal();
+    if (!picking && d.open) d.close();
+  }, [picking]);
+
+  if (!offered.length) {
     return <p className="text-sm text-neutral-600">Online payment isn&apos;t available right now. Please try again shortly or contact support.</p>;
   }
-  const category = METHOD_CATEGORY[method];
-  const active = groups.find((g) => g.category === category) ?? groups[0];
+  const choose = (m: PaymentMethod) => { setMethod(m); setPicking(false); };
   const base = target.kind === 'order' ? `/api/orders/${target.id}` : `/api/checkout/${target.id}`;
   const returnPath = target.kind === 'order' ? `/dashboard/orders/${target.id}` : `/dashboard/checkout/${target.id}`;
 
   return (
     <div>
-      <div role="tablist" aria-label="Payment category" className="segmented no-scrollbar overflow-x-auto">
-        {groups.map((g) => {
-          const Icon = CATEGORY_ICON[g.category];
-          const selected = g.category === active.category;
-          return (
-            <button key={g.category} type="button" role="tab" id={`${uid}-tab-${g.category}`} aria-selected={selected} aria-controls={`${uid}-panel`}
-              onClick={() => setMethod(g.methods.includes(method) ? method : g.methods[0])}
-              className={clsx('segment flex-1 whitespace-nowrap', selected && 'text-neutral-900')}>
-              <Icon className={clsx('h-4 w-4', selected ? 'text-current' : 'text-neutral-400')} aria-hidden /> {CATEGORY_LABEL[g.category]}
-            </button>
-          );
-        })}
-      </div>
+      {method ? (
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="flex items-center gap-2 text-sm text-neutral-700">
+            <span className="grid h-8 w-8 place-items-center rounded-full bg-[#5a9895]/20 text-[#8fd3cc]">{(() => { const I = METHOD_TILE[method].icon; return <I className="h-4 w-4" aria-hidden />; })()}</span>
+            Paying with <span className="font-medium text-neutral-900">{METHOD_LABEL[method]}</span>
+          </p>
+          {offered.length > 1 && !openMethod && (
+            <button type="button" onClick={() => setPicking(true)} className="sx-link px-2 py-1 underline-offset-4 hover:underline">Change method</button>
+          )}
+        </div>
+      ) : (
+        <button type="button" onClick={() => setPicking(true)} aria-haspopup="dialog" aria-controls={`${uid}-picker`}
+          className="btn-primary w-full py-3 text-base transition-all active:scale-95">
+          <Lock className="h-4 w-4" aria-hidden /> Pay now · {amountLabel} <ArrowRight className="h-4 w-4" aria-hidden />
+        </button>
+      )}
 
-      <div role="tabpanel" id={`${uid}-panel`} aria-labelledby={`${uid}-tab-${active.category}`} className="glass-inset mt-4 p-4 sm:p-5">
-        {active.methods.length > 1 ? (
-          <div role="radiogroup" aria-label={CATEGORY_LABEL[active.category]} className="segmented mb-4 inline-flex">
-            {active.methods.map((m) => (
-              <button key={m} type="button" role="radio" aria-checked={method === m} onClick={() => setMethod(m)} className="segment py-1.5">
-                {METHOD_LABEL[m]}
-              </button>
-            ))}
+      {/* Method picker: native modal dialog (focus trap, Esc closes); the backdrop click closes too. */}
+      <dialog ref={dialogRef} id={`${uid}-picker`} aria-labelledby={`${uid}-picker-title`} onClose={() => setPicking(false)}
+        onClick={(e) => { if (e.target === e.currentTarget) setPicking(false); }}
+        className="m-auto w-[min(32rem,calc(100vw-2rem))] bg-transparent p-0 text-neutral-900 backdrop:bg-black/60 backdrop:backdrop-blur-sm">
+        <div className="sx-glass dark sellsy p-5 sm:p-6">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h2 id={`${uid}-picker-title`} className="text-lg font-semibold">Choose how to pay</h2>
+              <p className="mt-0.5 text-sm text-neutral-500">{amountLabel} goes into escrow, not to the supplier.</p>
+            </div>
+            <button type="button" onClick={() => setPicking(false)} aria-label="Close" className="grid h-8 w-8 place-items-center rounded-full text-neutral-500 hover:bg-snow/10 hover:text-neutral-900">
+              <X className="h-4 w-4" aria-hidden />
+            </button>
           </div>
-        ) : <p className="eyebrow mb-3">{METHOD_LABEL[active.methods[0]]}</p>}
+          <ul className="mt-5 grid gap-2" aria-label="Payment methods">
+            {offered.map((m) => {
+              const { icon: Icon, hint } = METHOD_TILE[m];
+              const selected = m === method;
+              return (
+                <li key={m}>
+                  <button type="button" onClick={() => choose(m)} aria-pressed={selected}
+                    className={clsx('press flex w-full items-center gap-3 rounded-2xl border p-3 text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#5a9895]',
+                      selected ? 'border-[#5a9895] bg-[#5a9895]/15' : 'border-snow/10 bg-snow/[0.03] hover:border-snow/25 hover:bg-snow/[0.06]')}>
+                    <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#5a9895]/20 text-[#8fd3cc]"><Icon className="h-5 w-5" strokeWidth={1.75} aria-hidden /></span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-sm font-medium text-neutral-900">{METHOD_LABEL[m]}</span>
+                      <span className="block truncate text-xs text-neutral-500">{hint} · {CATEGORY_LABEL[METHOD_CATEGORY[m]]}</span>
+                    </span>
+                    {selected ? <Check className="h-4 w-4 text-[#8fd3cc]" aria-hidden /> : <ArrowRight className="h-4 w-4 text-neutral-400" aria-hidden />}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      </dialog>
+
+      {method && (
+      <div className="glass-inset mt-4 p-4 sm:p-5">
         {method === 'mpesa' && <MpesaPay orderId={target.id} endpoint={`${base}/mpesa`} onSwitchToCard={methods.includes('card') ? () => setMethod('card') : undefined} />}
         {method === 'airtel_money' && <AirtelPay endpoint={`${base}/gateway`} />}
         {method === 'card' && (
@@ -92,6 +146,7 @@ export default function PaymentMethods({ target, methods, preferred, amountLabel
             rejectedNote={manual.rejectedNote} options={manual.cryptoOptions} markup={manual.cryptoMarkup} />
         )}
       </div>
+      )}
     </div>
   );
 }

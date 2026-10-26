@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { FileQuestion } from 'lucide-react';
 import { getSessionProfile } from '@/lib/supabase/server';
@@ -6,7 +5,8 @@ import { categoryOptions, effectiveRfqStatus, parseTiers, type QuoteStatus, type
 import type { PaymentStructure } from '@/lib/milestone';
 import { UUID_RE } from '@/lib/uploads';
 import DashboardHeader from '@/components/dashboard/DashboardHeader';
-import RfqForm, { type RfqPrefill } from '@/components/rfq/RfqForm';
+import type { RfqPrefill } from '@/components/rfq/RfqForm';
+import NewRfqButton from '@/components/rfq/NewRfqButton';
 import RFQCard, { type BuyerRfq } from '@/components/rfq/RFQCard';
 import { getPricing, goldSupplierIds } from '@/lib/pricing-server';
 import { dollarsToCents } from '@/lib/pricing';
@@ -81,13 +81,21 @@ export default async function BuyerRfqsPage({ searchParams }: { searchParams: Pr
     <>
       <DashboardHeader profile={profile} />
       <main className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
-        <div className="border-b border-neutral-200 pb-6">
-          <p className="eyebrow">Sourcing</p>
-          <h1 className="mt-2 text-3xl font-semibold text-neutral-900">Requests for quote</h1>
-          <p className="mt-1 max-w-2xl text-sm text-neutral-600">
-            Need a volume, grade or price that isn&apos;t listed? Describe it once; verified suppliers quote privately. Accepted quotes
-            become escrow orders — with the option to pay 30% upfront and 70% when your goods ship.
-          </p>
+        <div className="flex flex-wrap items-end justify-between gap-4 border-b border-neutral-200 pb-6">
+          <div>
+            <p className="eyebrow">Sourcing</p>
+            <h1 className="mt-2 text-3xl font-semibold text-neutral-900">Requests for quote</h1>
+            <p className="mt-1 max-w-2xl text-sm text-neutral-600">
+              Need a volume, grade or price that isn&apos;t listed? Describe it once; verified suppliers quote privately. Accepted quotes
+              become escrow orders — with the option to pay 30% upfront and 70% when your goods ship.
+            </p>
+          </div>
+          {/* The request form stays hidden until "New RFQ" opens it (straight away when arriving with a product to quote). */}
+          <NewRfqButton categories={categoryOptions((cats ?? []) as { id: string; parent_id: string | null; name: string; sort_order: number }[])} prefill={prefill}
+            addonPrices={addonPrices} buyerName={profile.full_name} startOpen={!!p}
+            disabledReason={profile.role !== 'importer' ? 'Requests for quote are for importer accounts.'
+              : !kycApproved ? 'Verify your business (KYC) to request quotes.' : null}
+            kycHref={!kycApproved && profile.role === 'importer' ? '/dashboard/kyc' : null} />
         </div>
         {returnStatus === 'processing' && (
           <p role="status" className="mt-6 rounded-xl border px-4 py-3 text-sm tone-active">
@@ -95,14 +103,14 @@ export default async function BuyerRfqsPage({ searchParams }: { searchParams: Pr
           </p>
         )}
 
-        <div className="mt-8 grid gap-10 lg:grid-cols-[minmax(0,1fr)_24rem]">
+        <div className="mt-8">
           <section aria-labelledby="my-rfqs" className="min-w-0">
             <h2 id="my-rfqs" className="sr-only">Your requests</h2>
             {rfqs.length === 0 ? (
               <div className="card px-6 py-14 text-center">
                 <FileQuestion className="mx-auto h-8 w-8 text-neutral-400" aria-hidden />
                 <p className="mt-3 font-medium text-neutral-900">No requests yet</p>
-                <p className="mt-1 text-sm text-neutral-600">Post your first request — quotes usually arrive within a few days.</p>
+                <p className="mt-1 text-sm text-neutral-600">Press <span className="font-medium text-neutral-900">New RFQ</span> to post your first request — quotes usually arrive within a few days.</p>
               </div>
             ) : (
               <ul className="space-y-5">
@@ -113,16 +121,6 @@ export default async function BuyerRfqsPage({ searchParams }: { searchParams: Pr
               </ul>
             )}
           </section>
-
-          <aside className="lg:sticky lg:top-32 lg:self-start">
-            <RfqForm categories={categoryOptions((cats ?? []) as { id: string; parent_id: string | null; name: string; sort_order: number }[])} prefill={prefill}
-              addonPrices={addonPrices} buyerName={profile.full_name}
-              disabledReason={profile.role !== 'importer' ? 'Requests for quote are for importer accounts.'
-                : !kycApproved ? 'Verify your business (KYC) to request quotes.' : null} />
-            {!kycApproved && profile.role === 'importer' && (
-              <Link href="/dashboard/kyc" className="btn-secondary mt-3 w-full">Verify my business</Link>
-            )}
-          </aside>
         </div>
       </main>
     </>
