@@ -31,7 +31,7 @@ export default function NotificationsPanel({ prefs, hasPhone, disabled }: { pref
     <div>
       <h3 className="text-sm font-semibold text-neutral-900">Notifications</h3>
       <p className="mt-1 text-sm text-neutral-600">Choose how SokoGlobal reaches you. Account emails such as password resets are always sent.</p>
-      <ul className="mt-5 divide-y divide-neutral-200 rounded-[18px] border border-neutral-200">
+      <ul className="mt-5 divide-y divide-neutral-200 rounded-3xl border border-neutral-200">
         {ROWS.map(({ key, label, hint }) => {
           const on = view[key];
           const locked = disabled || (key === 'sms_alerts' && !hasPhone && !on);

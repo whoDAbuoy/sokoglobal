@@ -78,7 +78,7 @@ export default function AvatarUpload({ url, initials, disabled }: { url: string 
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-center gap-5">
-        <span className="relative grid h-20 w-20 shrink-0 place-items-center overflow-hidden rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 text-2xl font-semibold text-snow shadow-[0_8px_24px_-8px_rgb(59_130_246/0.7)] ring-4 ring-white/70 dark:ring-snow/10">
+        <span className="relative grid h-20 w-20 shrink-0 place-items-center overflow-hidden rounded-full bg-gradient-to-br from-[#5a9895] to-teal-500 text-2xl font-semibold text-snow shadow-[0_8px_24px_-8px_rgb(90_152_149/0.7)] ring-4 ring-white/70 dark:ring-snow/10">
           {source && crop
             ? <CropCanvas source={source} crop={crop} className="h-full w-full" />
             : url

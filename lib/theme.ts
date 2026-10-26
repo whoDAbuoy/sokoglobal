@@ -23,3 +23,15 @@ export function resolveTheme(pref: ThemePreference, systemPrefersDark: boolean):
 export const THEME_INIT_SCRIPT = `(function(){var p=null;try{p=localStorage.getItem('${THEME_KEY}')}catch(e){}`
   + `try{var d=p==='dark'||(p!=='light'&&!!(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches));`
   + `var r=document.documentElement;r.classList.toggle('dark',d);r.style.colorScheme=d?'dark':'light';}catch(e){}})();`;
+
+/**
+ * Routes drawn in the always-dark Sellsy style (pure-black canvas, charcoal cards, mint accents):
+ * the supplier portal and the account settings / profile hub. The ambient backdrop switches to its
+ * mint palette there, whatever the site theme.
+ */
+export function isSellsyRoute(pathname: string | null | undefined): boolean {
+  const p = pathname ?? '';
+  return p === '/supplier' || p.startsWith('/supplier/')
+    || p === '/dashboard/settings' || p.startsWith('/dashboard/settings/')
+    || p === '/dashboard/profile' || p.startsWith('/dashboard/profile/');
+}

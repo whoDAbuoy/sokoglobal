@@ -16,15 +16,12 @@ import { KYC_STATUS_META, kycHome } from '@/lib/kyc';
 export interface ProfileDetails { designation: string | null; phone_number: string | null; avatar_url: string | null }
 export interface Regional { escrowCurrency: string; cardCurrency: string; mpesaEnabled: boolean }
 
-export default function ProfilePanel({ profile, details, memberSince, regional, changeRequest, initials, ready }: {
-  profile: Profile; details: ProfileDetails; memberSince: string | null; regional: Regional; changeRequest: LatestChangeRequest | null;
+export default function ProfilePanel({ profile, details, memberSince, changeRequest, initials, ready }: {
+  profile: Profile; details: ProfileDetails; memberSince: string | null; changeRequest: LatestChangeRequest | null;
   initials: string; ready: boolean;
 }) {
   const [state, action, pending] = useActionState<SettingsResult | null, FormData>(saveProfileDetails, null);
-  const code = profile.country_code.toUpperCase();
-  const dial = dialCode(code);
-  const isBuyer = profile.role === 'importer';
-  const mpesaForYou = regional.mpesaEnabled && code === 'KE';
+  const dial = dialCode(profile.country_code.toUpperCase());
 
   return (
     <div className="space-y-10">
@@ -66,6 +63,23 @@ export default function ProfilePanel({ profile, details, memberSince, regional, 
           {pending ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <Save className="h-4 w-4" aria-hidden />} Save details
         </button>
       </form>
+    </div>
+  );
+}
+
+/** Store / business details: region and how money moves (read-only; payout accounts live under Verification). */
+export function StorePanel({ profile, regional }: { profile: Profile; regional: Regional }) {
+  const code = profile.country_code.toUpperCase();
+  const dial = dialCode(code);
+  const isBuyer = profile.role === 'importer';
+  const mpesaForYou = regional.mpesaEnabled && code === 'KE';
+
+  return (
+    <div className="space-y-10">
+      <Section title={profile.role === 'supplier' ? 'Store' : 'Business'} icon={Building2}>
+        <Row label="Legal / company name" value={profile.company_name} />
+        {profile.role === 'supplier' && <Row label="Storefront" value={<Link href="/supplier/products" className="underline underline-offset-4">Your catalogue</Link>} />}
+      </Section>
 
       <Section title="Region" icon={Globe2}>
         <Row label="Country" value={<span>{flag(code)} {countryName(code)}</span>} />

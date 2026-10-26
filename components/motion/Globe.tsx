@@ -4,11 +4,24 @@ import { useCallback, useEffect, useMemo, useRef } from 'react';
 import clsx from 'clsx';
 import { arcPoints, facing, HUBS, isVisible, landDots, rotate, ROUTES, toVec, type Vec3 } from '@/lib/geo/globe-math';
 import { useLowPowerScreen, useMotionLoop, useReducedMotion } from './useMotionLoop';
+import type { MotionPalette } from './WaveBackground';
 
 const AUTO_SPIN = 0.00012; // rad per ms
 const DRAG_SPEED = 0.006;  // rad per px
 const KEY_STEP = 0.12;
 const MAX_PITCH = 1.1;
+
+/** Shader colours per palette: electric blue (default) or the Sellsy mint / teal over #050505. */
+const COLORS = {
+  electric: {
+    halo: ['rgba(59,130,246,0.35)', 'rgba(6,182,212,0.10)', 'rgba(59,130,246,0)'], body: ['#13213a', '#070b13'], rim: 'rgba(96,165,250,0.45)',
+    land: '#cbd5e1', arc: 'rgba(96,165,250,0.28)', pulse: ['rgba(34,211,238,0.95)', 'rgba(96,165,250,0.95)'], ring: '34,211,238', hub: '#60a5fa',
+  },
+  mint: {
+    halo: ['rgba(90,152,149,0.38)', 'rgba(20,184,166,0.10)', 'rgba(90,152,149,0)'], body: ['#122321', '#050707'], rim: 'rgba(143,211,204,0.4)',
+    land: '#d4d4d4', arc: 'rgba(143,211,204,0.26)', pulse: ['rgba(143,211,204,0.95)', 'rgba(20,184,166,0.95)'], ring: '143,211,204', hub: '#5a9895',
+  },
+} as const;
 
 /**
  * Interactive dot-matrix globe with animated trade corridors between hubs
@@ -16,7 +29,7 @@ const MAX_PITCH = 1.1;
  * client. Drag or use the arrow keys to rotate; spins slowly on its own unless
  * the user prefers reduced motion. Pauses off-screen.
  */
-export default function Globe({ className, focus = { lat: 12, lon: 30 }, labels = true, interactive = true, maxFps }: {
+export default function Globe({ className, focus = { lat: 12, lon: 30 }, labels = true, interactive = true, maxFps, palette = 'electric' }: {
   className?: string;
   /** Initial point of view. */
   focus?: { lat: number; lon: number };
@@ -25,6 +38,7 @@ export default function Globe({ className, focus = { lat: 12, lon: 30 }, labels 
   interactive?: boolean;
   /** Optional frame-rate cap (the ambient backdrop runs slower to keep blurred glass above it cheap). */
   maxFps?: number;
+  palette?: MotionPalette;
 }) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -78,20 +92,21 @@ export default function Globe({ className, focus = { lat: 12, lon: 30 }, labels 
     const R = Math.min(w, h) * 0.42;
     const cx = w / 2, cy = h / 2;
     const P = (p: Vec3) => rotate(p, v.yaw, v.pitch);
+    const c = COLORS[palette];
 
     // Atmosphere glow + body
     const halo = ctx.createRadialGradient(cx, cy, R * 0.85, cx, cy, R * 1.35);
-    halo.addColorStop(0, 'rgba(59,130,246,0.35)');
-    halo.addColorStop(0.45, 'rgba(6,182,212,0.10)');
-    halo.addColorStop(1, 'rgba(59,130,246,0)');
+    halo.addColorStop(0, c.halo[0]);
+    halo.addColorStop(0.45, c.halo[1]);
+    halo.addColorStop(1, c.halo[2]);
     ctx.fillStyle = halo;
     ctx.fillRect(0, 0, w, h);
     const body = ctx.createRadialGradient(cx - R * 0.3, cy - R * 0.35, R * 0.1, cx, cy, R);
-    body.addColorStop(0, '#13213a');
-    body.addColorStop(1, '#070b13');
+    body.addColorStop(0, c.body[0]);
+    body.addColorStop(1, c.body[1]);
     ctx.fillStyle = body;
     ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2); ctx.fill();
-    ctx.strokeStyle = 'rgba(96,165,250,0.45)';
+    ctx.strokeStyle = c.rim;
     ctx.lineWidth = 1;
     ctx.stroke();
 
@@ -101,7 +116,7 @@ export default function Globe({ className, focus = { lat: 12, lon: 30 }, labels 
       const [x, y, z] = P(d);
       if (z <= 0.02) continue;
       ctx.globalAlpha = 0.25 + 0.7 * z;
-      ctx.fillStyle = '#cbd5e1';
+      ctx.fillStyle = c.land;
       ctx.fillRect(cx + x * R - dotR, cy - y * R - dotR, dotR * 2, dotR * 2);
     }
     ctx.globalAlpha = 1;
@@ -111,13 +126,13 @@ export default function Globe({ className, focus = { lat: 12, lon: 30 }, labels 
     for (const arc of arcs) {
       const pts = arc.pts.map(P);
       ctx.lineWidth = 1;
-      ctx.strokeStyle = 'rgba(96,165,250,0.28)';
+      ctx.strokeStyle = c.arc;
       strokeVisible(ctx, pts, 0, pts.length - 1, cx, cy, R);
       const head = frac(t + arc.offset) * (pts.length - 1);
       const tail = Math.max(0, head - pts.length * 0.35);
       const grad = ctx.createLinearGradient(0, 0, w, 0);
-      grad.addColorStop(0, 'rgba(34,211,238,0.95)');
-      grad.addColorStop(1, 'rgba(96,165,250,0.95)');
+      grad.addColorStop(0, c.pulse[0]);
+      grad.addColorStop(1, c.pulse[1]);
       ctx.strokeStyle = grad;
       ctx.lineWidth = 1.75;
       strokeVisible(ctx, pts, Math.floor(tail), Math.ceil(head), cx, cy, R);
@@ -132,12 +147,12 @@ export default function Globe({ className, focus = { lat: 12, lon: 30 }, labels 
       const pulse = reducedRef.current ? 0.5 : frac(ms / 1600 + hub.lat / 37);
       ctx.beginPath();
       ctx.arc(sx, sy, 3 + pulse * 9, 0, Math.PI * 2);
-      ctx.strokeStyle = `rgba(34,211,238,${0.6 * (1 - pulse)})`;
+      ctx.strokeStyle = `rgba(${c.ring},${0.6 * (1 - pulse)})`;
       ctx.lineWidth = 1;
       ctx.stroke();
       ctx.beginPath();
       ctx.arc(sx, sy, 3, 0, Math.PI * 2);
-      ctx.fillStyle = '#60a5fa';
+      ctx.fillStyle = c.hub;
       ctx.fill();
       if (labels && z > 0.25) {
         ctx.globalAlpha = Math.min(1, (z - 0.25) * 3);
@@ -146,7 +161,7 @@ export default function Globe({ className, focus = { lat: 12, lon: 30 }, labels 
         ctx.globalAlpha = 1;
       }
     }
-  }, [arcs, dots, hubs, labels]);
+  }, [arcs, dots, hubs, labels, palette]);
   drawRef.current = draw;
 
   useMotionLoop(wrapRef, draw, reduced, Math.min(maxFps ?? 60, lowPower ? 30 : 60));

@@ -12,11 +12,20 @@ const RIBBONS = [
   { amp: 0.10, freq: 1.1, speed: -0.12, thick: 0.06, phase: 4.4, hue: 'cyan' },
 ] as const;
 
-const STOPS = {
+const ELECTRIC = {
   blue: ['rgba(59,130,246,0)', 'rgba(59,130,246,0.85)', 'rgba(6,182,212,0.75)', 'rgba(59,130,246,0)'],
   cyan: ['rgba(6,182,212,0)', 'rgba(6,182,212,0.8)', 'rgba(59,130,246,0.7)', 'rgba(6,182,212,0)'],
   indigo: ['rgba(99,102,241,0)', 'rgba(99,102,241,0.75)', 'rgba(59,130,246,0.65)', 'rgba(99,102,241,0)'],
 } as const;
+
+/** Sellsy routes (supplier portal, settings): mint #5A9895 / mint ink #8FD3CC / teal, over the #050505 canvas. */
+const MINT: Record<keyof typeof ELECTRIC, readonly string[]> = {
+  blue: ['rgba(90,152,149,0)', 'rgba(90,152,149,0.85)', 'rgba(20,184,166,0.6)', 'rgba(90,152,149,0)'],
+  cyan: ['rgba(20,184,166,0)', 'rgba(20,184,166,0.65)', 'rgba(143,211,204,0.7)', 'rgba(20,184,166,0)'],
+  indigo: ['rgba(143,211,204,0)', 'rgba(143,211,204,0.6)', 'rgba(90,152,149,0.7)', 'rgba(143,211,204,0)'],
+};
+
+export type MotionPalette = 'electric' | 'mint';
 
 /**
  * Two-tone liquid wave wallpaper (electric blue / cyan / indigo). Drawn on two
@@ -26,7 +35,7 @@ const STOPS = {
  *
  * Place inside a `relative` container; it fills it.
  */
-export default function WaveBackground({ className, band = 0.55, intensity = 1, speed = 1, maxFps, fade = true }: {
+export default function WaveBackground({ className, band = 0.55, intensity = 1, speed = 1, maxFps, fade = true, palette = 'electric' }: {
   /** Vertical centre of the wave band, 0 (top) – 1 (bottom). */
   band?: number;
   /** Overall opacity multiplier (0–1). */
@@ -36,6 +45,8 @@ export default function WaveBackground({ className, band = 0.55, intensity = 1, 
   maxFps?: number;
   /** Fade the band out towards the top and bottom edges. */
   fade?: boolean;
+  /** Ribbon colours: electric blue / cyan (default) or the Sellsy mint / teal. */
+  palette?: MotionPalette;
   className?: string;
 }) {
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -91,7 +102,7 @@ export default function WaveBackground({ className, band = 0.55, intensity = 1, 
         return h * r.thick * (0.25 + 0.75 * (0.5 + 0.5 * Math.sin(u * 1.4 + t * 0.5 + k * 1.9)));
       };
       const grad = glow.createLinearGradient(0, 0, w, 0);
-      const stops = STOPS[r.hue];
+      const stops = (palette === 'mint' ? MINT : ELECTRIC)[r.hue];
       const drift = 0.5 + 0.12 * Math.sin(t * 0.3 + k);
       grad.addColorStop(0, stops[0]);
       grad.addColorStop(Math.max(0.05, drift - 0.3), stops[1]);
@@ -115,7 +126,7 @@ export default function WaveBackground({ className, band = 0.55, intensity = 1, 
         line.stroke();
       }
     });
-  }, [band, intensity, speed]);
+  }, [band, intensity, speed, palette]);
   drawRef.current = draw;
 
   useMotionLoop(wrapRef, draw, reduced, Math.min(maxFps ?? 60, lowPower ? 30 : 60));

@@ -1,7 +1,7 @@
 // Run: npx tsx --test lib/theme.test.mts
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { THEME_INIT_SCRIPT, THEME_KEY, parseTheme, resolveTheme } from './theme.ts';
+import { THEME_INIT_SCRIPT, THEME_KEY, isSellsyRoute, parseTheme, resolveTheme } from './theme.ts';
 
 test('parseTheme defaults to system for anything unexpected', () => {
   assert.equal(parseTheme('dark'), 'dark');
@@ -40,4 +40,11 @@ test('init script: stored choice wins, system follows the OS, blocked storage st
   assert.deepEqual(run('system', true), { dark: true, scheme: 'dark', kept: true });
   assert.deepEqual(run(null, false), { dark: false, scheme: 'light', kept: true });
   assert.deepEqual(run('throws', true), { dark: true, scheme: 'dark', kept: true });   // used to abort the whole script
+});
+
+test('isSellsyRoute: supplier portal and the settings / profile hub only', () => {
+  for (const p of ['/supplier', '/supplier/orders', '/dashboard/settings', '/dashboard/profile']) assert.equal(isSellsyRoute(p), true, p);
+  for (const p of ['/', '/dashboard', '/dashboard/discover', '/supplierx', '/admin', '/dashboard/settingsx', null, undefined]) {
+    assert.equal(isSellsyRoute(p), false, String(p));
+  }
 });
