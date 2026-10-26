@@ -243,7 +243,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
           <section id="following" aria-labelledby="following-title" className="scroll-mt-32">
             <SectionHeader icon={UserCheck} title="From suppliers you follow" titleId="following-title"
               subtitle="New Trial Batches from the suppliers you follow, newest first."
-              aside={<Link href="/dashboard/discover" className="pill border-neutral-300 text-neutral-800 hover:border-neutral-900">Find suppliers <ArrowRight className="h-3.5 w-3.5" aria-hidden /></Link>} />
+              aside={<Link href="/dashboard/following" className="pill border-neutral-300 text-neutral-800 hover:border-neutral-900">Find suppliers <ArrowRight className="h-3.5 w-3.5" aria-hidden /></Link>} />
             {feed.length > 0 ? (
               <OneRowGrid className="mt-8">
                 {feed.map((p) => <TrialBatchCard key={`f-${p.id}`} product={p} />)}

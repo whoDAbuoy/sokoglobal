@@ -11,6 +11,8 @@ import DashboardHeader from '@/components/dashboard/DashboardHeader';
 import TrialBatchCard from '@/components/dashboard/TrialBatchCard';
 import FollowButton from '@/components/follow/FollowButton';
 import GoldBadge from '@/components/supplier/GoldBadge';
+import StarRating from '@/components/ratings/StarRating';
+import RateSupplier from '@/components/ratings/RateSupplier';
 
 export const metadata = { title: 'Profile · SokoGlobal', robots: { index: false, follow: false } };
 export const dynamic = 'force-dynamic';
@@ -49,6 +51,18 @@ export default async function UserProfilePage({ params }: { params: Promise<{ id
     ])
     : [null, null, new Set<string>()] as const;
   const products = ((productsRes?.data ?? []) as unknown as CatalogProductRow[]).map((r) => toTrialProductView(r, null, gold));
+  // Star rating (migration 032): public aggregate, plus the viewer's own rating when they may rate. Absent before 032.
+  const [aggRes, canRes, mineRes] = isSupplier && !isSelf
+    ? await Promise.all([
+      supabase.rpc('supplier_rating', { p_supplier_id: id }),
+      supabase.rpc('can_rate_supplier', { p_supplier_id: id }),
+      supabase.from('supplier_ratings').select('stars').eq('buyer_id', user.id).eq('supplier_id', id).maybeSingle(),
+    ])
+    : isSupplier ? [await supabase.rpc('supplier_rating', { p_supplier_id: id }), null, null] : [null, null, null];
+  const agg = aggRes && !aggRes.error ? (Array.isArray(aggRes.data) ? aggRes.data[0] : aggRes.data) as { average: number | string | null; ratings: number } | undefined : undefined;
+  const rating = agg ? { average: agg.average === null ? null : Number(agg.average), count: agg.ratings } : null;
+  const canRate = !!canRes && !canRes.error && !!canRes.data;
+  const myStars = (mineRes && !mineRes.error ? (mineRes.data as { stars: number } | null)?.stars : null) ?? null;
   const since = new Date(p.created_at).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
   const back = profile.role === 'supplier' ? '/supplier' : '/dashboard';
   const stats: [string, number][] = [
@@ -82,6 +96,13 @@ export default async function UserProfilePage({ params }: { params: Promise<{ id
                 <span>{flag(p.country_code)} {countryName(p.country_code)}</span>
                 <span className="inline-flex items-center gap-1"><CalendarDays className="h-3.5 w-3.5" aria-hidden /> Joined {since}</span>
               </p>
+              {rating && <StarRating average={rating.average} count={rating.count} className="mt-2" />}
+              {canRate && (
+                <div className="mt-3">
+                  <p className="mb-1 text-xs text-neutral-500">{myStars ? 'Your rating' : 'Rate this supplier'}</p>
+                  <RateSupplier supplierId={p.id} initial={myStars} />
+                </div>
+              )}
             </div>
             {isSelf
               ? <Link href="/dashboard/settings?tab=profile" className="btn-secondary px-4 py-2"><PencilLine className="h-4 w-4" aria-hidden /> Edit profile</Link>
