@@ -26,6 +26,7 @@ export async function setFollow(supplierId: string, follow: boolean): Promise<Fo
     return { ok: false, following: !follow, message: blocked ? 'This supplier can’t be followed.' : friendlyError(error.message) };
   }
   revalidatePath(`/dashboard/suppliers/${supplierId}`);
+  revalidatePath(`/dashboard/users/${supplierId}`);   // follower count on the public profile
   revalidatePath('/dashboard');
   return { ok: true, following: follow };
 }

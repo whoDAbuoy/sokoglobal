@@ -2,7 +2,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  AVATAR_MAX_BYTES, avatarObjectPath, checkAvatarFile, isNotificationPref, normalizeDesignation, normalizePhone, parseSettingsTab, sniffImageType,
+  AVATAR_MAX_BYTES, avatarObjectPath, checkAvatarFile, normalizeBio, isNotificationPref, normalizeDesignation, normalizePhone, parseSettingsTab, sniffImageType,
 } from './settings.ts';
 
 const PNG = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0]);
@@ -61,4 +61,14 @@ test('settings tabs and notification keys', () => {
   assert.equal(parseSettingsTab(undefined), 'profile');
   assert.equal(isNotificationPref('sms_alerts'), true);
   assert.equal(isNotificationPref('two_factor_enabled'), false, 'cannot be flipped through the preferences action');
+});
+
+test('normalizeBio: required, 20–500 characters, whitespace tidied', () => {
+  assert.deepEqual(normalizeBio('  We  import   skincare\r\n\n\n\nfor Nairobi boutiques.  '), { ok: true, value: 'We import skincare\n\nfor Nairobi boutiques.' });
+  assert.equal(normalizeBio('').ok, false);
+  assert.equal(normalizeBio('   ').ok, false);
+  assert.equal(normalizeBio('too short').ok, false);
+  assert.equal(normalizeBio('x'.repeat(20)).ok, true);
+  assert.equal(normalizeBio('x'.repeat(500)).ok, true);
+  assert.equal(normalizeBio('x'.repeat(501)).ok, false);
 });

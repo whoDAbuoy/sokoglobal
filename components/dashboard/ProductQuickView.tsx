@@ -109,7 +109,7 @@ export default function ProductQuickView({ product, quantity = 1, onClose, actio
               <dt className="eyebrow">Supplier</dt>
               <dd className="mt-1 flex flex-wrap items-center gap-1.5 font-medium text-neutral-900">
                 {product.supplier_id && !product.is_demo
-                  ? <Link href={`/dashboard/suppliers/${product.supplier_id}`} className="hover:underline">{product.supplier_name}</Link>
+                  ? <Link href={`/dashboard/users/${product.supplier_id}`} className="hover:underline">{product.supplier_name}</Link>
                   : product.supplier_name}
                 {product.supplier_verified && <BadgeCheck className="h-4 w-4 text-emerald-600" aria-label="KYC verified" />}
                 {product.supplier_gold && <GoldBadge compact />}

@@ -8,7 +8,7 @@ import { friendlyError } from '@/lib/format';
 import { validatePasswordChange, type PasswordChangeErrors } from '@/lib/password';
 import { rateLimit } from '@/lib/security/rate-limit';
 import {
-  avatarObjectPath, checkAvatarFile, isNotificationPref, normalizeDesignation, normalizePhone, type NotificationPref,
+  avatarObjectPath, checkAvatarFile, isNotificationPref, normalizeBio, normalizeDesignation, normalizePhone, type NotificationPref,
 } from '@/lib/settings';
 
 export type SettingsResult = { ok: boolean; message: string };
@@ -26,7 +26,7 @@ async function session() {
 
 const refresh = () => { revalidatePath('/dashboard/settings'); revalidatePath('/', 'layout'); };
 
-/** Job title + phone (name and business name keep the reviewed change-request flow). */
+/** Bio + job title + phone (name and business name keep the reviewed change-request flow). The bio is required (migration 031). */
 export async function saveProfileDetails(_prev: SettingsResult | null, form: FormData): Promise<SettingsResult> {
   const ctx = await session();
   if (!ctx) return { ok: false, message: 'Sign in first.' };
@@ -36,6 +36,12 @@ export async function saveProfileDetails(_prev: SettingsResult | null, form: For
   if (!phone.ok) return { ok: false, message: phone.error };
 
   const patch: Record<string, unknown> = { designation: designation.value, phone_number: phone.phone };
+  // Forms rendered before migration 031 has run carry no bio field; they keep saving as before.
+  if (form.has('bio')) {
+    const bio = normalizeBio(String(form.get('bio') ?? ''));
+    if (!bio.ok) return { ok: false, message: bio.error };
+    patch.bio = bio.value;
+  }
   if (!phone.phone) patch.sms_alerts = false;   // SMS alerts need a number (profiles_sms_needs_phone)
   const { error } = await ctx.supabase.from('profiles').update(patch).eq('id', ctx.user.id);
   if (error) return { ok: false, message: friendlyError(error.message) };

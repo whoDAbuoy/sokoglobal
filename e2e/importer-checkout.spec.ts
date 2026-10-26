@@ -26,7 +26,7 @@ test('importer: landed cost scales with quantity, cart → checkout totals match
   await page.getByRole('button', { name: /^cart,/i }).click();
   const drawer = page.getByRole('dialog');
   await expect(drawer).toBeVisible();
-  await drawer.getByRole('button', { name: /checkout/i }).first().click();
+  await drawer.getByRole('button', { name: /place order/i }).first().click();
 
   await expect(page).toHaveURL(/\/dashboard\/checkout\//, { timeout: 30_000 });
   await expect(page.getByText(/escrow/i).first()).toBeVisible();

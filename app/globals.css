@@ -180,7 +180,7 @@
   .dark .text-amber-700, .dark .text-amber-800, .dark .text-amber-900 { color: rgb(252 211 77); }
   .dark .text-red-600, .dark .text-red-700 { color: rgb(252 165 165); }
 
-/* ─── Sellsy-style modular dark cards: supplier portal + buyer side (app/{supplier,dashboard,rfqs}/layout.tsx add `.dark.sellsy`) ───
+/* ─── Sellsy-style modular dark cards: supplier portal, buyer side and admin (app/{supplier,dashboard,rfqs,admin}/layout.tsx add `.dark.sellsy`) ───
    Always dark: a pure-black canvas with charcoal glass cards, white pill tabs and mint accents.
    Re-pointing the neutral scale here (true neutral grays instead of the cool gray-950 ramp) restyles every
    existing supplier component at once; the `sx-*` classes are the new building blocks. */

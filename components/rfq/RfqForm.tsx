@@ -12,18 +12,29 @@ import { useCurrency } from '@/context/CurrencyContext';
 export interface RfqPrefill { title?: string; quantity?: number; categoryId?: string | null; productId?: string | null; unitOfMeasure?: string | null }
 
 /** Buyer's request for a custom volume quote. Target price is per unit, in KES. */
-export default function RfqForm({ categories, prefill = {}, disabledReason, addonPrices, buyerName }: {
+export default function RfqForm({ categories, prefill = {}, disabledReason, addonPrices, buyerName, onPosted, bare = false }: {
   categories: { id: string; label: string }[]; prefill?: RfqPrefill; disabledReason?: string | null;
   /** USD cents per add-on (from platform_settings); omitted → no add-ons offered. */
   addonPrices?: AddonPrices; buyerName?: string;
+  /** Called once a request is posted and nothing is left to do here (no add-on payment waiting). */
+  onPosted?: () => void;
+  /** Inside a modal: no card of its own (the dialog is the surface) and no duplicate heading. */
+  bare?: boolean;
 }) {
   const uid = useId();
   const formRef = useRef<HTMLFormElement>(null);
   const { currency } = useCurrency();
   const [state, action, pending] = useActionState<RfqFormState, FormData>(createRfq, null);
+  // Latest callbacks without re-running the effect below (it must fire once per result, not per render).
+  const after = useRef({ onPosted, addonPrices });
+  after.current = { onPosted, addonPrices };
 
   useEffect(() => {
-    if (state?.ok) { toast.success(state.message); formRef.current?.reset(); }
+    if (!state?.ok) return;
+    toast.success(state.message);
+    formRef.current?.reset();
+    // Add-ons chosen: stay open so the add-on checkout below can be paid; otherwise the caller may close.
+    if (!(state.rfqId && state.addons?.length && after.current.addonPrices)) after.current.onPosted?.();
   }, [state]);
 
   const err = (k: string) => state?.errors?.[k];
@@ -31,12 +42,14 @@ export default function RfqForm({ categories, prefill = {}, disabledReason, addo
   const msg = (k: string) => err(k) && <p id={`${uid}-${k}-err`} className="mt-1 text-xs text-red-600">{err(k)}</p>;
 
   return (
-    <form ref={formRef} className="card space-y-4 p-5"
+    <form ref={formRef} className={bare ? 'space-y-4' : 'card space-y-4 p-5'}
       onSubmit={(e) => { e.preventDefault(); const data = new FormData(e.currentTarget); startTransition(() => action(data)); }}>
-      <div>
-        <h2 className="text-base font-semibold text-neutral-900">New request for quote</h2>
-        <p className="mt-0.5 text-sm text-neutral-600">Verified suppliers in the category send private quotes. You choose one — or none.</p>
-      </div>
+      {!bare && (
+        <div>
+          <h2 className="text-base font-semibold text-neutral-900">New request for quote</h2>
+          <p className="mt-0.5 text-sm text-neutral-600">Verified suppliers in the category send private quotes. You choose one — or none.</p>
+        </div>
+      )}
       {disabledReason && <p className="rounded-md border px-3 py-2 text-sm tone-pending">{disabledReason}</p>}
 
       <fieldset disabled={!!disabledReason || pending} className="space-y-4">

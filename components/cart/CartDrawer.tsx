@@ -165,9 +165,9 @@ export default function CartDrawer() {
                     </button>
                   </div>
                 ) : (
-                  <button type="button" onClick={() => void checkout()} disabled={busy} className="btn-primary mt-4 w-full py-3">
+                  <button type="button" onClick={() => void checkout()} disabled={busy} className="btn-primary mt-4 w-full py-3 active:scale-95">
                     {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />}
-                    Checkout · pay with M-Pesa or card
+                    Place order
                   </button>
                 )}
                 {error && <p className="mt-2 flex items-start gap-1.5 text-xs text-red-600"><AlertCircle className="mt-px h-3.5 w-3.5 shrink-0" />{error}</p>}

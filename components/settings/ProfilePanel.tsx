@@ -3,7 +3,7 @@
 import { useActionState, type ReactNode } from 'react';
 import Link from 'next/link';
 import clsx from 'clsx';
-import { Building2, Globe2, Loader2, Save, UserRound, Wallet } from 'lucide-react';
+import { Building2, ExternalLink, Globe2, Loader2, Save, UserRound, Wallet } from 'lucide-react';
 import type { Profile } from '@/lib/types';
 import { countryName, flag } from '@/lib/format';
 import { dialCode } from '@/lib/countries';
@@ -12,6 +12,7 @@ import { saveProfileDetails, type SettingsResult } from '@/app/dashboard/setting
 import ProfileChangeRequest, { type LatestChangeRequest } from '@/components/profile/ProfileChangeRequest';
 import AvatarUpload from './AvatarUpload';
 import { KYC_STATUS_META, kycHome } from '@/lib/kyc';
+import { BIO_MAX, BIO_MIN } from '@/lib/settings';
 
 export interface ProfileDetails { designation: string | null; phone_number: string | null; avatar_url: string | null }
 export interface Regional { escrowCurrency: string; cardCurrency: string; mpesaEnabled: boolean }
@@ -45,7 +46,24 @@ export default function ProfilePanel({ profile, details, memberSince, changeRequ
       </Section>
 
       <form action={action} className="space-y-4">
-        <h3 className="flex items-center gap-2 text-sm font-semibold text-neutral-900"><UserRound className="h-4 w-4 text-neutral-500" aria-hidden /> Contact details</h3>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h3 className="flex items-center gap-2 text-sm font-semibold text-neutral-900"><UserRound className="h-4 w-4 text-neutral-500" aria-hidden /> About &amp; contact</h3>
+          {!roleAdminLevel(profile.role) && (
+            <Link href={`/dashboard/users/${profile.id}`} className="inline-flex items-center gap-1 text-xs font-medium text-neutral-600 underline-offset-4 hover:text-neutral-900 hover:underline">
+              View public profile <ExternalLink className="h-3.5 w-3.5" aria-hidden />
+            </Link>
+          )}
+        </div>
+        {/* Bio: required (migration 031). Hidden until the migration adds the column (profile.bio is then undefined). */}
+        {profile.bio !== undefined && (
+          <div>
+            <label htmlFor="bio" className="label">Bio <span className="normal-case tracking-normal text-neutral-500">(shown on your public profile)</span></label>
+            <textarea id="bio" name="bio" required minLength={BIO_MIN} maxLength={BIO_MAX} rows={4} defaultValue={profile.bio ?? ''} disabled={!ready}
+              placeholder={profile.role === 'supplier' ? 'What you make, where you ship from, minimums and certifications…' : 'Your business, what you stock and where you sell…'}
+              className="input resize-y" aria-describedby="bio-hint" />
+            <p id="bio-hint" className="mt-1 text-xs text-neutral-600">{BIO_MIN}–{BIO_MAX} characters. Required to complete your profile.</p>
+          </div>
+        )}
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
             <label htmlFor="designation" className="label">Designation / job title</label>

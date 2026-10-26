@@ -25,11 +25,11 @@ export const THEME_INIT_SCRIPT = `(function(){var p=null;try{p=localStorage.getI
   + `var r=document.documentElement;r.classList.toggle('dark',d);r.style.colorScheme=d?'dark':'light';}catch(e){}})();`;
 
 /** Route roots drawn in the always-dark Sellsy style (each also covers everything below it). */
-const SELLSY_ROOTS = ['/supplier', '/dashboard', '/rfqs'];
+const SELLSY_ROOTS = ['/supplier', '/dashboard', '/rfqs', '/admin'];
 
 /**
  * Routes drawn in the always-dark Sellsy style (pure-black canvas, charcoal glass cards, mint accents):
- * the supplier portal and the whole buyer side (dashboard, catalogue, checkout, orders, settings, RFQs).
+ * the supplier portal, the whole buyer side (dashboard, catalogue, checkout, orders, settings, RFQs) and admin.
  * The ambient backdrop switches to its mint palette there, whatever the site theme.
  */
 export function isSellsyRoute(pathname: string | null | undefined): boolean {
