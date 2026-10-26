@@ -56,6 +56,7 @@ test('avatar object path lives in the user folder and matches the profiles_guard
 test('settings tabs and notification keys', () => {
   assert.equal(parseSettingsTab('account'), 'profile', 'old /dashboard/profile?tab=account links');
   assert.equal(parseSettingsTab('security'), 'security');
+  assert.equal(parseSettingsTab('store'), 'store', 'store / business details tab');
   assert.equal(parseSettingsTab('nope'), 'profile');
   assert.equal(parseSettingsTab(undefined), 'profile');
   assert.equal(isNotificationPref('sms_alerts'), true);

@@ -17,7 +17,7 @@ interface Extended {
   email_notifications: boolean; sms_alerts: boolean; order_status_updates: boolean; two_factor_enabled: boolean;
 }
 
-/** Settings hub for every signed-in role: profile & avatar, security & 2FA, notifications, appearance. */
+/** Settings hub for every signed-in role: account & avatar, security & 2FA, store / business details, notifications, appearance. */
 export default async function SettingsPage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
   const { supabase, user, profile } = await getSessionProfile();
   if (!user || !profile) redirect('/login?redirectTo=/dashboard/settings');
@@ -42,8 +42,9 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
     } catch { backupLeft = null; }
   }
 
+  // Always dark (Sellsy layout), like the supplier portal: `.dark.sellsy` scopes the theme; AmbientBackdrop paints the canvas.
   return (
-    <>
+    <div className="dark sellsy min-h-screen text-neutral-900">
       <DashboardHeader profile={profile} />
       <main className="mx-auto max-w-4xl px-4 py-10 sm:px-6 lg:px-8">
         <p className="eyebrow">Account</p>
@@ -68,6 +69,6 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
           ready={ready}
         />
       </main>
-    </>
+    </div>
   );
 }

@@ -163,7 +163,7 @@ export default function TwoFactorCard({ status, email }: { status: TwoFactorStat
 
 function Shell({ enabled, children }: { enabled: boolean; children: React.ReactNode }) {
   return (
-    <section aria-labelledby="tfa-title" className="rounded-[18px] border border-neutral-200 p-5 sm:p-6">
+    <section aria-labelledby="tfa-title" className="rounded-3xl border border-neutral-200 p-5 sm:p-6">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <h3 id="tfa-title" className="flex items-center gap-2 text-sm font-semibold text-neutral-900"><ShieldCheck className="h-4 w-4 text-neutral-500" aria-hidden /> Two-factor authentication</h3>
         <span className={clsx('pill', enabled ? 'tone-escrow' : 'tone-muted')}>{enabled ? 'On' : 'Off'}</span>

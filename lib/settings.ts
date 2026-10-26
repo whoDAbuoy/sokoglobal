@@ -5,7 +5,7 @@
  */
 import { dialCode } from './countries';
 
-export const SETTINGS_TABS = ['profile', 'security', 'notifications', 'appearance'] as const;
+export const SETTINGS_TABS = ['profile', 'security', 'store', 'notifications', 'appearance'] as const;
 export type SettingsTab = (typeof SETTINGS_TABS)[number];
 /** Old /dashboard/profile?tab=… links keep working. */
 export function parseSettingsTab(v: string | undefined): SettingsTab {

@@ -192,11 +192,12 @@
   --sg-neutral-900: 245 245 245; --sg-neutral-950: 250 250 250;
   --sx-canvas: #050505; --sx-card: #121212; --sx-raised: #1b1b1b; --sx-mint: #5a9895; --sx-mint-ink: #8fd3cc;
   color-scheme: dark;
-  background-color: var(--sx-canvas);
+  /* No fill here: AmbientBackdrop paints the #050505 canvas plus the mint waves and globe behind this subtree. */
 }
+/* Smoked charcoal glass: opaque enough for AA text over the brightest wave, translucent enough for the waves to read. */
 .sellsy .card, .sellsy .glass-card, .sellsy .glass-surface, .sellsy .frost-card {
-  border-color: rgb(255 255 255 / 0.05); background-color: var(--sx-card); box-shadow: none;
-  -webkit-backdrop-filter: none; backdrop-filter: none;
+  border-color: rgb(255 255 255 / 0.06); background-color: rgb(18 18 18 / 0.74); box-shadow: inset 0 1px 0 0 rgb(255 255 255 / 0.04);
+  -webkit-backdrop-filter: blur(20px) saturate(140%); backdrop-filter: blur(20px) saturate(140%);
 }
 .sellsy .glass-inset { border-color: rgb(255 255 255 / 0.05); background-color: var(--sx-raised); }
 .sellsy .glass-nav { border-color: rgb(255 255 255 / 0.06); background-color: rgb(5 5 5 / 0.82); }
@@ -215,7 +216,7 @@
 
 @layer components {
   /* Modular card: charcoal, hairline rim, large radius. */
-  .sx-card { @apply rounded-3xl border border-snow/5 bg-[#121212]; }
+  .sx-card { @apply rounded-3xl border border-snow/[0.06] bg-[#121212]/[0.74] backdrop-blur-xl backdrop-saturate-150; }
   /* Card heading row: title left, quiet action (View all / select) right. */
   .sx-card-head { @apply flex items-center justify-between gap-3; }
   .sx-card-title { @apply text-lg font-medium tracking-tight text-neutral-900; }
@@ -271,7 +272,7 @@
 @media (prefers-reduced-transparency: reduce) {
   .frost-card, .frost-bar, .frost-pop, .frost-panel, .frost-ios, .glass, .card, .glass-card, .glass-surface, .glass-toolbar, .glass-nav { backdrop-filter: none !important; background-color: rgb(var(--sg-white)) !important; }
   .ambient-glow { display: none; }
-  .sellsy .card, .sellsy .glass-card, .sellsy .glass-surface, .sellsy .frost-card { background-color: #121212 !important; }
+  .sellsy .card, .sellsy .glass-card, .sellsy .glass-surface, .sellsy .frost-card, .sx-card { background-color: #121212 !important; backdrop-filter: none !important; }
 }
 
 /* Phones: pad every page that shows the bottom dock (components/navigation/MobileNav.tsx) so it never covers
