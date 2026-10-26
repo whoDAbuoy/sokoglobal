@@ -149,7 +149,7 @@ export default function ChatInput({ threadId, attachmentScope, myId, onSent, com
             <textarea id={`chat-input-${threadId}`} ref={inputRef} value={text}
               onChange={(e) => { setText(e.target.value); if (error) setError(null); }}
               onKeyDown={onKeyDown} rows={1} placeholder={media ? 'Message, or attach a file…' : 'Write a message…'} disabled={!myId}
-              className="input max-h-40 min-h-[2.5rem] flex-1 resize-none py-2" />
+              className="input max-h-40 min-h-[2.5rem] min-w-0 flex-1 resize-none py-2" />
           </>
         )}
         {media && (length === 0 || recording) && <VoiceRecorder onSend={sendVoice} onRecordingChange={setRecording} disabled={busy} />}

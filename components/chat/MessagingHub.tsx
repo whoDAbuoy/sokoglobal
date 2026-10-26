@@ -113,7 +113,7 @@ export default function MessagingHub({ basePath, role, initialThreadId = null }:
   const visible = useMemo(() => filterThreads(threads, { box, label, query, myId, muted }), [threads, box, label, query, myId, muted]);
   const selected = threads.find((t) => t.thread_id === selectedId) ?? null;
 
-  const navItem = (active: boolean) => clsx('press flex w-full items-center gap-2.5 whitespace-nowrap rounded-md px-2.5 py-1.5 text-left text-sm',
+  const navItem = (active: boolean) => clsx('press flex shrink-0 items-center gap-2.5 whitespace-nowrap rounded-md px-2.5 py-1.5 text-left text-sm lg:w-full',
     active ? 'bg-neutral-100 font-medium text-neutral-900' : 'text-neutral-600 hover:bg-neutral-50 hover:text-neutral-900');
 
   if (loading) {
@@ -171,9 +171,11 @@ export default function MessagingHub({ basePath, role, initialThreadId = null }:
       </section>,
       document.body,
     )}
-    <div className="card mt-6 grid overflow-hidden p-0 lg:h-[calc(100dvh-14rem)] lg:min-h-[32rem] lg:grid-cols-[13rem_20rem_minmax(0,1fr)]">
+    // grid-cols-1 = minmax(0, 1fr): on phones the column is capped at the screen width, so the scrolling mailbox
+    // tabs scroll inside the card instead of stretching it (and the search box and rows) past the viewport.
+    <div className="card mt-6 grid grid-cols-1 overflow-hidden p-0 lg:h-[calc(100dvh-14rem)] lg:min-h-[32rem] lg:grid-cols-[13rem_20rem_minmax(0,1fr)]">
       {/* Column 1: mailboxes + product labels (chips below lg) */}
-      <aside className="border-b border-neutral-200 p-3 lg:overflow-y-auto lg:border-b-0 lg:border-r">
+      <aside className="min-w-0 border-b border-neutral-200 p-3 lg:overflow-y-auto lg:border-b-0 lg:border-r">
         <p className="hidden px-2.5 pb-2 text-[11px] font-semibold uppercase tracking-eyebrow text-neutral-500 lg:block">Mailboxes</p>
         <div role="group" aria-label="Mailboxes" className="no-scrollbar flex gap-1 overflow-x-auto lg:flex-col lg:overflow-visible">
           {CHAT_BOXES.map((b) => {
@@ -208,7 +210,7 @@ export default function MessagingHub({ basePath, role, initialThreadId = null }:
       </aside>
 
       {/* Column 2: conversation list */}
-      <section aria-label="Conversations" className={clsx('flex min-h-0 flex-col border-neutral-200 lg:border-r', selectedId ? 'hidden lg:flex' : 'flex')}>
+      <section aria-label="Conversations" className={clsx('flex min-h-0 min-w-0 flex-col border-neutral-200 lg:border-r', selectedId ? 'hidden lg:flex' : 'flex')}>
         <div className="flex items-center justify-between gap-2 px-4 pb-2 pt-3">
           <h2 className="font-semibold text-neutral-900">{label ? labels.find((l) => l.key === label)?.title ?? copy.title : CHAT_BOX_LABEL[role][box]}</h2>
           <span className="text-xs tabular-nums text-neutral-500">{visible.length}</span>

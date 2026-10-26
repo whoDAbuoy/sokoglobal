@@ -118,7 +118,7 @@ export default function ChatMessageItem({ message: m, mine, showRead, onDelete }
           <ShieldCheck className="h-3 w-3" aria-hidden /> System / Admin message
         </span>
       )}
-      <div className={clsx('max-w-[85%] break-words text-sm',
+      <div className={clsx('min-w-0 max-w-[85%] break-words text-sm [overflow-wrap:anywhere]',
         bare ? '' : clsx('rounded-2xl', media ? 'p-2' : 'whitespace-pre-wrap px-3.5 py-2',
           mine ? 'rounded-br-md bg-neutral-900 text-white' : 'rounded-bl-md bg-neutral-100 text-neutral-900'))}>
         {media ? <MediaBody m={m} mine={mine} /> : m.content}
