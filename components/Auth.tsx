@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import clsx from 'clsx';
@@ -18,6 +18,9 @@ import { homePathFor } from '@/lib/auth/admin-access';
 type Mode = 'login' | 'signup';
 type SignupRole = Exclude<UserRole, 'admin' | 'super_admin'>;
 
+/** Email typed on one auth page survives a hop to the other (tab-scoped; never the password). */
+const EMAIL_DRAFT_KEY = 'sokoglobal.auth.email';
+const MINT_TEXT = 'bg-gradient-to-r from-[#8fd3cc] via-teal-300 to-cyan-300 bg-clip-text text-transparent';
 
 const regionNames = new Intl.DisplayNames(['en'], { type: 'region' });
 
@@ -75,6 +78,22 @@ export default function Auth({ mode }: { mode: Mode }) {
   const redirectTo = (() => {
     const r = searchParams.get('redirectTo');
     return r && r.startsWith('/') && !r.startsWith('//') ? r : null;
+  })();
+
+  // Restore / remember the email draft (read after mount so server and client render the same markup).
+  useEffect(() => {
+    try { const saved = sessionStorage.getItem(EMAIL_DRAFT_KEY); if (saved) setEmail((e) => e || saved); } catch { /* storage blocked */ }
+  }, []);
+  useEffect(() => {
+    try { if (email) sessionStorage.setItem(EMAIL_DRAFT_KEY, email); } catch { /* storage blocked */ }
+  }, [email]);
+  /** Sign in ⇄ Sign up links keep where the user was heading (and the supplier choice on sign-up). */
+  const otherAuthHref = (() => {
+    const q = new URLSearchParams();
+    if (redirectTo) q.set('redirectTo', redirectTo);
+    if (mode === 'signup' && role === 'supplier') q.set('role', 'supplier');
+    const qs = q.toString();
+    return `${mode === 'login' ? '/signup' : '/login'}${qs ? `?${qs}` : ''}`;
   })();
 
   async function routeByRole(userId: string) {
@@ -138,27 +157,27 @@ export default function Auth({ mode }: { mode: Mode }) {
     // Superlist-style split: an info panel and the form card, both iOS-style frosted glass, floating over a
     // full-viewport interactive globe and the live waves. The content layer comes first in the DOM so
     // keyboard focus reaches the form before the globe; gaps between panels let pointer drags reach the globe.
-    <div className="dark relative isolate min-h-screen overflow-hidden bg-midnight text-neutral-900">
+    <div className="dark sellsy relative isolate min-h-screen overflow-hidden bg-[#050505] text-neutral-900">
       <div className="pointer-events-none relative z-10 mx-auto grid min-h-screen max-w-6xl content-center gap-6 px-4 py-8 sm:px-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:py-12">
         {/* Left: brand, value proposition and trust points */}
-        <aside className="frost-ios pointer-events-auto hidden flex-col rounded-3xl p-8 motion-safe:animate-fade-up lg:flex xl:p-10">
-          <Link href="/" className="flex w-fit items-center gap-2.5 rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400">
-            <ShieldCheck className="h-5 w-5 text-cyan-400" strokeWidth={2.25} aria-hidden />
+        <aside className="sx-glass pointer-events-auto hidden flex-col p-8 motion-safe:animate-fade-up lg:flex xl:p-10">
+          <Link href="/" className="flex w-fit items-center gap-2.5 rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-[#5a9895]">
+            <ShieldCheck className="h-5 w-5 text-[#8fd3cc]" strokeWidth={2.25} aria-hidden />
             <span className="text-lg font-semibold tracking-tight">SokoGlobal</span>
           </Link>
 
           <h1 className="mt-6 text-3xl font-semibold leading-[1.1] xl:text-4xl">
             Source from the West.{' '}
-            <span className="bg-gradient-to-r from-blue-400 via-cyan-300 to-indigo-400 bg-clip-text text-transparent">Pay only when it lands.</span>
+            <span className={MINT_TEXT}>Pay only when it lands.</span>
           </h1>
           <p className="mt-3 flex items-center gap-1.5 text-sm text-neutral-600">
-            <CheckCircle2 className="h-4 w-4 text-cyan-400" aria-hidden /> Escrow on every order · no surprise fees
+            <CheckCircle2 className="h-4 w-4 text-[#8fd3cc]" aria-hidden /> Escrow on every order · no surprise fees
           </p>
 
           <ul className="mt-10 space-y-8">
             {TRUST_POINTS.map(({ icon: Icon, title, body }) => (
               <li key={title}>
-                <Icon className="h-6 w-6 text-cyan-400" strokeWidth={1.75} aria-hidden />
+                <Icon className="h-6 w-6 text-[#8fd3cc]" strokeWidth={1.75} aria-hidden />
                 <p className="mt-3 text-sm font-semibold">{title}</p>
                 <p className="mt-1 max-w-sm text-sm leading-relaxed text-neutral-600">{body}</p>
               </li>
@@ -174,19 +193,19 @@ export default function Auth({ mode }: { mode: Mode }) {
       {/* Right: the form card */}
       <main className="pointer-events-auto flex items-center">
         <div className="mx-auto w-full max-w-lg lg:max-w-none">
-          <Link href="/" className="mb-6 flex w-fit items-center gap-2 rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 lg:hidden">
-            <ShieldCheck className="h-5 w-5 text-cyan-400" strokeWidth={2.25} aria-hidden />
+          <Link href="/" className="mb-6 flex w-fit items-center gap-2 rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-[#5a9895] lg:hidden">
+            <ShieldCheck className="h-5 w-5 text-[#8fd3cc]" strokeWidth={2.25} aria-hidden />
             <span className="text-base font-semibold tracking-tight">SokoGlobal</span>
           </Link>
-          <div className="frost-ios rounded-3xl p-6 motion-safe:animate-scale-in sm:p-9">
+          <div className="sx-glass p-6 motion-safe:animate-scale-in sm:p-9">
           {confirmationSentTo ? (
             <div className="py-4 text-center">
               <span className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-emerald-50">
                 <CheckCircle2 className="h-6 w-6 text-emerald-600" />
               </span>
               <h2 className="mt-4 text-xl font-semibold">Check your email</h2>
-              <p className="mt-2 text-sm text-slate-600">
-                We sent a secure link to <span className="font-medium text-slate-900">{confirmationSentTo}</span>.
+              <p className="mt-2 text-sm text-neutral-600">
+                We sent a secure link to <span className="font-medium text-neutral-900">{confirmationSentTo}</span>.
                 Open it to continue securely.
               </p>
               <Link href="/login" className="btn-secondary mt-6 w-full">Back to sign in</Link>
@@ -196,11 +215,11 @@ export default function Auth({ mode }: { mode: Mode }) {
               <h2 className="text-3xl font-semibold text-neutral-900">
                 {mode === 'login' ? 'Welcome back' : 'Create your trade account'}
               </h2>
-              <p className="mt-1.5 text-sm text-slate-600">
+              <p className="mt-1.5 text-sm text-neutral-600">
                 {mode === 'login' ? (
-                  <>New to SokoGlobal? <Link href="/signup" className="font-medium text-neutral-900 underline underline-offset-4 hover:text-neutral-600">Create an account</Link></>
+                  <>New to SokoGlobal? <Link href={otherAuthHref} className="font-medium text-neutral-900 underline underline-offset-4 hover:text-neutral-600">Create an account</Link></>
                 ) : (
-                  <>Already registered? <Link href="/login" className="font-medium text-neutral-900 underline underline-offset-4 hover:text-neutral-600">Sign in</Link></>
+                  <>Already registered? <Link href={otherAuthHref} className="font-medium text-neutral-900 underline underline-offset-4 hover:text-neutral-600">Sign in</Link></>
                 )}
               </p>
 
@@ -219,14 +238,14 @@ export default function Auth({ mode }: { mode: Mode }) {
                             aria-checked={active}
                             onClick={() => { setRole(value); setCountry(''); }}
                             className={clsx(
-                              'relative rounded-lg border p-4 text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900 focus-visible:ring-offset-2',
-                              active ? 'border-neutral-900 bg-white ring-1 ring-neutral-900' : 'border-neutral-200 bg-white hover:border-neutral-400',
+                              'relative rounded-2xl border p-4 text-left transition-all duration-200 active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#5a9895] focus-visible:ring-offset-2 focus-visible:ring-offset-[#050505]',
+                              active ? 'border-[#5a9895] bg-[#5a9895]/15 ring-1 ring-[#5a9895]' : 'border-snow/10 bg-snow/[0.03] hover:border-snow/25',
                             )}
                           >
-                            {active && <CheckCircle2 className="absolute right-3 top-3 h-4 w-4 text-neutral-900" />}
-                            <Icon className={clsx('h-5 w-5', active ? 'text-neutral-900' : 'text-neutral-400')} strokeWidth={1.75} />
-                            <p className="mt-3 text-sm font-semibold text-slate-900">{title}</p>
-                            <p className="mt-0.5 text-xs leading-snug text-slate-500">{subtitle}</p>
+                            {active && <CheckCircle2 className="absolute right-3 top-3 h-4 w-4 text-[#8fd3cc]" />}
+                            <Icon className={clsx('h-5 w-5', active ? 'text-[#8fd3cc]' : 'text-neutral-400')} strokeWidth={1.75} />
+                            <p className="mt-3 text-sm font-semibold text-neutral-900">{title}</p>
+                            <p className="mt-0.5 text-xs leading-snug text-neutral-500">{subtitle}</p>
                           </button>
                         );
                       })}
@@ -270,12 +289,12 @@ export default function Auth({ mode }: { mode: Mode }) {
                     )}
                   </div>
                   <div className="relative">
-                    <Lock className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                    <Lock className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400" />
                     <input id="password" type={showPassword ? 'text' : 'password'} required minLength={mode === 'signup' ? 10 : 1}
                       autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
                       className="input pl-10 pr-10" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••••" />
                     <button type="button" onClick={() => setShowPassword((s) => !s)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 rounded p-0.5 text-slate-400 hover:text-slate-600"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 rounded p-0.5 text-neutral-400 hover:text-neutral-600"
                       aria-label={showPassword ? 'Hide password' : 'Show password'}>
                       {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
@@ -285,7 +304,7 @@ export default function Auth({ mode }: { mode: Mode }) {
                       <div className="flex flex-1 gap-1">
                         {[1, 2, 3].map((i) => (
                           <span key={i} className={clsx('h-1 flex-1 rounded-full',
-                            strength.score >= i ? ['bg-red-500', 'bg-amber-500', 'bg-emerald-500'][strength.score - 1] : 'bg-slate-200')} />
+                            strength.score >= i ? ['bg-red-500', 'bg-amber-500', 'bg-emerald-500'][strength.score - 1] : 'bg-neutral-200')} />
                         ))}
                       </div>
                       <span className="text-xs text-neutral-600">{strength.label}</span>
@@ -294,9 +313,9 @@ export default function Auth({ mode }: { mode: Mode }) {
                 </div>
 
                 {mode === 'signup' && (
-                  <label className="flex items-start gap-2.5 text-sm text-slate-600">
+                  <label className="flex items-start gap-2.5 text-sm text-neutral-600">
                     <input type="checkbox" checked={acceptTerms} onChange={(e) => setAcceptTerms(e.target.checked)}
-                      className="mt-0.5 h-4 w-4 rounded border-neutral-300 text-neutral-900 focus:ring-neutral-900" />
+                      className="mt-0.5 h-4 w-4 rounded border-neutral-300 accent-[#5a9895] focus:ring-[#5a9895]" />
                     <span>I agree to the <a href="#" className="font-medium text-neutral-900 underline underline-offset-4 hover:text-neutral-600">Terms of Trade</a> and{' '}
                       <a href="#" className="font-medium text-neutral-900 underline underline-offset-4 hover:text-neutral-600">Escrow Agreement</a>.</span>
                   </label>
@@ -308,7 +327,7 @@ export default function Auth({ mode }: { mode: Mode }) {
                   </div>
                 )}
 
-                <button type="submit" disabled={submitting} className="btn-primary w-full py-3">
+                <button type="submit" disabled={submitting} className="btn-primary w-full py-3 active:scale-95">
                   {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
                   {mode === 'login' ? 'Sign in securely' : `Create ${role === 'supplier' ? 'supplier' : 'importer'} account`}
                   {!submitting && <ArrowRight className="h-4 w-4" />}
@@ -327,9 +346,10 @@ export default function Auth({ mode }: { mode: Mode }) {
 
       {/* Background: live waves behind a full-viewport interactive globe (drag in the gaps, or Tab to it and use the arrow keys). */}
       <div className="absolute inset-0 z-0">
-        <WaveBackground band={0.8} intensity={0.85} />
+        <div aria-hidden className="ambient-glow left-1/2 top-1/2 h-[60vh] w-[60vh] -translate-x-1/2 -translate-y-1/2 bg-[#5a9895]/20" />
+        <WaveBackground band={0.8} intensity={0.85} palette="mint" />
         <div className="absolute left-1/2 top-1/2 aspect-square w-[min(115vw,104vh)] -translate-x-1/2 -translate-y-1/2 lg:left-1/2">
-          <Globe className="h-full w-full" focus={{ lat: 14, lon: 30 }} />
+          <Globe className="h-full w-full" focus={{ lat: 14, lon: 30 }} palette="mint" />
         </div>
       </div>
     </div>
@@ -341,7 +361,7 @@ function Field({ id, label, icon: Icon, children }: { id: string; label: string;
     <div>
       <label htmlFor={id} className="label">{label}</label>
       <div className="relative">
-        <Icon className="pointer-events-none absolute left-3.5 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-slate-400" />
+        <Icon className="pointer-events-none absolute left-3.5 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-neutral-400" />
         {children}
       </div>
     </div>
