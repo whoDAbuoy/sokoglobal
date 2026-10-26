@@ -212,6 +212,15 @@
 .sellsy .btn-secondary { border-radius: 9999px; border-color: rgb(255 255 255 / 0.12); background-color: rgb(255 255 255 / 0.03); }
 .sellsy .btn-secondary:hover { border-color: rgb(255 255 255 / 0.35); background-color: rgb(255 255 255 / 0.07); }
 .sellsy .input { border-radius: 0.875rem; border-color: rgb(255 255 255 / 0.1); background-color: #0b0b0b; }
+.sellsy .input:hover { border-color: rgb(255 255 255 / 0.2); }
+.sellsy .input:focus { border-color: #5a9895; --tw-ring-color: rgb(90 152 149 / 0.6); }
+/* Frosted glass container (auth forms, landing highlights): gray-900 at 40%, xl blur, 10% white rim, deep shadow,
+   so the waves and globe show through. Kept apart from .glass-card, which Sellsy pages make near-opaque. */
+.sx-glass {
+  border-radius: 1.5rem; border: 1px solid rgb(255 255 255 / 0.1); background-color: rgb(17 24 39 / 0.4);
+  box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.6), inset 0 1px 0 0 rgb(255 255 255 / 0.05);
+  -webkit-backdrop-filter: blur(24px) saturate(140%); backdrop-filter: blur(24px) saturate(140%);
+}
 .sellsy .pill:not([class*='border-']):not([class*='tone-']) { border-color: rgb(255 255 255 / 0.08); }
 .sellsy .pill:not([class*='bg-']):not([class*='tone-']) { background-color: rgb(255 255 255 / 0.04); }
 /* Mint status badges: escrow / verified / active states share the portal accent. */
@@ -282,7 +291,7 @@
 @media (prefers-reduced-transparency: reduce) {
   .frost-card, .frost-bar, .frost-pop, .frost-panel, .frost-ios, .glass, .card, .glass-card, .glass-surface, .glass-toolbar, .glass-nav { backdrop-filter: none !important; background-color: rgb(var(--sg-white)) !important; }
   .ambient-glow { display: none; }
-  .sellsy .card, .sellsy .glass-card, .sellsy .glass-surface, .sellsy .frost-card, .sx-card { background-color: #121212 !important; backdrop-filter: none !important; }
+  .sellsy .card, .sellsy .glass-card, .sellsy .glass-surface, .sellsy .frost-card, .sx-card, .sx-glass { background-color: #121212 !important; backdrop-filter: none !important; }
 }
 
 /* Phones: pad every page that shows the bottom dock (components/navigation/MobileNav.tsx) so it never covers
