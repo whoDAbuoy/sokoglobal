@@ -21,9 +21,9 @@ export interface FeaturedSlide {
 const INTERVAL_MS = 6000;
 
 /**
- * Featured collections banner: crossfading slides, edge arrows that fade in on
- * hover, animated dots. Auto-advances unless hovered/focused or the user
- * prefers reduced motion.
+ * Featured collections banner: crossfading slides with the copy on the left and the product visual clear on the
+ * right. Previous / next and the slide dots sit in one small control row under the copy (nothing floats over the
+ * image). Auto-advances unless hovered/focused or the user prefers reduced motion.
  */
 export default function FeaturedCarousel({ slides }: { slides: FeaturedSlide[] }) {
   const [index, setIndex] = useState(0);
@@ -51,7 +51,7 @@ export default function FeaturedCarousel({ slides }: { slides: FeaturedSlide[] }
           <ProductVisual src={s.image} alt="" category={s.category}
             className={clsx('h-full w-full transition-transform duration-[6000ms] ease-out motion-reduce:transition-none', i === index ? 'scale-105' : 'scale-100')} />
           <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/55 to-black/10" />
-          <div className="absolute inset-0 flex items-end p-6 sm:items-center sm:p-12">
+          <div className="absolute inset-0 flex items-end p-6 pb-16 sm:items-center sm:p-12 sm:pb-12">
             <div className="max-w-md text-[#fff]">
               <p className="text-xs font-medium uppercase tracking-eyebrow text-[#fff]/70">{s.eyebrow}</p>
               <h2 className="mt-3 text-3xl font-semibold leading-tight sm:text-4xl">{s.title}</h2>
@@ -66,21 +66,21 @@ export default function FeaturedCarousel({ slides }: { slides: FeaturedSlide[] }
       ))}
 
       {multi && (
-        <>
-          {([['Previous slide', -1, ChevronLeft, 'left-4'], ['Next slide', 1, ChevronRight, 'right-4']] as const).map(([label, step, Icon, side]) => (
+        // Controls under the copy, left side only: the product visual on the right stays unobstructed.
+        <div className="absolute bottom-5 left-6 z-20 flex items-center gap-2 sm:left-12">
+          {([['Previous slide', -1, ChevronLeft], ['Next slide', 1, ChevronRight]] as const).map(([label, step, Icon]) => (
             <button key={label} type="button" onClick={() => go(index + step)} aria-label={label}
-              className={clsx('absolute top-1/2 z-20 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-full bg-white/90 text-neutral-900 shadow-overlay transition duration-300',
-                'opacity-0 hover:bg-white focus-visible:opacity-100 group-hover/banner:opacity-100 [@media(hover:none)]:opacity-100', side)}>
-              <Icon className="h-5 w-5" />
+              className="grid h-8 w-8 place-items-center rounded-full border border-[#fff]/25 bg-[#000]/30 text-[#fff] backdrop-blur-md transition hover:bg-[#000]/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#fff]">
+              <Icon className="h-4 w-4" />
             </button>
           ))}
-          <div className="absolute bottom-5 right-6 z-20 flex items-center gap-1.5">
+          <div className="ml-1 flex items-center gap-1.5">
             {slides.map((s, i) => (
               <button key={s.id} type="button" onClick={() => go(i)} aria-label={`Show slide ${i + 1}`} aria-current={i === index}
                 className={clsx('h-1.5 rounded-full transition-all duration-500 ease-out', i === index ? 'w-6 bg-[#fff]' : 'w-1.5 bg-[#fff]/50 hover:bg-[#fff]/80')} />
             ))}
           </div>
-        </>
+        </div>
       )}
     </section>
   );

@@ -17,6 +17,7 @@ import SupportWidget from '@/components/dashboard/SupportWidget';
 import FeaturedCarousel, { type FeaturedSlide } from '@/components/dashboard/FeaturedCarousel';
 import CategoryTiles, { type CategoryTile } from '@/components/dashboard/CategoryTiles';
 import Link from 'next/link';
+import OneRowGrid from '@/components/dashboard/OneRowGrid';
 import BuyerOverview, { type Notice, type RfqAlert } from '@/components/dashboard/BuyerOverview';
 import { freightShareByOrigin } from '@/lib/landed-estimate';
 import { goldSupplierIds } from '@/lib/pricing-server';
@@ -244,9 +245,9 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
               subtitle="New Trial Batches from the suppliers you follow, newest first."
               aside={<Link href="/dashboard/discover" className="pill border-neutral-300 text-neutral-800 hover:border-neutral-900">Find suppliers <ArrowRight className="h-3.5 w-3.5" aria-hidden /></Link>} />
             {feed.length > 0 ? (
-              <div className="mt-8 grid gap-x-6 gap-y-12 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
+              <OneRowGrid className="mt-8">
                 {feed.map((p) => <TrialBatchCard key={`f-${p.id}`} product={p} />)}
-              </div>
+              </OneRowGrid>
             ) : (
               <p className="glass-card mt-6 px-6 py-8 text-center text-sm text-neutral-600">
                 {followedIds.length
@@ -278,9 +279,9 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
               </div>
             }
           />
-          <div className="mt-8 grid gap-x-6 gap-y-12 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
+          <OneRowGrid className="mt-8" moreHref="/dashboard/discover" moreLabel="View all in the catalogue">
             {shownProducts.map((p) => <TrialBatchCard key={p.id} product={p} />)}
-          </div>
+          </OneRowGrid>
         </section>
 
         {/* Trend Pools */}
@@ -290,9 +291,9 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
             title="Trend Pools"
             subtitle="Team up with other boutiques to buy in bulk and split volumetric shipping costs."
           />
-          <div className="mt-8 grid gap-x-6 gap-y-12 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
+          <OneRowGrid className="mt-8">
             {viewPools.map((p) => <TrendPoolCard key={p.id} pool={p} />)}
-          </div>
+          </OneRowGrid>
         </section>
       </main>
 
