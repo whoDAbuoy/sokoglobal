@@ -99,7 +99,7 @@ export default function AdminChatCenter({ initialThreadId = null }: { initialThr
   const counts = useMemo(() => Object.fromEntries(CHAT_KINDS.map((k) => [k, threads.filter((t) => t.kind === k).length])), [threads]);
 
   return (
-    <div className="card grid min-h-[36rem] overflow-hidden lg:h-[calc(100vh-11rem)] lg:grid-cols-[22rem_minmax(0,1fr)]">
+    <div className="card grid min-h-[36rem] grid-cols-1 overflow-hidden lg:h-[calc(100vh-11rem)] lg:grid-cols-[22rem_minmax(0,1fr)]">
       <section aria-label="Conversations" className={clsx('flex min-h-0 flex-col border-neutral-200 lg:border-r', selectedId ? 'hidden lg:flex' : 'flex')}>
         <div className="space-y-3 border-b border-neutral-200 p-3">
           <div className="relative">
