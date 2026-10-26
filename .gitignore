@@ -36,3 +36,6 @@ yarn-error.log*
 
 # Local agent screenshots and archives
 /Claude outputs/
+
+# Integration stack secrets (infrastructure/docker-compose.integrations.yml)
+infrastructure/.env.integrations
