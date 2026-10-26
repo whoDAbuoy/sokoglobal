@@ -1,10 +1,10 @@
 import { redirect } from 'next/navigation';
-import { ArrowRight, BadgeCheck, Compass, Heart, Info, Lock, MessageSquare, Package, Plane, UserCheck, Users } from 'lucide-react';
+import { ArrowRight, BadgeCheck, Info, Lock, Plane, UserCheck, Users } from 'lucide-react';
 import { PAID_ORDER_STATUSES } from '@/lib/order-status';
 import { getSessionProfile } from '@/lib/supabase/server';
 import type { EscrowStatus, GalleryMedia, OrderView, ProductCategory, TrendPoolView, TrialProductView } from '@/lib/types';
 import { DEMO_POOLS, DEMO_PRODUCTS } from '@/lib/demo-data';
-import { formatUSD } from '@/lib/format';
+import { daysLeft, flag, formatUSD } from '@/lib/format';
 import { getSystemConfigs } from '@/lib/system-config-server';
 import { minimumCents } from '@/lib/trial-batch';
 import { checklist, type KycDoc } from '@/lib/kyc';
@@ -17,7 +17,8 @@ import SupportWidget from '@/components/dashboard/SupportWidget';
 import FeaturedCarousel, { type FeaturedSlide } from '@/components/dashboard/FeaturedCarousel';
 import CategoryTiles, { type CategoryTile } from '@/components/dashboard/CategoryTiles';
 import Link from 'next/link';
-import BuyerOverview from '@/components/dashboard/BuyerOverview';
+import BuyerOverview, { type Notice, type RfqAlert } from '@/components/dashboard/BuyerOverview';
+import { freightShareByOrigin } from '@/lib/landed-estimate';
 import { goldSupplierIds } from '@/lib/pricing-server';
 import { CATALOG_PRODUCT_SELECT, toTrialProductView, type CatalogProductRow } from '@/lib/product-view';
 
@@ -78,6 +79,15 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     ? ((await supabase.from('products').select(CATALOG_PRODUCT_SELECT).in('supplier_id', followedIds).eq('status', 'live').is('deleted_at', null)
         .order('created_at', { ascending: false }).limit(6)).data ?? []) as unknown as CatalogProductRow[]
     : [];
+
+  // RFQ activity for the overview (own rows under RLS; additive read, errors → the card says RFQs are unavailable).
+  const rfqRes = await supabase.from('rfqs').select('id, title, status, expires_at, quotes:rfq_quotes!rfq_quotes_rfq_id_fkey ( count )')
+    .eq('buyer_id', user.id).in('status', ['open', 'quoted']).gt('expires_at', new Date().toISOString())
+    .order('created_at', { ascending: false }).limit(10);
+  const rfqAlerts: RfqAlert[] | null = rfqRes.error ? null : (rfqRes.data ?? []).map((r) => ({
+    id: r.id as string, title: r.title as string, expiresAt: r.expires_at as string,
+    quotes: (one(r.quotes as unknown as { count: number }[] | { count: number }) ?? { count: 0 }).count,
+  }));
 
   const configs = await getSystemConfigs(supabase);
   // Banner state comes from profiles.kyc_status (the column every guard reads); documents only refine its copy.
@@ -153,6 +163,25 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     });
   }
 
+  // Right-column cards: facts from rows already loaded (nothing invented; sample data gets no insights).
+  const live = usingDemo ? [] : [...products, ...feed];
+  const liveOrigins = [...new Set(products.map((p) => p.origin_country))];
+  const cheapest = products.length ? Math.min(...products.map((p) => p.landed_cost_cents)) : null;
+  const soonestPool = usingDemo ? null : pools.find((p) => p.status === 'open') ?? null;
+  const insights = usingDemo ? [{ label: 'Sample data', value: 'Insights appear once live listings are loaded.' }] : [
+    ...(liveOrigins.length ? [{ label: 'Newest listings ship from', value: liveOrigins.map((c) => flag(c)).join(' ') }] : []),
+    ...(cheapest !== null ? [{ label: 'Lowest landed cost among the newest listings', value: formatUSD(cheapest) }] : []),
+    ...(soonestPool ? [{ label: 'Trend Pool closing soonest', value: `${soonestPool.title} · ${daysLeft(soonestPool.deadline)} days left` }] : []),
+    { label: 'Trial Batch minimum', value: `${formatUSD(minTrialCents)} landed, freight and customs included` },
+  ];
+  const notices: Notice[] = [
+    ...(!configs.trial.enabled ? [{ tone: 'amber' as const, text: 'New trial batches are paused. Trend Pools and placed orders are not affected.' }] : []),
+    ...(showKycBanner ? [{ tone: 'amber' as const, text: 'Verify your business to keep ordering.', href: '/dashboard/kyc', cta: 'Verify now' }] : []),
+    ...(profile.bio === null ? [{ tone: 'mint' as const, text: 'Add a bio so suppliers know who you are.', href: '/dashboard/settings?tab=profile', cta: 'Add bio' }] : []),
+  ];
+  if (!notices.length) notices.push({ tone: 'mint', text: 'No notices right now.' });
+  const freightShare = freightShareByOrigin(live.map((p) => ({ origin_country: p.origin_country, goods_cents: p.goods_cents, freight_cents: p.freight_cents })));
+
   const featuredSlides: FeaturedSlide[] = [
     ...(['beauty', 'clothing'] as const).filter((c) => inCategory(c).length > 0).map((c) => ({
       id: c, category: c, image: imageOf(c),
@@ -192,14 +221,8 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
             <p role="status" className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">New trial batches are paused right now. Trend Pools and orders already placed are not affected.</p>
           )}
           <div className="mt-8">
-            <BuyerOverview orders={orders} feed={feed} following={followedIds === null ? null : followedIds.length} actions={[
-              { href: '/dashboard/orders', label: 'My Orders', hint: 'Escrow & shipment tracking', icon: Package, badge: orders.length || undefined },
-              { href: '/dashboard/discover', label: 'Catalogue', hint: 'Every category, filters & search', icon: Compass },
-              { href: '/dashboard#batches', label: 'Trial Batches', hint: `Test a supplier from ${formatUSD(minTrialCents)}`, icon: Plane },
-              { href: '/dashboard#pools', label: 'Trend Pools', hint: 'Split freight with boutiques', icon: Users },
-              { href: '/dashboard/messages', label: 'Messages', hint: 'Chat with suppliers', icon: MessageSquare },
-              { href: '/dashboard/wishlist', label: 'Wishlist', hint: 'Saved products', icon: Heart },
-            ]} />
+            <BuyerOverview profile={profile} orders={orders} feed={feed} following={followedIds === null ? null : followedIds.length}
+              rfqs={rfqAlerts} insights={insights} notices={notices} freightShare={freightShare} />
           </div>
         </div>
       </div>

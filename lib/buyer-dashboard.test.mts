@@ -1,7 +1,7 @@
 // Run: npx tsx --test lib/buyer-dashboard.test.mts
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { orderPill, shipmentStage, summarizeOrders, trackedOrder, type OrderRow } from './buyer-dashboard.ts';
+import { escrowPipeline, orderPill, shipmentStage, summarizeOrders, trackedOrder, type OrderRow } from './buyer-dashboard.ts';
 
 const row = (id: string, escrow_status: OrderRow['escrow_status'], total_cents: number, created_at = '2026-10-01T00:00:00Z'): OrderRow =>
   ({ id, escrow_status, total_cents, created_at });
@@ -47,4 +47,14 @@ test('orderPill: buyer wording and tones', () => {
   assert.deepEqual(orderPill('released'), { label: 'Delivered', tone: 'mint' });
   assert.equal(orderPill('disputed').tone, 'rose');
   assert.equal(orderPill('weird_status' as never).label, 'weird status');
+});
+
+test('escrowPipeline: counts and value per stage; disputed / refunded / cancelled left out', () => {
+  const p = escrowPipeline([
+    row('a', 'funded', 10_000), row('b', 'in_transit', 5_000), row('c', 'customs_cleared', 7_000),
+    row('d', 'delivered_pending_verification', 3_000), row('e', 'released', 2_000), row('f', 'refunded', 99_000), row('g', 'disputed', 1),
+  ]);
+  assert.deepEqual(p.map((s) => [s.label, s.count, s.cents]), [
+    ['Payment received', 2, 15_000], ['Customs cleared', 1, 7_000], ['Delivered', 1, 3_000], ['Funds released', 1, 2_000],
+  ]);
 });

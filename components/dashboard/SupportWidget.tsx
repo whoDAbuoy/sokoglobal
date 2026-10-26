@@ -112,9 +112,9 @@ export default function SupportWidget({ orders = [] }: { orders?: OrderView[] })
   // Order cards can open the widget on that order's support chat (lib/support-events.ts).
   useEffect(() => {
     const onOpen = (e: Event) => {
-      const { orderId } = (e as CustomEvent<OpenSupportDetail>).detail ?? {};
+      const { orderId, tab: openOn } = (e as CustomEvent<OpenSupportDetail>).detail ?? {};
       if (orderId) setChatOrderId(orderId);
-      setTab('chat');
+      setTab(openOn ?? 'chat');
       setOpen(true);
     };
     window.addEventListener(OPEN_SUPPORT_EVENT, onOpen);
