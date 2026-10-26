@@ -4,7 +4,7 @@ import { useEffect, useId, useRef, useState } from 'react';
 import clsx from 'clsx';
 import { ArrowRight, Bitcoin, Check, CreditCard, Landmark, Lock, Smartphone, Wallet, X, type LucideIcon } from 'lucide-react';
 import {
-  CATEGORY_LABEL, METHOD_CATEGORY, METHOD_LABEL, WIRE_SUGGESTED_CENTS,
+  CATEGORY_LABEL, METHOD_CATEGORY, METHOD_LABEL, WIRE_SUGGESTED_CENTS, methodOptions,
   type CryptoOption, type ManualPaymentView, type PaymentMethod, type SwiftDetails,
 } from '@/lib/payment-methods';
 import BankCardPanel from './BankCardPanel';
@@ -31,9 +31,10 @@ export interface ManualContext {
 
 /**
  * Checkout payment picker (migration 028). Orders are placed without choosing a channel; here "Pay now" opens a
- * frosted-glass list of every method the server says is switched on and configured, each as its own option
- * (M-Pesa, Airtel Money, card, DPO Pay, PayPal, SWIFT wire, crypto). Picking one shows that method's own
- * handler below, with "Change" to pick again. Every method charges what Postgres says is due; nothing here
+ * frosted-glass list of every supported method, each as its own option (M-Pesa, Airtel Money, card, DPO Pay,
+ * PayPal, SWIFT wire, crypto). Methods the server offers for this payment are selectable; the rest stay listed
+ * but disabled with a reason (e.g. wire and crypto on a cart: single orders only). Picking one shows that
+ * method's own handler below, with "Change" to pick again. Every method charges what Postgres says is due; nothing here
  * sets an amount.
  */
 export default function PaymentMethods({ target, methods, preferred, amountLabel, buyerName, manual }: {
@@ -65,6 +66,7 @@ export default function PaymentMethods({ target, methods, preferred, amountLabel
   if (!offered.length) {
     return <p className="text-sm text-neutral-600">Online payment isn&apos;t available right now. Please try again shortly or contact support.</p>;
   }
+  const options = methodOptions(offered, target.kind === 'order');
   const choose = (m: PaymentMethod) => { setMethod(m); setPicking(false); };
   const base = target.kind === 'order' ? `/api/orders/${target.id}` : `/api/checkout/${target.id}`;
   const returnPath = target.kind === 'order' ? `/dashboard/orders/${target.id}` : `/dashboard/checkout/${target.id}`;
@@ -77,7 +79,7 @@ export default function PaymentMethods({ target, methods, preferred, amountLabel
             <span className="grid h-8 w-8 place-items-center rounded-full bg-[#5a9895]/20 text-[#8fd3cc]">{(() => { const I = METHOD_TILE[method].icon; return <I className="h-4 w-4" aria-hidden />; })()}</span>
             Paying with <span className="font-medium text-neutral-900">{METHOD_LABEL[method]}</span>
           </p>
-          {offered.length > 1 && !openMethod && (
+          {!openMethod && (
             <button type="button" onClick={() => setPicking(true)} className="sx-link px-2 py-1 underline-offset-4 hover:underline">Change method</button>
           )}
         </div>
@@ -103,20 +105,29 @@ export default function PaymentMethods({ target, methods, preferred, amountLabel
             </button>
           </div>
           <ul className="mt-5 grid gap-2" aria-label="Payment methods">
-            {offered.map((m) => {
+            {options.map(({ method: m, enabled, blocked, reason }) => {
               const { icon: Icon, hint } = METHOD_TILE[m];
               const selected = m === method;
               return (
                 <li key={m}>
-                  <button type="button" onClick={() => choose(m)} aria-pressed={selected}
-                    className={clsx('press flex w-full items-center gap-3 rounded-2xl border p-3 text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#5a9895]',
-                      selected ? 'border-[#5a9895] bg-[#5a9895]/15' : 'border-snow/10 bg-snow/[0.03] hover:border-snow/25 hover:bg-snow/[0.06]')}>
-                    <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#5a9895]/20 text-[#8fd3cc]"><Icon className="h-5 w-5" strokeWidth={1.75} aria-hidden /></span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block text-sm font-medium text-neutral-900">{METHOD_LABEL[m]}</span>
-                      <span className="block truncate text-xs text-neutral-500">{hint} · {CATEGORY_LABEL[METHOD_CATEGORY[m]]}</span>
+                  {/* Unavailable methods stay listed (disabled, with the reason) so buyers see every channel. */}
+                  <button type="button" onClick={() => choose(m)} aria-pressed={enabled ? selected : undefined} disabled={!enabled}
+                    aria-describedby={reason ? `${uid}-why-${m}` : undefined}
+                    className={clsx('flex w-full items-center gap-3 rounded-2xl border p-3 text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#5a9895]',
+                      !enabled ? 'cursor-not-allowed border-snow/[0.06] bg-transparent'
+                        : selected ? 'press border-[#5a9895] bg-[#5a9895]/15' : 'press border-snow/10 bg-snow/[0.03] hover:border-snow/25 hover:bg-snow/[0.06]')}>
+                    <span className={clsx('grid h-10 w-10 shrink-0 place-items-center rounded-full', enabled ? 'bg-[#5a9895]/20 text-[#8fd3cc]' : 'bg-snow/[0.05] text-neutral-500')}>
+                      <Icon className="h-5 w-5" strokeWidth={1.75} aria-hidden />
                     </span>
-                    {selected ? <Check className="h-4 w-4 text-[#8fd3cc]" aria-hidden /> : <ArrowRight className="h-4 w-4 text-neutral-400" aria-hidden />}
+                    <span className="min-w-0 flex-1">
+                      <span className={clsx('block text-sm font-medium', enabled ? 'text-neutral-900' : 'text-neutral-600')}>{METHOD_LABEL[m]}</span>
+                      {reason
+                        ? <span id={`${uid}-why-${m}`} className="block text-xs text-neutral-500">{reason}</span>
+                        : <span className="block truncate text-xs text-neutral-500">{hint} · {CATEGORY_LABEL[METHOD_CATEGORY[m]]}</span>}
+                    </span>
+                    {!enabled
+                      ? <span className="sx-pill sx-pill-muted shrink-0">{blocked === 'single_order' ? 'Single orders' : 'Unavailable'}</span>
+                      : selected ? <Check className="h-4 w-4 text-[#8fd3cc]" aria-hidden /> : <ArrowRight className="h-4 w-4 text-neutral-400" aria-hidden />}
                   </button>
                 </li>
               );
