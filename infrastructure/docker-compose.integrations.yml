@@ -1,0 +1,112 @@
+# SokoGlobal integrations: n8n (automation) and Twenty CRM, for local and staging use.
+#
+#   cp infrastructure/.env.integrations.example infrastructure/.env.integrations   # then fill in the secrets
+#   docker compose -f infrastructure/docker-compose.integrations.yml --env-file infrastructure/.env.integrations up -d
+#
+#   n8n     http://localhost:5678   (first visit creates the owner account)
+#   Twenty  http://localhost:3001   (first visit creates the workspace; then Settings → APIs & Webhooks → API key)
+#
+# Ports bind to 127.0.0.1 only. For staging, put a TLS reverse proxy in front and set N8N_PUBLIC_URL /
+# TWENTY_SERVER_URL to the public https:// URLs: the app refuses plain http:// in production.
+# Wiring to the app (N8N_WEBHOOK_URL, N8N_WEBHOOK_SECRET, TWENTY_API_URL, TWENTY_API_KEY): see docs/integrations.md.
+name: sokoglobal-integrations
+
+x-twenty-env: &twenty-env
+  PG_DATABASE_URL: postgres://twenty:${TWENTY_DB_PASSWORD:?set TWENTY_DB_PASSWORD}@twenty-db:5432/twenty
+  SERVER_URL: ${TWENTY_SERVER_URL:-http://localhost:3001}
+  REDIS_URL: redis://twenty-redis:6379
+  STORAGE_TYPE: local
+  ENCRYPTION_KEY: ${TWENTY_ENCRYPTION_KEY:?set TWENTY_ENCRYPTION_KEY}
+
+services:
+  n8n:
+    image: n8nio/n8n:2.43.0
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:5678:5678"
+    environment:
+      N8N_HOST: ${N8N_HOST:-localhost}
+      N8N_PORT: 5678
+      N8N_PROTOCOL: ${N8N_PROTOCOL:-http}
+      WEBHOOK_URL: ${N8N_PUBLIC_URL:-http://localhost:5678/}
+      N8N_SECURE_COOKIE: ${N8N_SECURE_COOKIE:-false}       # true once served over https
+      N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY:?set N8N_ENCRYPTION_KEY}
+      GENERIC_TIMEZONE: ${GENERIC_TIMEZONE:-Africa/Nairobi}
+      TZ: ${GENERIC_TIMEZONE:-Africa/Nairobi}
+      # The shared HMAC secret (same value as the app's N8N_WEBHOOK_SECRET). Code nodes read it as
+      # $env.SOKOGLOBAL_WEBHOOK_SECRET to verify deliveries and sign calls back to the app.
+      SOKOGLOBAL_WEBHOOK_SECRET: ${N8N_WEBHOOK_SECRET:?set N8N_WEBHOOK_SECRET}
+      SOKOGLOBAL_APP_URL: ${SOKOGLOBAL_APP_URL:-http://host.docker.internal:3000}
+      N8N_BLOCK_ENV_ACCESS_IN_NODE: "false"
+      NODE_FUNCTION_ALLOW_BUILTIN: crypto
+    extra_hosts:
+      - "host.docker.internal:host-gateway"                # reach `npm run dev` on the host
+    volumes:
+      - n8n-data:/home/node/.n8n
+
+  twenty-server:
+    image: twentycrm/twenty:v2.46.0
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3001:3000"                              # 3000 is the SokoGlobal dev server
+    environment:
+      <<: *twenty-env
+      NODE_PORT: 3000
+    volumes:
+      - twenty-storage:/app/packages/twenty-server/.local-storage
+    depends_on:
+      twenty-db:
+        condition: service_healthy
+      twenty-redis:
+        condition: service_healthy
+    healthcheck:
+      test: curl --fail http://localhost:3000/healthz
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  twenty-worker:
+    image: twentycrm/twenty:v2.46.0
+    restart: unless-stopped
+    command: ["yarn", "worker:prod"]
+    environment:
+      <<: *twenty-env
+      DISABLE_DB_MIGRATIONS: "true"                        # the server runs them
+      DISABLE_CRON_JOBS_REGISTRATION: "true"
+    volumes:
+      - twenty-storage:/app/packages/twenty-server/.local-storage
+    depends_on:
+      twenty-db:
+        condition: service_healthy
+      twenty-server:
+        condition: service_healthy
+
+  twenty-db:
+    image: postgres:16.14
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: twenty
+      POSTGRES_USER: twenty
+      POSTGRES_PASSWORD: ${TWENTY_DB_PASSWORD:?set TWENTY_DB_PASSWORD}
+    volumes:
+      - twenty-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: pg_isready -U twenty -h localhost -d twenty
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  twenty-redis:
+    image: redis:7.4.10
+    restart: unless-stopped
+    command: ["--maxmemory-policy", "noeviction"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  n8n-data:
+  twenty-storage:
+  twenty-db-data:

@@ -34,6 +34,8 @@ export default async function SupplierProfilePage({ params }: { params: Promise<
     supabase.rpc('supplier_follower_count', { p_supplier_id: id }),
     supabase.from('follows').select('following_id').eq('follower_id', user.id).eq('following_id', id).maybeSingle(),
     goldSupplierIds(supabase, [id]),
+    // CRM lead signal (migration 033): buyers only, once a day; the result is ignored, so it never affects the page.
+    profile.role === 'importer' ? supabase.rpc('record_supplier_profile_view', { p_supplier_id: id }).then(() => null, () => null) : null,
   ]);
   const supplier = supplierRes.data as null | {
     id: string; role: string; company_name: string; country_code: string; kyc_verified: boolean; created_at: string; avatar_url: string | null; is_banned: boolean | null;
