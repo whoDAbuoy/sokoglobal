@@ -57,7 +57,7 @@ export default function PaymentMethods({ target, methods, preferred, amountLabel
             <button key={g.category} type="button" role="tab" id={`${uid}-tab-${g.category}`} aria-selected={selected} aria-controls={`${uid}-panel`}
               onClick={() => setMethod(g.methods.includes(method) ? method : g.methods[0])}
               className={clsx('segment flex-1 whitespace-nowrap', selected && 'text-neutral-900')}>
-              <Icon className={clsx('h-4 w-4', selected ? 'text-blue-600 dark:text-cyan-400' : 'text-neutral-400')} aria-hidden /> {CATEGORY_LABEL[g.category]}
+              <Icon className={clsx('h-4 w-4', selected ? 'text-current' : 'text-neutral-400')} aria-hidden /> {CATEGORY_LABEL[g.category]}
             </button>
           );
         })}

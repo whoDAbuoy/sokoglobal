@@ -78,13 +78,13 @@ export default function TrackingTimeline({ orderId, trackingUrl, className }: { 
             {t.stages.map((s, i) => (
               <li key={s.key} className="relative flex gap-3 pb-5 last:pb-0">
                 {i < t.stages.length - 1 && (
-                  <span aria-hidden className={clsx('absolute left-[11px] top-6 h-[calc(100%-1.25rem)] w-px', s.state === 'done' ? 'bg-emerald-500/60' : 'bg-neutral-200 dark:bg-snow/10')} />
+                  <span aria-hidden className={clsx('absolute left-[11px] top-6 h-[calc(100%-1.25rem)] w-px', s.state === 'done' ? 'bg-[#5a9895]/70' : 'bg-neutral-200 dark:bg-snow/10')} />
                 )}
                 <span className="relative grid h-6 w-6 shrink-0 place-items-center">
                   {s.state === 'done'
-                    ? <CheckCircle2 className="h-6 w-6 text-emerald-500" aria-hidden />
+                    ? <CheckCircle2 className="h-6 w-6 text-[#5a9895]" aria-hidden />
                     : s.state === 'current'
-                      ? <><span className="absolute inset-0 rounded-full bg-blue-500/30 motion-safe:animate-pulse-ring" /><Circle className="h-6 w-6 fill-blue-500/20 text-blue-500" aria-hidden /></>
+                      ? <><span className="absolute inset-0 rounded-full bg-teal-400/30 motion-safe:animate-pulse-ring" /><Circle className="h-6 w-6 fill-teal-400/20 text-teal-400" aria-hidden /></>
                       : <Circle className="h-6 w-6 text-neutral-300 dark:text-snow/20" aria-hidden />}
                 </span>
                 <div className="min-w-0 pt-0.5">

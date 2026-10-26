@@ -177,13 +177,13 @@ export default function TrialBatchCard({ product }: { product: TrialProductView 
   );
 
   return (
-    <article className="group flex flex-col">
+    <article className="glass-card group flex flex-col p-3 transition duration-300 ease-out hover:border-snow/15">
       {/* Clicking the photos opens the Quick View; swiping scrolls the gallery (touch swipes don't produce clicks). */}
-      <div className="relative cursor-pointer overflow-hidden rounded-lg transition duration-300 ease-out group-hover:-translate-y-1 group-hover:shadow-xl group-hover:shadow-blue-500/10" onClick={() => setQuickView(true)}>
+      <div className="relative cursor-pointer overflow-hidden rounded-2xl transition duration-300 ease-out group-hover:-translate-y-0.5" onClick={() => setQuickView(true)}>
         <ProductGallery images={images} media={product.media} alt={product.title} category={product.category} className="aspect-square" arrows="hover"
           dotsClassName="group-hover:-translate-y-12 group-focus-within:-translate-y-12 [@media(hover:none)]:-translate-y-12" />
         <div className="pointer-events-none absolute left-3 top-3 flex flex-wrap gap-1.5">
-          <span className="pill border-transparent bg-blue-600 text-snow shadow">Trial Batch</span>
+          <span className="pill border-transparent bg-[#5a9895] text-snow shadow">Trial Batch</span>
           {product.is_featured && <span className="pill border-transparent bg-violet-600 text-snow shadow">Featured</span>}
           {product.is_demo && <span className="pill border-amber-200 bg-amber-50 text-amber-800">Sample</span>}
         </div>
@@ -234,7 +234,7 @@ export default function TrialBatchCard({ product }: { product: TrialProductView 
         </div>
       </div>
 
-      <div className="flex flex-1 flex-col pt-4">
+      <div className="flex flex-1 flex-col px-1 pb-1 pt-4">
         <div className="flex items-center gap-2">
           <p className="flex min-w-0 flex-1 items-center gap-1.5 text-xs text-neutral-500">
             {flag(product.origin_country)}{' '}

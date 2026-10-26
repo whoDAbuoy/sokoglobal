@@ -17,7 +17,7 @@ import SupportWidget from '@/components/dashboard/SupportWidget';
 import FeaturedCarousel, { type FeaturedSlide } from '@/components/dashboard/FeaturedCarousel';
 import CategoryTiles, { type CategoryTile } from '@/components/dashboard/CategoryTiles';
 import Link from 'next/link';
-import QuickActions from '@/components/portal/QuickActions';
+import BuyerOverview from '@/components/dashboard/BuyerOverview';
 import { goldSupplierIds } from '@/lib/pricing-server';
 import { CATALOG_PRODUCT_SELECT, toTrialProductView, type CatalogProductRow } from '@/lib/product-view';
 
@@ -179,29 +179,32 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         </p>
       )}
 
-      {/* Hero over the live wave wallpaper */}
+      {/* Modular overview over the live mint waves (Sellsy layout) */}
       <div className="relative">
-        <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8 lg:py-16">
-          <p className="eyebrow">Welcome back, {profile.full_name.split(' ')[0]}</p>
-          <div className="mt-4"><EscrowProtectionBanner /></div>
+        <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8 lg:py-12">
+          <p className="eyebrow">Overview</p>
+          <h1 className="mt-2 text-3xl font-normal tracking-tight text-neutral-900 sm:text-4xl">Welcome back, {profile.full_name.split(' ')[0]}</h1>
+          <div className="mt-6"><EscrowProtectionBanner /></div>
           {showKycBanner && profile.kyc_status && profile.kyc_status !== 'approved' && (
             <div className="mt-4"><KycBanner status={profile.kyc_status} approved={kycApproved} /></div>
           )}
           {!configs.trial.enabled && (
             <p role="status" className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">New trial batches are paused right now. Trend Pools and orders already placed are not affected.</p>
           )}
-          <QuickActions className="mt-10" actions={[
-            { href: '/dashboard/orders', label: 'My Orders', hint: 'Escrow & shipment tracking', icon: Package, tone: 'tone-escrow', badge: orders.length || undefined },
-            { href: '/dashboard/discover', label: 'Catalogue', hint: 'Every category, filters & search', icon: Compass, tone: 'tone-muted' },
-            { href: '/dashboard#batches', label: 'Trial Batches', hint: `Test a supplier from ${formatUSD(minTrialCents)}`, icon: Plane, tone: 'tone-transit' },
-            { href: '/dashboard#pools', label: 'Trend Pools', hint: 'Split freight with boutiques', icon: Users, tone: 'tone-active' },
-            { href: '/dashboard/messages', label: 'Messages', hint: 'Chat with suppliers', icon: MessageSquare, tone: 'tone-pending' },
-            { href: '/dashboard/wishlist', label: 'Wishlist', hint: 'Saved products', icon: Heart, tone: 'tone-danger' },
-          ]} />
+          <div className="mt-8">
+            <BuyerOverview orders={orders} feed={feed} following={followedIds === null ? null : followedIds.length} actions={[
+              { href: '/dashboard/orders', label: 'My Orders', hint: 'Escrow & shipment tracking', icon: Package, badge: orders.length || undefined },
+              { href: '/dashboard/discover', label: 'Catalogue', hint: 'Every category, filters & search', icon: Compass },
+              { href: '/dashboard#batches', label: 'Trial Batches', hint: `Test a supplier from ${formatUSD(minTrialCents)}`, icon: Plane },
+              { href: '/dashboard#pools', label: 'Trend Pools', hint: 'Split freight with boutiques', icon: Users },
+              { href: '/dashboard/messages', label: 'Messages', hint: 'Chat with suppliers', icon: MessageSquare },
+              { href: '/dashboard/wishlist', label: 'Wishlist', hint: 'Saved products', icon: Heart },
+            ]} />
+          </div>
         </div>
       </div>
 
-      <main className="mx-auto max-w-7xl space-y-20 px-4 py-14 sm:px-6 lg:px-8">
+      <main className="mx-auto max-w-7xl space-y-20 px-4 pb-14 pt-6 sm:px-6 lg:px-8">
         {featuredSlides.length > 0 && <FeaturedCarousel slides={featuredSlides} />}
 
         {categoryTiles.length > 1 && (

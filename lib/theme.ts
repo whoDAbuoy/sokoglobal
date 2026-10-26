@@ -24,14 +24,15 @@ export const THEME_INIT_SCRIPT = `(function(){var p=null;try{p=localStorage.getI
   + `try{var d=p==='dark'||(p!=='light'&&!!(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches));`
   + `var r=document.documentElement;r.classList.toggle('dark',d);r.style.colorScheme=d?'dark':'light';}catch(e){}})();`;
 
+/** Route roots drawn in the always-dark Sellsy style (each also covers everything below it). */
+const SELLSY_ROOTS = ['/supplier', '/dashboard', '/rfqs'];
+
 /**
- * Routes drawn in the always-dark Sellsy style (pure-black canvas, charcoal cards, mint accents):
- * the supplier portal and the account settings / profile hub. The ambient backdrop switches to its
- * mint palette there, whatever the site theme.
+ * Routes drawn in the always-dark Sellsy style (pure-black canvas, charcoal glass cards, mint accents):
+ * the supplier portal and the whole buyer side (dashboard, catalogue, checkout, orders, settings, RFQs).
+ * The ambient backdrop switches to its mint palette there, whatever the site theme.
  */
 export function isSellsyRoute(pathname: string | null | undefined): boolean {
   const p = pathname ?? '';
-  return p === '/supplier' || p.startsWith('/supplier/')
-    || p === '/dashboard/settings' || p.startsWith('/dashboard/settings/')
-    || p === '/dashboard/profile' || p.startsWith('/dashboard/profile/');
+  return SELLSY_ROOTS.some((root) => p === root || p.startsWith(`${root}/`));
 }

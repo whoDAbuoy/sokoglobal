@@ -180,8 +180,8 @@
   .dark .text-amber-700, .dark .text-amber-800, .dark .text-amber-900 { color: rgb(252 211 77); }
   .dark .text-red-600, .dark .text-red-700 { color: rgb(252 165 165); }
 
-/* ─── Supplier portal: Sellsy-style modular dark cards (app/supplier/layout.tsx adds `.dark.sellsy`) ───
-   The portal is always dark: a pure-black canvas with charcoal cards, white pill tabs and mint growth accents.
+/* ─── Sellsy-style modular dark cards: supplier portal + buyer side (app/{supplier,dashboard,rfqs}/layout.tsx add `.dark.sellsy`) ───
+   Always dark: a pure-black canvas with charcoal glass cards, white pill tabs and mint accents.
    Re-pointing the neutral scale here (true neutral grays instead of the cool gray-950 ramp) restyles every
    existing supplier component at once; the `sx-*` classes are the new building blocks. */
 .dark.sellsy {
@@ -194,11 +194,12 @@
   color-scheme: dark;
   /* No fill here: AmbientBackdrop paints the #050505 canvas plus the mint waves and globe behind this subtree. */
 }
-/* Smoked charcoal glass: opaque enough for AA text over the brightest wave, translucent enough for the waves to read. */
+/* Smoked charcoal glass (#121212 at 90%, xl blur): AA text over the brightest wave, with the waves and globe peeking through. */
 .sellsy .card, .sellsy .glass-card, .sellsy .glass-surface, .sellsy .frost-card {
-  border-color: rgb(255 255 255 / 0.06); background-color: rgb(18 18 18 / 0.74); box-shadow: inset 0 1px 0 0 rgb(255 255 255 / 0.04);
-  -webkit-backdrop-filter: blur(20px) saturate(140%); backdrop-filter: blur(20px) saturate(140%);
+  border-color: rgb(255 255 255 / 0.05); background-color: rgb(18 18 18 / 0.9); box-shadow: inset 0 1px 0 0 rgb(255 255 255 / 0.04);
+  -webkit-backdrop-filter: blur(24px) saturate(140%); backdrop-filter: blur(24px) saturate(140%);
 }
+.sellsy .card, .sellsy .glass-card { border-radius: 1.5rem; }
 .sellsy .glass-inset { border-color: rgb(255 255 255 / 0.05); background-color: var(--sx-raised); }
 .sellsy .glass-nav { border-color: rgb(255 255 255 / 0.06); background-color: rgb(5 5 5 / 0.82); }
 .sellsy .card-lift:hover, .sellsy .card-lift:focus-within { border-color: rgb(255 255 255 / 0.14); box-shadow: 0 18px 40px -20px rgb(0 0 0 / 0.9); }
@@ -211,12 +212,21 @@
 .sellsy .btn-secondary { border-radius: 9999px; border-color: rgb(255 255 255 / 0.12); background-color: rgb(255 255 255 / 0.03); }
 .sellsy .btn-secondary:hover { border-color: rgb(255 255 255 / 0.35); background-color: rgb(255 255 255 / 0.07); }
 .sellsy .input { border-radius: 0.875rem; border-color: rgb(255 255 255 / 0.1); background-color: #0b0b0b; }
-.sellsy .pill { border-color: rgb(255 255 255 / 0.08); background-color: rgb(255 255 255 / 0.04); }
+.sellsy .pill:not([class*='border-']):not([class*='tone-']) { border-color: rgb(255 255 255 / 0.08); }
+.sellsy .pill:not([class*='bg-']):not([class*='tone-']) { background-color: rgb(255 255 255 / 0.04); }
+/* Mint status badges: escrow / verified / active states share the portal accent. */
+.sellsy .tone-escrow, .sellsy .tone-active { border-color: rgb(90 152 149 / 0.35); background-color: rgb(90 152 149 / 0.18); color: #8fd3cc; }
+.sellsy .tone-transit { border-color: rgb(45 212 191 / 0.25); background-color: rgb(45 212 191 / 0.1); color: #5eead4; }
+.sellsy .glass-button-active { border-color: rgb(90 152 149 / 0.5); background-color: rgb(90 152 149 / 0.18); color: #8fd3cc; }
+/* Tabbed glass controls (payment channels, shipping options, filters): a pill well with a white selected pill. */
+.sellsy .segmented { border-radius: 9999px; border-color: rgb(255 255 255 / 0.08); background-color: rgb(255 255 255 / 0.03); }
+.sellsy .segment { border-radius: 9999px; }
+.sellsy .segment[aria-selected='true'], .sellsy .segment[aria-checked='true'] { background-color: #fff; color: #050505; box-shadow: none; }
 .sellsy .glow-hover::before { background: radial-gradient(240px circle at var(--glow-x, 50%) var(--glow-y, 0%), rgb(90 152 149 / 0.16), transparent 70%); }
 
 @layer components {
   /* Modular card: charcoal, hairline rim, large radius. */
-  .sx-card { @apply rounded-3xl border border-snow/[0.06] bg-[#121212]/[0.74] backdrop-blur-xl backdrop-saturate-150; }
+  .sx-card { @apply rounded-3xl border border-snow/5 bg-[#121212]/90 backdrop-blur-xl backdrop-saturate-150; }
   /* Card heading row: title left, quiet action (View all / select) right. */
   .sx-card-head { @apply flex items-center justify-between gap-3; }
   .sx-card-title { @apply text-lg font-medium tracking-tight text-neutral-900; }
