@@ -48,11 +48,22 @@ export default function FeaturedCarousel({ slides }: { slides: FeaturedSlide[] }
         <div key={s.id} role="group" aria-roledescription="slide" aria-label={`${i + 1} of ${slides.length}`} aria-hidden={i !== index}
           className={clsx('absolute inset-0 transition-opacity duration-700 ease-out motion-reduce:transition-none',
             i === index ? 'z-10 opacity-100' : 'pointer-events-none opacity-0')}>
-          <ProductVisual src={s.image} alt="" category={s.category}
-            className={clsx('h-full w-full transition-transform duration-[6000ms] ease-out motion-reduce:transition-none', i === index ? 'scale-105' : 'scale-100')} />
-          <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/55 to-black/10" />
+          {/* Backdrop: the same photo, heavily blurred and dimmed — its colours, never its (label) text. */}
+          {s.image && (
+            <div aria-hidden className="absolute inset-0 scale-125 opacity-60 blur-3xl">
+              <ProductVisual src={s.image} alt="" category={s.category} sizes="10vw" zoomOnHover={false} className="h-full w-full" />
+            </div>
+          )}
+          <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/60 to-black/20" />
+          {/* The product itself, whole (contain, no crop) in a framed panel on the right. Phones keep the copy full
+              width over the blurred backdrop (the panel would cover the headline there). */}
+          <div className={clsx('absolute bottom-6 right-6 top-6 hidden w-[40%] overflow-hidden rounded-2xl border border-[#fff]/10 bg-[#fff]/[0.04] sm:block lg:w-[36%]',
+            'transition-transform duration-[6000ms] ease-out motion-reduce:transition-none', i === index ? 'scale-[1.02]' : 'scale-100')}>
+            <ProductVisual src={s.image} alt={s.title} category={s.category} fit="contain" zoomOnHover={false}
+              sizes="(min-width: 1024px) 36vw, 40vw" className="h-full w-full bg-transparent" />
+          </div>
           <div className="absolute inset-0 flex items-end p-6 pb-16 sm:items-center sm:p-12 sm:pb-12">
-            <div className="max-w-md text-[#fff]">
+            <div className="max-w-md text-[#fff] sm:max-w-[50%] lg:max-w-md">
               <p className="text-xs font-medium uppercase tracking-eyebrow text-[#fff]/70">{s.eyebrow}</p>
               <h2 className="mt-3 text-3xl font-semibold leading-tight sm:text-4xl">{s.title}</h2>
               <p className="mt-3 text-sm leading-relaxed text-[#fff]/80">{s.body}</p>
