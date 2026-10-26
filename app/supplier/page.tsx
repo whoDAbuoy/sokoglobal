@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { Crown, FileCheck2, FileDown, MessageSquare, PackagePlus, Plus, Workflow } from 'lucide-react';
+import { ArrowUpRight, Crown, FileDown, ImageIcon, PackageCheck, Plus } from 'lucide-react';
 import { formatUSD } from '@/lib/format';
 import { getSessionProfile } from '@/lib/supabase/server';
 import type { EscrowStatus } from '@/lib/types';
@@ -8,13 +8,17 @@ import DashboardHeader from '@/components/dashboard/DashboardHeader';
 import SupportWidget from '@/components/dashboard/SupportWidget';
 import SupplierStats, { type ProductCounts } from '@/components/supplier/SupplierStats';
 import type { SupplierProduct } from '@/components/supplier/SupplierProductCard';
-import SupplierProductGrid from '@/components/supplier/SupplierProductGrid';
 import { addOrder, emptyCounts, type OrderCounts } from '@/components/supplier/orderStages';
 import FulfilmentPipeline, { type FulfilmentOrder } from '@/components/supplier/FulfilmentPipeline';
-import QuickActions from '@/components/portal/QuickActions';
 import { payoutSummary, releaseSplit, type PayoutStatus } from '@/lib/supplier-pipeline';
 import { goldState } from '@/lib/pricing';
 import GoldBadge from '@/components/supplier/GoldBadge';
+import ProductVisual from '@/components/dashboard/ProductVisual';
+import RevenueChart from '@/components/supplier/sellsy/RevenueChart';
+import OrderHeatmap from '@/components/supplier/sellsy/OrderHeatmap';
+import CategoryDonut from '@/components/supplier/sellsy/CategoryDonut';
+import { GrowthPill, OrderStatusPill, PageHead, Panel, ProductStatusPill, ViewAll } from '@/components/supplier/sellsy/ui';
+import { categoryShares, countSince, dailySeries, growthPct, orderHeatmap, productSales } from '@/lib/supplier-dashboard';
 
 export default async function SupplierHome() {
   const { supabase, user, profile } = await getSessionProfile();
@@ -81,41 +85,203 @@ export default async function SupplierHome() {
     else productCounts.draft += 1;
   }
 
+  // ── Sellsy overview read-model: summaries of the rows above (no new queries, no money rules). ──
+  const now = new Date();
+  const productById = new Map(products.map((p) => [p.id, p]));
+  const coverOf = (p: SupplierProduct | undefined) => [...(p?.product_media ?? [])]
+    .filter((m) => m.media_type === 'image' && m.public_url).sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))[0]?.public_url ?? null;
+  const orderDates = orders.map((o) => o.created_at);
+  const counted = orders.filter((o) => o.escrow_status !== 'refunded' && o.escrow_status !== 'cancelled');
+  // 36 days so the 7-day average is already full on the first of the 30 days drawn.
+  const series = dailySeries(counted.map((o) => ({ created_at: o.created_at, cents: o.goods_cents ?? 0 })), now, 36);
+  const sales30 = series.slice(6).reduce((n, d) => n + d.cents, 0);
+  const salesGrowth = (() => {
+    const prev = dailySeries(counted.map((o) => ({ created_at: o.created_at, cents: o.goods_cents ?? 0 })), new Date(now.getTime() - 30 * 86_400_000), 30)
+      .reduce((n, d) => n + d.cents, 0);
+    return prev > 0 ? Math.round(((sales30 - prev) / prev) * 100) : null;
+  })();
+  const heat = orderHeatmap(orderDates);
+  const shares = categoryShares(counted.map((o) => ({ category: productById.get(o.product_id)?.category ?? 'general', cents: o.goods_cents ?? 0 })));
+  const topSales = productSales(orders).slice(0, 5);
+  const recent = orders.slice(0, 4);
+  // "Low stock" in Sellsy terms: listings that can't sell yet — drafts short of photos first, then drafts, then those in review.
+  const photoCount = (p: SupplierProduct) => (p.product_media ?? []).filter((m) => m.media_type === 'image' && m.public_url).length;
+  const attention = products.filter((p) => !p.deleted_at && (p.status === 'draft' || p.status === 'pending_review'))
+    .map((p) => ({ p, photos: photoCount(p), rank: p.status === 'draft' ? (photoCount(p) < 3 ? 0 : 1) : 2 }))
+    .sort((a, b) => a.rank - b.rank).slice(0, 6);
+  const shortId = (id: string) => `#${id.slice(0, 6).toUpperCase()}`;
+
   return (
     <>
       <DashboardHeader profile={profile} />
-      <div className="relative">
-        <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
-          <div className="flex flex-wrap items-end justify-between gap-4">
-            <div>
-              <p className="eyebrow">Supplier</p>
-              <h1 className="mt-2 flex flex-wrap items-center gap-3 text-3xl font-semibold text-neutral-900">Your catalogue {gold.kind === 'active' && <GoldBadge />}</h1>
-              <p className="mt-1 text-sm text-neutral-500">Products go live after logistics quoting and photo review.</p>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <Link href="/supplier/subscription" className="btn-secondary"><Crown className="h-4 w-4 text-yellow-600 dark:text-yellow-300" aria-hidden /> {gold.kind === 'active' ? 'Gold membership' : 'Go Gold'}</Link>
-              <Link href="/supplier/products/new" className="btn-primary"><Plus className="h-4 w-4" aria-hidden /> New product</Link>
-            </div>
+      <main className="mx-auto max-w-7xl px-4 pb-16 pt-8 sm:px-6 lg:px-8">
+        <PageHead eyebrow="Supplier" title={<>Overview {gold.kind === 'active' && <GoldBadge />}</>}
+          actions={<>
+            <Link href="/supplier/subscription" className="btn-secondary"><Crown className="h-4 w-4 text-yellow-300" aria-hidden /> {gold.kind === 'active' ? 'Gold membership' : 'Go Gold'}</Link>
+            <Link href="/supplier/products/new" className="btn-primary"><Plus className="h-4 w-4" aria-hidden /> New product</Link>
+          </>}>
+          Products go live after logistics quoting and photo review.
+        </PageHead>
+
+        {/* Top row: stat stack · sales spline · order heatmap */}
+        <div className="mt-8 grid grid-cols-1 gap-4 lg:grid-cols-12">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:col-span-3 lg:grid-cols-1">
+            <Panel as="div" className="flex flex-col justify-between">
+              <div className="sx-card-head">
+                <h2 className="sx-card-title">Total orders</h2>
+                <GrowthPill pct={growthPct(orderDates, now)} />
+              </div>
+              <div className="mt-4">
+                <p className="sx-stat">{totals.total.toLocaleString('en-US')}</p>
+                <p className="mt-1 text-xs text-neutral-500">+{countSince(orderDates, now)} orders in the last 30 days</p>
+              </div>
+            </Panel>
+            <Panel as="div" className="flex flex-col justify-between">
+              <div className="sx-card-head">
+                <h2 className="sx-card-title">Ready to ship</h2>
+                {readyToShip.count > 0 && <Link href="/supplier/orders" className="sx-pill sx-pill-mint">Ship <ArrowUpRight className="h-3 w-3" aria-hidden /></Link>}
+              </div>
+              <div className="mt-4">
+                <p className="sx-stat">{readyToShip.count}</p>
+                <p className="mt-1 text-xs text-neutral-500">{formatUSD(readyToShip.goodsCents)} goods value paid and held in escrow</p>
+              </div>
+            </Panel>
           </div>
-          <QuickActions className="mt-8" label="Supplier shortcuts" actions={[
-            { href: '/supplier/products/new', label: 'New Trial Batch', hint: 'List a product for review', icon: PackagePlus, tone: 'tone-active' },
-            { href: '/supplier#pipeline', label: 'Fulfilment', hint: 'Orders to prepare and ship', icon: Workflow, tone: 'tone-transit', badge: totals.escrow || undefined },
-            { href: '/supplier/verification', label: 'Documents & payouts', hint: 'KYC files and payout account', icon: FileCheck2, tone: 'tone-escrow' },
-            { href: '/supplier/messages', label: 'Buyer messages', hint: 'Answer importer questions', icon: MessageSquare, tone: 'tone-pending' },
-          ]} />
+
+          <Panel id="revenue" className="lg:col-span-5" title="Goods sales" action={<span className="sx-pill sx-pill-muted">Last 30 days</span>}>
+            <div className="mt-3 flex flex-wrap items-baseline gap-3">
+              <p className="sx-stat">{formatUSD(sales30, true)}</p>
+              <GrowthPill pct={salesGrowth} />
+            </div>
+            <div className="mt-4">
+              <RevenueChart points={series} warmup={6} caption={`Goods sales, 7-day average per day over the last 30 days: ${formatUSD(sales30, true)} in total`} />
+            </div>
+          </Panel>
+
+          <Panel id="order-stats" className="lg:col-span-4" title="Order statistics" action={<span className="sx-pill sx-pill-muted">All time · UTC</span>}>
+            <div className="mt-3"><OrderHeatmap data={heat} /></div>
+          </Panel>
         </div>
-      </div>
-      <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
-        <SupplierStats products={productCounts} orders={totals} payouts={payouts} release={release} readyToShip={readyToShip} />
+
+        {/* Middle row: needs attention · last activity · Gold upsell */}
+        <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-12">
+          <Panel id="attention" className="lg:col-span-4" title="Needs attention" action={<ViewAll href="/supplier/drafts" />}>
+            {attention.length === 0 ? (
+              <p className="mt-6 text-sm text-neutral-500">Every listing is live. New drafts and listings in review show up here.</p>
+            ) : (
+              <ul className="no-scrollbar -mx-1 mt-4 flex snap-x gap-3 overflow-x-auto px-1 pb-1">
+                {attention.map(({ p, photos }) => (
+                  <li key={p.id} className="w-40 shrink-0 snap-start">
+                    <Link href={`/supplier/products/${p.id}`} className="group block overflow-hidden rounded-2xl bg-snow text-[#050505] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#8fd3cc]">
+                      <ProductVisual src={coverOf(p)} alt="" category={p.category} className="aspect-[4/3] !bg-[#f4f4f4]" />
+                      <div className="px-3 pb-3 pt-2">
+                        <p className="truncate text-sm font-semibold">{p.title}</p>
+                        <p className="mt-0.5 flex items-center gap-1 text-xs text-[#525252]">
+                          {p.status === 'pending_review' ? 'Waiting for review' : photos < 3 ? <><ImageIcon className="h-3 w-3" aria-hidden /> {photos} of 3 photos</> : 'Ready to submit'}
+                        </p>
+                      </div>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Panel>
+
+          <Panel id="activity" className="lg:col-span-5" title="Last activity" action={<ViewAll href="/supplier#pipeline" />}>
+            {recent.length === 0 ? (
+              <p className="mt-6 text-sm text-neutral-500">Paid orders appear here as soon as a buyer&apos;s payment is confirmed.</p>
+            ) : (
+              <ul className="mt-3 divide-y divide-snow/[0.06]">
+                {recent.map((o) => {
+                  const p = productById.get(o.product_id);
+                  return (
+                    <li key={o.id}>
+                      <Link href={`/supplier/orders/${o.id}`} className="-mx-2 grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-xl px-2 py-2.5 transition-colors hover:bg-snow/[0.03] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#8fd3cc] sm:grid-cols-[auto_minmax(0,1fr)_auto_auto]">
+                        <span className="sx-thumb">
+                          <ProductVisual src={coverOf(p)} alt="" category={p?.category ?? 'general'} className="h-full w-full" />
+                        </span>
+                        <span className="min-w-0">
+                          <span className="block truncate text-sm text-neutral-900">{p?.title ?? 'Product'}</span>
+                          <span className="block text-xs text-neutral-500"><OrderStatusPill status={o.escrow_status} className="!px-0 !py-0 !bg-transparent" /></span>
+                        </span>
+                        <span className="hidden font-mono text-xs text-neutral-500 sm:block">{shortId(o.id)}</span>
+                        <span className="text-right text-sm tabular-nums text-neutral-900">{formatUSD(o.goods_cents ?? 0)}</span>
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </Panel>
+
+          <section aria-labelledby="gold-title" className="sx-pro flex flex-col justify-between p-6 lg:col-span-3">
+            <div>
+              <h2 id="gold-title" className="text-2xl font-medium tracking-tight">{gold.kind === 'active' ? 'You’re Gold' : 'SokoGlobal Gold'}</h2>
+              <p className="mt-2 text-sm text-[#1f3b3a]">
+                {gold.kind === 'active'
+                  ? 'Lower commission on new orders and the Gold Supplier badge on your listings and quotes.'
+                  : 'Lower commission on every order and a Gold Supplier badge buyers can see on your listings and quotes.'}
+              </p>
+            </div>
+            <Link href="/supplier/subscription" className="mt-6 inline-flex items-center justify-center rounded-full bg-snow px-4 py-2.5 text-sm font-medium text-[#050505] shadow-[0_8px_24px_-12px_rgb(0_0_0/0.5)] transition hover:bg-[#f2f2f2] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#050505] active:scale-95">
+              {gold.kind === 'active' ? 'Manage membership' : 'Upgrade now'}
+            </Link>
+          </section>
+        </div>
+
+        {/* Bottom row: recent sales table · category donut */}
+        <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-12">
+          <Panel id="sales" className="overflow-hidden !px-0 !pb-2 lg:col-span-8" title={<span className="px-5 sm:px-6">Recent sales</span>}
+            action={<span className="px-5 sm:px-6"><ViewAll href="/supplier/products">All products</ViewAll></span>}>
+            {topSales.length === 0 ? (
+              <p className="px-5 pb-4 pt-6 text-sm text-neutral-500 sm:px-6">No sales yet. Sales by product appear here once buyers pay for an order.</p>
+            ) : (
+              <div className="mt-3 overflow-x-auto">
+                <table className="sx-table min-w-[560px]">
+                  <thead><tr><th scope="col">ID</th><th scope="col">Product</th><th scope="col" className="text-right">Orders</th><th scope="col" className="text-right">Batch price</th><th scope="col" className="text-right">Earnings</th></tr></thead>
+                  <tbody>
+                    {topSales.map((s) => {
+                      const p = productById.get(s.id);
+                      return (
+                        <tr key={s.id}>
+                          <td className="font-mono text-xs text-neutral-500">{shortId(s.id)}</td>
+                          <td>
+                            <Link href={`/supplier/products/${s.id}`} className="flex min-w-0 items-center gap-3 hover:underline">
+                              <span className="sx-thumb"><ProductVisual src={coverOf(p)} alt="" category={p?.category ?? 'general'} className="h-full w-full" /></span>
+                              <span className="truncate">{p?.title ?? 'Product'}</span>
+                            </Link>
+                          </td>
+                          <td className="text-right tabular-nums">{s.orders}</td>
+                          <td className="text-right tabular-nums">{p ? formatUSD(p.trial_goods_cents) : '—'}</td>
+                          <td className="text-right tabular-nums text-neutral-900">{formatUSD(s.earningsCents)}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </Panel>
+
+          <Panel id="categories" className="lg:col-span-4" title="Top selling categories">
+            <div className="mt-5">
+              {shares.length ? <CategoryDonut shares={shares} /> : <p className="text-sm text-neutral-500">Category split appears with your first sale.</p>}
+            </div>
+          </Panel>
+        </div>
+
+        {/* Analytics: catalogue + order metrics, payout dial and escrow release (unchanged component). */}
+        <section id="analytics" aria-label="Analytics" className="mt-10 scroll-mt-32">
+          <SupplierStats products={productCounts} orders={totals} payouts={payouts} release={release} readyToShip={readyToShip} />
+        </section>
 
         <div className="mt-10"><FulfilmentPipeline orders={pipeline} /></div>
 
         {recentPaid.length > 0 && (
-          <section aria-labelledby="payouts-title" className="card mt-10 overflow-hidden">
-            <h2 id="payouts-title" className="border-b border-neutral-200 px-4 py-3 font-semibold text-neutral-900">Recent payouts</h2>
-            <ul className="divide-y divide-neutral-200">
+          <Panel id="payouts" className="mt-10 !p-0" title={<span className="flex items-center gap-2 px-5 pt-5 sm:px-6"><PackageCheck className="h-4 w-4 text-[#8fd3cc]" aria-hidden /> Recent payouts</span>}>
+            <ul className="mt-3 divide-y divide-snow/[0.06] border-t border-snow/[0.06]">
               {recentPaid.map((p) => (
-                <li key={p.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 text-sm">
+                <li key={p.id} className="flex flex-wrap items-center justify-between gap-3 px-5 py-3 text-sm sm:px-6">
                   <div>
                     <p className="font-medium tabular-nums text-neutral-900">{formatUSD(p.amount_cents, true)} <span className="text-xs font-normal text-neutral-500">{p.currency}</span></p>
                     <p className="font-mono text-xs text-neutral-500">{p.reference}{p.completed_at ? ` · ${new Date(p.completed_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}` : ''}</p>
@@ -124,25 +290,7 @@ export default async function SupplierHome() {
                 </li>
               ))}
             </ul>
-          </section>
-        )}
-
-        <div className="mt-12 flex items-baseline justify-between border-b border-neutral-200 pb-3">
-          <h2 className="text-lg font-semibold text-neutral-900">Trial Batches</h2>
-          <p className="flex items-center gap-3 text-sm tabular-nums text-neutral-500">
-            {productCounts.draft > 0 && <Link href="/supplier/drafts" className="font-medium text-blue-700 hover:underline dark:text-cyan-300">Drafts ({productCounts.draft})</Link>}
-            <Link href="/supplier/products/import" className="font-medium text-blue-700 hover:underline dark:text-cyan-300">Bulk import</Link>
-            {products.length} product{products.length === 1 ? '' : 's'}
-          </p>
-        </div>
-
-        {products.length === 0 ? (
-          <div className="card mt-6 px-6 py-12 text-center">
-            <p className="text-sm text-neutral-500">No products yet. Create your first Trial Batch listing.</p>
-            <Link href="/supplier/products/new" className="btn-secondary mt-4 inline-flex"><Plus className="h-4 w-4" /> New product</Link>
-          </div>
-        ) : (
-          <SupplierProductGrid products={products} orders={Object.fromEntries(byProduct)} />
+          </Panel>
         )}
       </main>
       <SupportWidget />

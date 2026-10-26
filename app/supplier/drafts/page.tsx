@@ -1,10 +1,11 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { ArrowLeft, Plus } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { getSessionProfile } from '@/lib/supabase/server';
 import type { ProductCategory } from '@/lib/types';
 import DashboardHeader from '@/components/dashboard/DashboardHeader';
 import DraftsList, { type DraftItem } from '@/components/supplier/DraftsList';
+import { PageHead } from '@/components/supplier/sellsy/ui';
 
 export const metadata = { title: 'Drafts · SokoGlobal' };
 export const dynamic = 'force-dynamic';
@@ -50,21 +51,11 @@ export default async function SupplierDraftsPage() {
   return (
     <>
       <DashboardHeader profile={profile} />
-      <main className="relative mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
-        <div aria-hidden className="ambient-glow -top-10 right-0 -z-10 h-72 w-72 bg-blue-600/10" />
-        <Link href="/supplier" className="inline-flex items-center gap-1 text-sm text-neutral-600 hover:text-neutral-900"><ArrowLeft className="h-4 w-4" aria-hidden /> Catalogue</Link>
-        <div className="mt-4 flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <p className="eyebrow">Supplier</p>
-            <h1 className="mt-2 flex items-center gap-3 text-3xl font-semibold text-neutral-900">
-              Drafts {drafts.length > 0 && <span className="pill tone-muted tabular-nums">{drafts.length}</span>}
-            </h1>
-            <p className="mt-1 max-w-2xl text-sm text-neutral-600">
-              Listings that aren&apos;t submitted yet. Finish one and submit it for logistics quoting and photo review, or delete the ones you no longer need.
-            </p>
-          </div>
-          <Link href="/supplier/products/new" className="btn-primary"><Plus className="h-4 w-4" aria-hidden /> New product</Link>
-        </div>
+      <main className="mx-auto max-w-7xl px-4 pb-16 pt-8 sm:px-6 lg:px-8">
+        <PageHead eyebrow="Trial Batches" title={<>Drafts {drafts.length > 0 && <span className="sx-pill sx-pill-muted text-sm">{drafts.length}</span>}</>}
+          actions={<Link href="/supplier/products/new" className="btn-primary"><Plus className="h-4 w-4" aria-hidden /> New product</Link>}>
+          Listings that aren&apos;t submitted yet. Finish one and submit it for logistics quoting and photo review, or delete the ones you no longer need.
+        </PageHead>
         <DraftsList drafts={drafts} />
       </main>
     </>

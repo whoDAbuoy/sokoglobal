@@ -25,11 +25,12 @@ export interface SupplierProduct {
   product_media: SupplierProductMedia[] | null;
 }
 
+// Solid dark pills with a status dot, so they stay legible over any photo (the portal is always dark).
 const STATUS_PILL: Record<ProductStatus, { label: string; className: string }> = {
-  live: { label: 'Live', className: 'border-emerald-200 bg-emerald-50 text-emerald-700' },
-  pending_review: { label: 'Pending review', className: 'border-amber-200 bg-amber-50 text-amber-800' },
-  draft: { label: 'Draft', className: 'border-neutral-200 bg-white text-neutral-700' },
-  archived: { label: 'Archived', className: 'border-neutral-200 bg-neutral-100 text-neutral-500' },
+  live: { label: 'Live', className: 'before:bg-[#8fd3cc]' },
+  pending_review: { label: 'Pending review', className: 'before:bg-amber-300' },
+  draft: { label: 'Draft', className: 'before:bg-neutral-500' },
+  archived: { label: 'Archived', className: 'before:bg-neutral-500' },
 };
 
 const BAR_ORDER: OrderStage[] = ['completed', 'escrow', 'awaiting', 'closed'];
@@ -45,14 +46,14 @@ export default function SupplierProductCard({ product, orders }: { product: Supp
 
   const removed = Boolean(product.deleted_at);
   const pill = removed
-    ? { label: 'Removed', className: 'border-red-200 bg-red-50 text-red-700' }
+    ? { label: 'Removed', className: 'before:bg-rose-400' }
     : STATUS_PILL[product.status] ?? STATUS_PILL.draft;
 
   return (
-    <Link href={`/supplier/products/${product.id}`} className="group flex flex-col">
-      <div className={clsx('relative overflow-hidden rounded-lg', removed && 'opacity-60')}>
+    <Link href={`/supplier/products/${product.id}`} className="sx-card card-lift group flex h-full flex-col p-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#8fd3cc]">
+      <div className={clsx('relative overflow-hidden rounded-[1.1rem]', removed && 'opacity-60')}>
         {firstImage || !firstVideo ? (
-          <ProductVisual src={firstImage} alt={product.title} category={product.category} className="aspect-[4/3]" />
+          <ProductVisual src={firstImage} alt={product.title} category={product.category} className={clsx('aspect-[4/3]', firstImage && '!bg-[#f4f4f4]')} />
         ) : (
           <div className="relative aspect-[4/3] bg-neutral-900">
             <video
@@ -71,7 +72,7 @@ export default function SupplierProductCard({ product, orders }: { product: Supp
           </div>
         )}
 
-        <span className={clsx('pill absolute left-3 top-3', pill.className)}>{pill.label}</span>
+        <span className={clsx('sx-pill absolute left-3 top-3 bg-[#050505]/75 text-snow backdrop-blur-md before:h-1.5 before:w-1.5 before:rounded-full before:content-[""]', pill.className)}>{pill.label}</span>
         {firstVideo && (
           <span className="pill absolute right-3 top-3 gap-1 border-transparent bg-white/95 text-neutral-900">
             <Video className="h-3 w-3" /> Video
@@ -85,14 +86,14 @@ export default function SupplierProductCard({ product, orders }: { product: Supp
         )}
       </div>
 
-      <div className="flex flex-1 flex-col pt-4">
+      <div className="flex flex-1 flex-col px-3 pb-3 pt-3">
         <p className="text-xs capitalize text-neutral-500">{product.category}</p>
         <h3 className="mt-0.5 text-base font-medium leading-snug text-neutral-900 group-hover:underline">{product.title}</h3>
         {removed && (
-          <p className="mt-1 text-xs text-red-700">Removed by SokoGlobal: {product.deletion_reason}</p>
+          <p className="mt-1 text-xs text-rose-300">Removed by SokoGlobal: {product.deletion_reason}</p>
         )}
 
-        <dl className="mt-3 grid grid-cols-2 divide-x divide-neutral-200 border-y border-neutral-200">
+        <dl className="mt-3 grid grid-cols-2 divide-x divide-snow/[0.06] border-y border-snow/[0.06]">
           <div className="py-2.5 pr-3">
             <dt className="text-[11px] uppercase tracking-wider text-neutral-500">Goods value</dt>
             <dd className="mt-0.5 text-sm font-semibold tabular-nums text-neutral-900">{formatUSD(product.trial_goods_cents)}</dd>
@@ -125,7 +126,7 @@ function OrderProgress({ orders }: { orders: OrderCounts }) {
         {orders.escrowCents > 0 && <span className="tabular-nums text-neutral-500">{formatUSD(orders.escrowCents)} in escrow</span>}
       </div>
       <div
-        className="mt-2 flex h-1 gap-px overflow-hidden rounded-full bg-neutral-200"
+        className="mt-2 flex h-1 gap-px overflow-hidden rounded-full bg-snow/[0.08]"
         role="img"
         aria-label={BAR_ORDER.filter((s) => orders[s] > 0).map((s) => `${orders[s]} ${STAGE_META[s].label}`).join(', ')}
       >

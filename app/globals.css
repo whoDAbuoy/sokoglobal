@@ -180,6 +180,75 @@
   .dark .text-amber-700, .dark .text-amber-800, .dark .text-amber-900 { color: rgb(252 211 77); }
   .dark .text-red-600, .dark .text-red-700 { color: rgb(252 165 165); }
 
+/* ─── Supplier portal: Sellsy-style modular dark cards (app/supplier/layout.tsx adds `.dark.sellsy`) ───
+   The portal is always dark: a pure-black canvas with charcoal cards, white pill tabs and mint growth accents.
+   Re-pointing the neutral scale here (true neutral grays instead of the cool gray-950 ramp) restyles every
+   existing supplier component at once; the `sx-*` classes are the new building blocks. */
+.dark.sellsy {
+  --sg-white: 5 5 5;
+  --sg-neutral-50: 14 14 14;     --sg-neutral-100: 22 22 22;    --sg-neutral-200: 38 38 38;
+  --sg-neutral-300: 58 58 58;    --sg-neutral-400: 115 115 115; --sg-neutral-500: 158 158 158;
+  --sg-neutral-600: 184 184 184; --sg-neutral-700: 212 212 212; --sg-neutral-800: 229 229 229;
+  --sg-neutral-900: 245 245 245; --sg-neutral-950: 250 250 250;
+  --sx-canvas: #050505; --sx-card: #121212; --sx-raised: #1b1b1b; --sx-mint: #5a9895; --sx-mint-ink: #8fd3cc;
+  color-scheme: dark;
+  background-color: var(--sx-canvas);
+}
+.sellsy .card, .sellsy .glass-card, .sellsy .glass-surface, .sellsy .frost-card {
+  border-color: rgb(255 255 255 / 0.05); background-color: var(--sx-card); box-shadow: none;
+  -webkit-backdrop-filter: none; backdrop-filter: none;
+}
+.sellsy .glass-inset { border-color: rgb(255 255 255 / 0.05); background-color: var(--sx-raised); }
+.sellsy .glass-nav { border-color: rgb(255 255 255 / 0.06); background-color: rgb(5 5 5 / 0.82); }
+.sellsy .card-lift:hover, .sellsy .card-lift:focus-within { border-color: rgb(255 255 255 / 0.14); box-shadow: 0 18px 40px -20px rgb(0 0 0 / 0.9); }
+/* Primary action = the white pill ("Upgrade now"); secondary = a quiet outlined pill. */
+.sellsy .btn-primary {
+  border-radius: 9999px; background-color: #fff; color: #050505; box-shadow: none;
+}
+.sellsy .btn-primary:hover { background-color: #e5e5e5; box-shadow: none; }
+.sellsy .btn-primary:focus-visible, .sellsy .btn-secondary:focus-visible { --tw-ring-offset-color: #050505; }
+.sellsy .btn-secondary { border-radius: 9999px; border-color: rgb(255 255 255 / 0.12); background-color: rgb(255 255 255 / 0.03); }
+.sellsy .btn-secondary:hover { border-color: rgb(255 255 255 / 0.35); background-color: rgb(255 255 255 / 0.07); }
+.sellsy .input { border-radius: 0.875rem; border-color: rgb(255 255 255 / 0.1); background-color: #0b0b0b; }
+.sellsy .pill { border-color: rgb(255 255 255 / 0.08); background-color: rgb(255 255 255 / 0.04); }
+.sellsy .glow-hover::before { background: radial-gradient(240px circle at var(--glow-x, 50%) var(--glow-y, 0%), rgb(90 152 149 / 0.16), transparent 70%); }
+
+@layer components {
+  /* Modular card: charcoal, hairline rim, large radius. */
+  .sx-card { @apply rounded-3xl border border-snow/5 bg-[#121212]; }
+  /* Card heading row: title left, quiet action (View all / select) right. */
+  .sx-card-head { @apply flex items-center justify-between gap-3; }
+  .sx-card-title { @apply text-lg font-medium tracking-tight text-neutral-900; }
+  .sx-link { @apply rounded-full text-xs font-medium text-neutral-500 transition-colors hover:text-neutral-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#5a9895]; }
+  /* Big tabular stat number. */
+  .sx-stat { @apply text-4xl font-normal tracking-tight tabular-nums text-neutral-900 sm:text-[2.6rem]; }
+  /* Growth / status pills. */
+  .sx-pill { @apply inline-flex items-center gap-1 whitespace-nowrap rounded-full px-3 py-1 text-xs font-medium tabular-nums; }
+  .sx-pill-mint  { @apply bg-[#5a9895]/20 text-[#8fd3cc]; }
+  .sx-pill-muted { @apply bg-snow/[0.06] text-neutral-600; }
+  .sx-pill-amber { @apply bg-amber-400/15 text-amber-300; }
+  .sx-pill-rose  { @apply bg-rose-500/15 text-rose-300; }
+  .sx-pill-blue  { @apply bg-[#3987e5]/20 text-[#a9c9f2]; }
+  /* Pill tabs (header + in-page). Active = white pill, black text. */
+  .sx-tab {
+    @apply inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border border-snow/10 px-4 py-1.5 text-sm text-neutral-700
+      transition-colors duration-200 hover:border-snow/25 hover:text-neutral-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#5a9895];
+  }
+  .sx-tab[aria-current='page'], .sx-tab[aria-selected='true'] { @apply border-snow bg-snow font-medium text-[#050505]; }
+  /* Dark table: hairline row separators, no outer grid. :where() keeps cell defaults overridable by utilities (text-right). */
+  .sx-table { @apply w-full border-separate border-spacing-0 text-sm; }
+  .sx-table :where(thead th) { @apply whitespace-nowrap px-4 py-3 text-left text-xs font-normal text-neutral-500 first:pl-6 last:pr-6; }
+  .sx-table :where(tbody td) { @apply border-t border-snow/[0.06] px-4 py-3.5 align-middle text-neutral-800 first:pl-6 last:pr-6; }
+  .sx-table tbody tr { @apply transition-colors hover:bg-snow/[0.025]; }
+  /* Thumbnail tile beside a product name. */
+  .sx-thumb { @apply grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-full bg-snow/[0.08] text-neutral-500; }
+  /* Pro / upgrade card: mint-to-cyan glow. */
+  .sx-pro {
+    @apply relative overflow-hidden rounded-3xl border border-snow/10 text-[#050505]
+      bg-[radial-gradient(120%_120%_at_0%_0%,#d9efe9_0%,#a9d6cf_38%,#8ec3d6_72%,#7fb0d0_100%)];
+  }
+}
+
 /* Metric tiles: a soft radial glow follows the pointer (CSS vars set by GlowCard) or sits centred. */
 .glow-hover { position: relative; isolation: isolate; }
 .glow-hover::before {
@@ -202,6 +271,7 @@
 @media (prefers-reduced-transparency: reduce) {
   .frost-card, .frost-bar, .frost-pop, .frost-panel, .frost-ios, .glass, .card, .glass-card, .glass-surface, .glass-toolbar, .glass-nav { backdrop-filter: none !important; background-color: rgb(var(--sg-white)) !important; }
   .ambient-glow { display: none; }
+  .sellsy .card, .sellsy .glass-card, .sellsy .glass-surface, .sellsy .frost-card { background-color: #121212 !important; }
 }
 
 /* Phones: pad every page that shows the bottom dock (components/navigation/MobileNav.tsx) so it never covers

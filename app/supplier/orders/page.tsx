@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { ArrowLeft, Truck, Zap } from 'lucide-react';
+import { Truck, Zap } from 'lucide-react';
 import { getSessionProfile } from '@/lib/supabase/server';
 import { groupPaidOrders, parseGroupedCatalog, type ListingGroup, type RawOrder } from '@/lib/supplier-orders';
 import DashboardHeader from '@/components/dashboard/DashboardHeader';
@@ -8,6 +8,7 @@ import OrderCatalog from '@/components/supplier/OrderCatalog';
 import ShipOrderDialog, { type ExistingShipment } from '@/components/supplier/ShipOrderDialog';
 import OrderChatButton from '@/components/chat/OrderChatButton';
 import { SHIPMENT_STAGE_LABEL, trackingLink } from '@/lib/shipping';
+import { PageHead, Panel } from '@/components/supplier/sellsy/ui';
 
 type ShipmentRow = ExistingShipment & {
   order_id: string; dispatched_at: string | null;
@@ -61,53 +62,59 @@ export default async function SupplierOrdersPage() {
   return (
     <>
       <DashboardHeader profile={profile} />
-      <main className="mx-auto max-w-5xl px-4 py-10 sm:px-6 lg:px-8">
-        <Link href="/supplier" className="inline-flex items-center gap-1 text-sm text-neutral-600 hover:text-neutral-900"><ArrowLeft className="h-4 w-4" aria-hidden /> Catalogue</Link>
-        <p className="eyebrow mt-4">Fulfilment</p>
-        <h1 className="mt-2 text-3xl font-semibold text-neutral-900">Orders to fulfil</h1>
-        <p className="mt-1 max-w-2xl text-sm text-neutral-600">
+      <main className="mx-auto max-w-7xl px-4 pb-16 pt-8 sm:px-6 lg:px-8">
+        <PageHead eyebrow="Fulfilment" title="Orders to fulfil"
+          actions={<Link href="/supplier#pipeline" className="btn-secondary">All orders</Link>}>
           Paid orders waiting for dispatch, grouped by listing. Every order here is confirmed by Paystack or M-Pesa and held in escrow;
           you&apos;re paid the goods value when the buyer confirms delivery — or right after dispatch with an instant early payout.
-        </p>
+        </PageHead>
 
         <OrderCatalog groups={groups} shipments={saved} />
 
         {onTheWay.length > 0 && (
-          <section aria-labelledby="on-the-way" className="mt-12">
-            <h2 id="on-the-way" className="flex items-center gap-2 text-lg font-semibold text-neutral-900"><Truck className="h-5 w-5" aria-hidden /> On the way</h2>
-            <p className="mt-1 text-sm text-neutral-600">Mark parcels out for delivery or delivered; buyers verify the goods before escrow is released.</p>
-            <ul className="card mt-4 divide-y divide-neutral-200">
-              {onTheWay.map((r) => {
-                const o = one(r.order);
-                const title = one(o?.product)?.title ?? 'Order';
-                const link = trackingLink(r);
-                return (
-                  <li key={r.order_id} className="grid gap-2 px-4 py-3 text-sm sm:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_auto] sm:items-center sm:px-5">
-                    <div className="min-w-0">
-                      <p className="truncate font-medium text-neutral-900">{title}</p>
-                      <p className="font-mono text-xs text-neutral-600">#{r.order_id.slice(0, 8).toUpperCase()} · dispatched {day(r.dispatched_at)}</p>
-                    </div>
-                    <div className="min-w-0 text-neutral-700">
-                      <p className="truncate">{SHIPMENT_STAGE_LABEL[r.status]} · {r.carrier_name}{' '}
-                        {link ? <a href={link} target="_blank" rel="noopener noreferrer" className="font-mono underline underline-offset-2">{r.tracking_number}</a> : <span className="font-mono">{r.tracking_number}</span>}
-                      </p>
-                      <p className="text-xs text-neutral-600">
-                        {r.estimated_delivery ? `ETA ${day(r.estimated_delivery)}` : 'No ETA set'}
-                        {o?.escrow_status === 'deposit_paid' ? ' · waiting for the buyer’s 70% balance' : ''}
-                      </p>
-                    </div>
-                    <div className="flex flex-wrap gap-2 sm:justify-end">
-                      <Link href={`/supplier/orders/${r.order_id}`} className="btn-secondary px-3 py-1.5 text-sm">
-                        {o?.escrow_status === 'deposit_paid' ? 'Details' : <><Zap className="h-3.5 w-3.5 text-yellow-600 dark:text-yellow-300" aria-hidden /> Payout</>}
-                      </Link>
-                      <OrderChatButton orderId={r.order_id} label="Message buyer" title={`Order #${r.order_id.slice(0, 8).toUpperCase()} · ${title}`} />
-                      <ShipOrderDialog orderId={r.order_id} existing={r} orderLabel={`${title} (#${r.order_id.slice(0, 8).toUpperCase()})`} />
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-          </section>
+          <Panel id="on-the-way" className="mt-10 overflow-hidden !p-0"
+            title={<span className="flex items-center gap-2 px-5 pt-5 sm:px-6"><Truck className="h-5 w-5 text-[#8fd3cc]" aria-hidden /> On the way</span>}>
+            <p className="px-5 pt-1 text-sm text-neutral-500 sm:px-6">Mark parcels out for delivery or delivered; buyers verify the goods before escrow is released.</p>
+            <div className="mt-4 overflow-x-auto">
+              <table className="sx-table min-w-[820px]">
+                <thead><tr><th scope="col">Order</th><th scope="col">Shipment</th><th scope="col">ETA</th><th scope="col"><span className="sr-only">Actions</span></th></tr></thead>
+                <tbody>
+                  {onTheWay.map((r) => {
+                    const o = one(r.order);
+                    const title = one(o?.product)?.title ?? 'Order';
+                    const link = trackingLink(r);
+                    return (
+                      <tr key={r.order_id}>
+                        <td className="max-w-[16rem]">
+                          <p className="truncate text-neutral-900">{title}</p>
+                          <p className="font-mono text-xs text-neutral-500">#{r.order_id.slice(0, 8).toUpperCase()} · dispatched {day(r.dispatched_at)}</p>
+                        </td>
+                        <td>
+                          <span className="sx-pill sx-pill-blue">{SHIPMENT_STAGE_LABEL[r.status]}</span>
+                          <p className="mt-1 text-xs text-neutral-500">{r.carrier_name}{' '}
+                            {link ? <a href={link} target="_blank" rel="noopener noreferrer" className="font-mono underline underline-offset-2">{r.tracking_number}</a> : <span className="font-mono">{r.tracking_number}</span>}
+                          </p>
+                        </td>
+                        <td className="text-neutral-500">
+                          {r.estimated_delivery ? day(r.estimated_delivery) : 'No ETA set'}
+                          {o?.escrow_status === 'deposit_paid' && <p className="text-xs"><span className="sx-pill sx-pill-amber mt-1">Waiting for the buyer’s 70% balance</span></p>}
+                        </td>
+                        <td>
+                          <div className="flex flex-wrap justify-end gap-2">
+                            <Link href={`/supplier/orders/${r.order_id}`} className="btn-secondary px-3 py-1.5 text-sm">
+                              {o?.escrow_status === 'deposit_paid' ? 'Details' : <><Zap className="h-3.5 w-3.5 text-yellow-300" aria-hidden /> Payout</>}
+                            </Link>
+                            <OrderChatButton orderId={r.order_id} label="Message buyer" title={`Order #${r.order_id.slice(0, 8).toUpperCase()} · ${title}`} />
+                            <ShipOrderDialog orderId={r.order_id} existing={r} orderLabel={`${title} (#${r.order_id.slice(0, 8).toUpperCase()})`} />
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </Panel>
         )}
       </main>
     </>

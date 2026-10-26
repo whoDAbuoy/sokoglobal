@@ -24,34 +24,34 @@ export default function OrderCatalog({ groups, shipments = {}, now = Date.now() 
   const totals = catalogTotals(groups);
   return (
     <>
-        <dl className="mt-6 grid gap-3 sm:grid-cols-3">
+        <dl className="mt-8 grid gap-4 sm:grid-cols-3">
           {[
             { label: 'Listings with orders', value: String(totals.listings), icon: PackageCheck },
             { label: 'Paid orders to ship', value: String(totals.orders), icon: Truck },
             { label: 'Goods value in escrow', value: formatUSD(totals.goodsCents), icon: Lock },
           ].map(({ label, value, icon: Icon }) => (
-            <div key={label} className="card flex items-center gap-4 p-4">
-              <span className="grid h-10 w-10 place-items-center rounded-lg border tone-escrow"><Icon className="h-5 w-5" aria-hidden /></span>
-              <div><dd className="text-2xl font-semibold tabular-nums text-neutral-900">{value}</dd><dt className="text-sm text-neutral-600">{label}</dt></div>
+            <div key={label} className="sx-card flex flex-col-reverse justify-between gap-4 p-5">
+              <dd className="sx-stat">{value}</dd>
+              <dt className="flex items-center justify-between gap-2 text-sm text-neutral-600">{label}<span className="sx-pill sx-pill-mint px-2"><Icon className="h-3.5 w-3.5" aria-hidden /></span></dt>
             </div>
           ))}
         </dl>
 
         {groups.length === 0 ? (
-          <div className="card mt-8 px-6 py-14 text-center">
+          <div className="sx-card mt-6 px-6 py-14 text-center">
             <PackageCheck className="mx-auto h-8 w-8 text-neutral-400" aria-hidden />
             <p className="mt-3 font-medium text-neutral-900">Nothing waiting to ship</p>
             <p className="mt-1 text-sm text-neutral-600">New paid orders appear here as soon as the payment is confirmed.</p>
           </div>
         ) : (
-          <ul className="mt-8 space-y-5">
+          <ul className="mt-6 space-y-4">
             {groups.map((g) => (
               <li key={g.listing_id}>
-                <article className="card overflow-hidden">
+                <article className="sx-card overflow-hidden">
                   <div className="flex flex-wrap items-center gap-4 p-4 sm:flex-nowrap sm:p-5">
-                    <ProductVisual src={g.image_url} alt="" category="general" className="h-20 w-20 shrink-0 rounded-[14px]" />
+                    <ProductVisual src={g.image_url} alt="" category="general" className="h-20 w-20 shrink-0 rounded-2xl !bg-[#f4f4f4]" />
                     <div className="min-w-0 flex-1">
-                      <h2 className="line-clamp-2 text-lg font-semibold text-neutral-900">{g.title}</h2>
+                      <h2 className="line-clamp-2 text-lg font-medium tracking-tight text-neutral-900">{g.title}</h2>
                       <p className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-neutral-600">
                         <span>{g.order_count} buyer order{g.order_count === 1 ? '' : 's'}</span>
                         {waiting(g.oldest_paid_at, now) && <span className="inline-flex items-center gap-1"><Clock className="h-3.5 w-3.5" aria-hidden /> oldest {waiting(g.oldest_paid_at, now)}</span>}
@@ -70,12 +70,12 @@ export default function OrderCatalog({ groups, shipments = {}, now = Date.now() 
                       </div>
                     </dl>
                   </div>
-                  <details className="group border-t border-neutral-200">
-                    <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-medium text-neutral-800 hover:bg-neutral-50 sm:px-5 [&::-webkit-details-marker]:hidden">
+                  <details className="group border-t border-snow/[0.06]">
+                    <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-medium text-neutral-800 hover:bg-snow/[0.025] sm:px-5 [&::-webkit-details-marker]:hidden">
                       Buyer delivery details
                       <ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180 motion-reduce:transition-none" aria-hidden />
                     </summary>
-                    <ul className="divide-y divide-neutral-200 border-t border-neutral-200">
+                    <ul className="divide-y divide-snow/[0.06] border-t border-snow/[0.06]">
                       {g.orders.map((o) => (
                         <li key={o.order_id} className="grid gap-2 px-4 py-3 text-sm sm:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_auto_auto] sm:items-center sm:px-5">
                           <div className="min-w-0">
@@ -83,9 +83,9 @@ export default function OrderCatalog({ groups, shipments = {}, now = Date.now() 
                             <p className="font-mono text-xs text-neutral-600">#{o.order_id.slice(0, 8).toUpperCase()} · paid {date(o.paid_at)}</p>
                             {(o.is_rfq || o.payment_structure === 'milestone_30_70') && (
                               <p className="mt-1 flex flex-wrap gap-1.5">
-                                {o.is_rfq && <span className="pill tone-muted">Quoted order</span>}
+                                {o.is_rfq && <span className="sx-pill sx-pill-muted">Quoted order</span>}
                                 {o.payment_structure === 'milestone_30_70' && (
-                                  <span className="pill tone-transit">{o.escrow_status === 'deposit_paid' ? '30% deposit paid · 70% due on dispatch' : 'Milestone escrow'}</span>
+                                  <span className="sx-pill sx-pill-blue">{o.escrow_status === 'deposit_paid' ? '30% deposit paid · 70% due on dispatch' : 'Milestone escrow'}</span>
                                 )}
                               </p>
                             )}
