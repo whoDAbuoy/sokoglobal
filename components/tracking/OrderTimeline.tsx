@@ -26,10 +26,10 @@ export default function OrderTimeline({ steps, trackingUrl, className }: { steps
               {/* Connector to the next step (vertical on phones, horizontal from sm). */}
               {i < steps.length - 1 && (
                 <span aria-hidden className={clsx('absolute left-4 top-9 h-[calc(100%-1.25rem)] w-0.5 sm:left-[calc(50%+1.25rem)] sm:top-4 sm:h-0.5 sm:w-[calc(100%-2.5rem)]',
-                  s.state === 'done' && steps[i + 1].state !== 'upcoming' ? 'bg-gradient-to-r from-emerald-500 to-cyan-500' : 'bg-neutral-200')} />
+                  s.state === 'done' && steps[i + 1].state !== 'upcoming' ? 'bg-gradient-to-r from-[#5a9895] to-teal-400' : 'bg-neutral-200')} />
               )}
               <span className={clsx('relative z-10 grid h-8 w-8 shrink-0 place-items-center rounded-full',
-                s.state === 'done' ? 'bg-emerald-500 text-snow' : s.state === 'current' ? 'bg-cyan-500/15 text-cyan-600 ring-2 ring-cyan-500 dark:text-cyan-400' : 'bg-neutral-100 text-neutral-400')}>
+                s.state === 'done' ? 'bg-[#5a9895] text-snow' : s.state === 'current' ? 'bg-teal-400/15 text-teal-700 ring-2 ring-teal-400 dark:text-[#8fd3cc]' : 'bg-neutral-100 text-neutral-400')}>
                 {s.state === 'done' ? <Check className="h-4 w-4" strokeWidth={2.5} aria-hidden /> : <Icon className="h-4 w-4" aria-hidden />}
                 <span className="sr-only">{s.state === 'done' ? 'Done: ' : s.state === 'current' ? 'Current: ' : 'Upcoming: '}</span>
               </span>

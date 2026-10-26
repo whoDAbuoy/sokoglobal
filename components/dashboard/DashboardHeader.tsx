@@ -12,6 +12,7 @@ import { useChat } from '@/context/ChatContext';
 import { useWishlist } from '@/hooks/useWishlist';
 import type { Profile } from '@/lib/types';
 import { ADMIN_LEVEL_LABEL, adminLevel, formatTimeLeft, homePathFor, roleAdminLevel } from '@/lib/auth/admin-access';
+import { isSellsyRoute } from '@/lib/theme';
 import CurrencySwitcher from '@/components/currency/CurrencySwitcher';
 import MobileNav from '@/components/navigation/MobileNav';
 
@@ -61,8 +62,8 @@ export default function DashboardHeader({ profile }: { profile: Profile }) {
   const level = adminLevel(profile);
   const items = navLinks(profile, pathname);
   const current = activeHref(items.map(([, href]) => href), pathname);
-  // Inside the supplier portal (always dark) the sections are Sellsy pill tabs: white active pill, no icons.
-  const pills = pathname === '/supplier' || pathname.startsWith('/supplier/');
+  // On Sellsy routes (supplier portal, buyer side; always dark) the sections are pill tabs: white active pill, no icons.
+  const pills = isSellsyRoute(pathname);
   const links = items.map(([label, href]) => {
     const Icon = pills ? undefined : NAV_ICON[label];
     const active = href === current;
