@@ -1,12 +1,12 @@
 /**
  * SokoGlobal Content-Security-Policy (Edge-runtime safe: no Node APIs).
  *
- * Rollout plan
- *   1. CSP_MODE=report-only (default) — browsers REPORT violations, block nothing.
- *   2. Watch reports for 1–2 weeks across Production traffic (incl. checkout,
- *      tracking map, uploads, support chat). Add any legitimate source below.
- *   3. CSP_MODE=enforce — same policy, now blocking. Keep reporting on.
- *   CSP_MODE=off is an emergency kill-switch.
+ * Modes
+ *   • CSP_MODE=enforce (default) — browsers BLOCK anything outside the policy and
+ *     report it. e2e/smoke.spec.ts fails CI if a public page trips the policy.
+ *   • CSP_MODE=report-only — report but block nothing: the rollback if a new
+ *     third party is added before it is allowed below.
+ *   • CSP_MODE=off — emergency kill-switch.
  *
  * Design
  *   • Scripts: per-request nonce + 'strict-dynamic'. Next.js 15 reads the nonce
@@ -21,8 +21,8 @@
 export type CspMode = 'report-only' | 'enforce' | 'off';
 
 export function cspMode(): CspMode {
-  const v = (process.env.CSP_MODE ?? 'report-only').toLowerCase();
-  return v === 'enforce' || v === 'off' ? v : 'report-only';
+  const v = (process.env.CSP_MODE ?? 'enforce').trim().toLowerCase();
+  return v === 'report-only' || v === 'off' ? v : 'enforce';
 }
 
 export const cspHeaderName = (mode: Exclude<CspMode, 'off'>) =>

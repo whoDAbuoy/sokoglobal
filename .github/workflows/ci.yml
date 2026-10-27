@@ -46,3 +46,31 @@ jobs:
         with:
           node-version: 22
       - run: npm run test:db
+
+  e2e-smoke:
+    name: Browser smoke tests (Playwright, enforced CSP)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      CI: 'true'
+      NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54321
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder-anon-key
+      NEXT_PUBLIC_SITE_URL: http://localhost:3000
+      NEXT_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      # Public pages, guards, headers, CSP. The journeys skip themselves here (no test accounts).
+      - run: npx playwright test e2e/smoke.spec.ts
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-smoke-report
+          path: playwright-report
+          retention-days: 7
+

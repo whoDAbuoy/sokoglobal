@@ -8,9 +8,11 @@ import { defineConfig, devices } from '@playwright/test';
  *     secrets (see .env.example); without them those tests are skipped.
  * E2E_BASE_URL targets a deployed preview instead of starting a local server.
  * PLAYWRIGHT_CHROMIUM_EXECUTABLE lets CI/sandboxes reuse a preinstalled Chromium.
+ * VERCEL_AUTOMATION_BYPASS_SECRET gets past Vercel Deployment Protection on preview URLs.
  */
 const baseURL = process.env.E2E_BASE_URL || 'http://localhost:3000';
 const executablePath = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE || undefined;
+const bypass = process.env.VERCEL_AUTOMATION_BYPASS_SECRET;
 
 export default defineConfig({
   testDir: './e2e',
@@ -22,6 +24,7 @@ export default defineConfig({
   reporter: process.env.CI ? [['github'], ['html', { open: 'never' }]] : [['list']],
   use: {
     baseURL,
+    extraHTTPHeaders: bypass ? { 'x-vercel-protection-bypass': bypass, 'x-vercel-set-bypass-cookie': 'true' } : undefined,
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
     launchOptions: executablePath ? { executablePath } : undefined,

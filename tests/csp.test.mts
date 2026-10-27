@@ -50,9 +50,10 @@ test('report endpoint override (e.g. Sentry) and mode switch', () => {
   assert.match(buildCsp({ nonce: 'n' }), /report-uri https:\/\/o1\.ingest\.sentry\.io/);
   assert.equal(reportingEndpointsHeader('https://x'), 'csp-endpoint="https://o1.ingest.sentry.io/api/2/security/?sentry_key=k"');
   delete process.env.CSP_REPORT_URI;
-  delete process.env.CSP_MODE; assert.equal(cspMode(), 'report-only');
+  delete process.env.CSP_MODE; assert.equal(cspMode(), 'enforce');
+  process.env.CSP_MODE = 'report-only'; assert.equal(cspMode(), 'report-only');
   process.env.CSP_MODE = 'ENFORCE'; assert.equal(cspMode(), 'enforce');
-  process.env.CSP_MODE = 'bogus'; assert.equal(cspMode(), 'report-only', 'unknown values fail safe to report-only');
+  process.env.CSP_MODE = 'bogus'; assert.equal(cspMode(), 'enforce', 'unknown values keep the policy enforced');
 });
 
 test('nonces are random 128-bit base64', () => {
