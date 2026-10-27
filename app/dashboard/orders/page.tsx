@@ -30,13 +30,25 @@ export default async function OrdersPage() {
   if (!user || !profile) redirect('/login?redirectTo=/dashboard/orders');
   if (profile.role === 'supplier') redirect('/supplier');
 
-  const { data, error } = await supabase
-    .from('orders')
-    .select('id, order_type, escrow_status, total_cents, created_at, payment_structure, rfq_quote_id, product:products ( title )')
-    .eq('buyer_id', user.id)
-    .in('escrow_status', PAID_ORDER_STATUSES)
-    .order('created_at', { ascending: false })
-    .limit(200);
+  const [{ data, error }, { data: done }] = await Promise.all([
+    supabase
+      .from('orders')
+      .select('id, order_type, escrow_status, total_cents, created_at, payment_structure, rfq_quote_id, product:products ( title )')
+      .eq('buyer_id', user.id)
+      .in('escrow_status', PAID_ORDER_STATUSES)
+      .order('created_at', { ascending: false })
+      .limit(200),
+    // Completed orders feed the quick-reorder matrix (live listings at today's price; RLS hides delisted ones).
+    supabase
+      .from('orders')
+      .select(`id, product_id, batches, quantity, rfq_quote_id, released_at, verified_at,
+               product:products ( title, status, category, trial_landed_cost_cents,
+                                  supplier:profiles!products_supplier_id_fkey ( company_name ),
+                                  product_media ( public_url, media_type, sort_order ) )`)
+      .eq('buyer_id', user.id).eq('escrow_status', 'released')
+      .order('released_at', { ascending: false, nullsFirst: false })
+      .limit(100),
+  ]);
   if (error) throw new Error(`Could not load orders: ${error.message}`);
 
   const orders: OrderView[] = (data ?? []).map((o) => ({
@@ -45,16 +57,6 @@ export default async function OrdersPage() {
     payment_structure: o.payment_structure, is_rfq: !!o.rfq_quote_id,
   }));
 
-  // Completed orders feed the quick-reorder matrix (live listings at today's price; RLS hides delisted ones).
-  const { data: done } = await supabase
-    .from('orders')
-    .select(`id, product_id, batches, quantity, rfq_quote_id, released_at, verified_at,
-             product:products ( title, status, category, trial_landed_cost_cents,
-                                supplier:profiles!products_supplier_id_fkey ( company_name ),
-                                product_media ( public_url, media_type, sort_order ) )`)
-    .eq('buyer_id', user.id).eq('escrow_status', 'released')
-    .order('released_at', { ascending: false, nullsFirst: false })
-    .limit(100);
   type DoneProduct = {
     title: string; status: string; category: ProductCategory;
     trial_landed_cost_cents: number; supplier: { company_name: string } | { company_name: string }[] | null;

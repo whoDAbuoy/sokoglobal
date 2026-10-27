@@ -2,7 +2,7 @@ import 'server-only';
 import { cookies } from 'next/headers';
 import { unstable_cache } from 'next/cache';
 import { createClient } from '@supabase/supabase-js';
-import { createClient as createUserClient } from '@/lib/supabase/server';
+import { getSessionProfile } from '@/lib/supabase/server';
 import {
   CURRENCY_COOKIE, getDefaultCurrencyForCountry, isCurrency, normalizeRates, type CurrencyCode, type ExchangeRates,
 } from '@/lib/currency';
@@ -25,20 +25,21 @@ const loadRates = unstable_cache(async () => {
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!url || !key) throw new Error('Supabase is not configured');
   const db = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
-  const { data, error } = await db.from('exchange_rates').select('currency_code, rate_to_kes, updated_at');
+  // Capped, no retries: this runs in the root layout, so a slow database must not hold every page (callers fall back to built-in rates).
+  const { data, error } = await db.from('exchange_rates').select('currency_code, rate_to_kes, updated_at').abortSignal(AbortSignal.timeout(2000)).retry(false);
   if (error) throw new Error(error.message);
   const updatedAt = (data ?? []).map((r) => r.updated_at as string).sort().at(-1) ?? null;
   return { rows: data ?? [], updatedAt };
 }, ['exchange-rates'], { revalidate: 600, tags: ['exchange-rates'] });
 
-/** Signed-in visitor's profiles.country_code, or null (signed out, or the lookup failed). */
+/**
+ * Signed-in visitor's profiles.country_code, or null (signed out, or the lookup failed).
+ * Reads the request's cached session (getSessionProfile), so the root layout and the page
+ * share one auth check and one profile read instead of each making their own.
+ */
 async function profileCountry(): Promise<string | null> {
   try {
-    const supabase = await createUserClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return null;
-    const { data } = await supabase.from('profiles').select('country_code').eq('id', user.id).maybeSingle<{ country_code: string | null }>();
-    return data?.country_code ?? null;
+    return (await getSessionProfile()).profile?.country_code ?? null;
   } catch {
     return null;
   }

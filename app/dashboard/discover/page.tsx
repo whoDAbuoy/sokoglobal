@@ -9,6 +9,7 @@ import {
 } from '@/lib/catalog';
 import { CATALOG_PRODUCT_SELECT, toTrialProductView, type CatalogProductRow } from '@/lib/product-view';
 import { goldSupplierIds } from '@/lib/pricing-server';
+import { getCategories } from '@/lib/categories-server';
 import DashboardHeader from '@/components/dashboard/DashboardHeader';
 import TrialBatchCard from '@/components/dashboard/TrialBatchCard';
 
@@ -26,15 +27,13 @@ const SELECT = CATALOG_PRODUCT_SELECT;
  * year, Certifications…). Reads only live listings, through RLS.
  */
 export default async function DiscoverPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
-  const { supabase, user, profile } = await getSessionProfile();
+  // Session, query string and the (cross-request cached) category tree are independent: load them together.
+  const [{ supabase, user, profile }, params, catData] = await Promise.all([getSessionProfile(), searchParams, getCategories()]);
   if (!user || !profile) redirect('/login?redirectTo=/dashboard/discover');
   if (profile.role === 'supplier') redirect('/supplier');
 
-  const query = parseCatalogQuery(await searchParams);
-  const { data: catData, error: catError } = await supabase.from('categories')
-    .select('id, parent_id, slug, name, description, icon, sort_order, is_active, attribute_schema, legacy_category, requires_compliance');
-
-  if (catError) {
+  const query = parseCatalogQuery(params);
+  if (!catData) {
     return (
       <>
         <DashboardHeader profile={profile} />
@@ -47,7 +46,7 @@ export default async function DiscoverPage({ searchParams }: { searchParams: Pro
     );
   }
 
-  const categories = (catData ?? []) as CategoryRow[];
+  const categories: CategoryRow[] = catData;
   const tree = buildCategoryTree(categories);
   const current = query.category ? categories.find((c) => c.slug === query.category) ?? null : null;
   const trail = current ? categoryPath(categories, current.id) : [];

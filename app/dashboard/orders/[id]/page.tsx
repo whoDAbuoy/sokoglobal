@@ -52,22 +52,30 @@ export default async function OrderPage({ params, searchParams }: {
   const { supabase, user, profile } = await getSessionProfile();
   if (!user || !profile) redirect(`/login?redirectTo=/dashboard/orders/${id}`);
 
-  const { data: order } = await supabase
-    .from('orders')
-    .select(`id, order_type, escrow_status, quantity, checkout_group_id, product_id, goods_cents, freight_cents, customs_cents, total_cents,
-             created_at, buyer_id, discharge_timestamp, eta_timestamp, origin_port_coords, destination_coords,
-             route_waypoints, current_status, origin_label, destination_label, funded_at, delivered_at,
-             payment_structure, deposit_amount, remaining_balance, deposit_paid_at, final_paid_at, rfq_quote_id, fx_rate_to_kes,
-             escrow_fee_cents, escrow_fee_rate,
-             product:products ( title, trial_units ),
-             shipments ( status, carrier_name, tracking_number, tracking_url, estimated_delivery, dispatched_at, delivered_at )`)
-    .eq('id', id)
-    .maybeSingle();
+  // Everything here is keyed by the order id, so it loads at once; RLS returns nothing for someone else's
+  // order, and the ownership check below 404s before any of it is used.
+  const [{ data: order }, { data: events }, payments, { data: manualRows }] = await Promise.all([
+    supabase
+      .from('orders')
+      .select(`id, order_type, escrow_status, quantity, checkout_group_id, product_id, goods_cents, freight_cents, customs_cents, total_cents,
+               created_at, buyer_id, discharge_timestamp, eta_timestamp, origin_port_coords, destination_coords,
+               route_waypoints, current_status, origin_label, destination_label, funded_at, delivered_at,
+               payment_structure, deposit_amount, remaining_balance, deposit_paid_at, final_paid_at, rfq_quote_id, fx_rate_to_kes,
+               escrow_fee_cents, escrow_fee_rate,
+               product:products ( title, trial_units ),
+               shipments ( status, carrier_name, tracking_number, tracking_url, estimated_delivery, dispatched_at, delivered_at )`)
+      .eq('id', id)
+      .maybeSingle(),
+    supabase
+      .from('escrow_events').select('id, from_status, to_status, event_type, note, metadata, created_at')
+      .eq('order_id', id).order('created_at', { ascending: true }),
+    // Migration 028: methods switched on + configured + within limits, and any open wire / crypto transfer.
+    getPaymentSettings(supabase),
+    supabase.from('manual_payments')
+      .select('id, method, network, leg, usd_cents, fee_cents, charge_cents, reference, pay_to, tx_hash, proof_path, status, review_note, created_at, submitted_at')
+      .eq('order_id', id).order('created_at', { ascending: false }).limit(1),
+  ]);
   if (!order || order.buyer_id !== user.id) notFound();
-
-  const { data: events } = await supabase
-    .from('escrow_events').select('id, from_status, to_status, event_type, note, metadata, created_at')
-    .eq('order_id', id).order('created_at', { ascending: true });
 
   const product = (Array.isArray(order.product) ? order.product[0] : order.product) as { title: string; trial_units: number } | null;
   // Trial Batches in this order (quantity is stored in units; migration 010 also records it as orders.batches).
@@ -86,13 +94,6 @@ export default async function OrderPage({ params, searchParams }: {
   const chatOpen = orderChatOpen({ ...order, escrow_status: view.escrow_status });
   // Migration 026: the escrow fee is part of total_cents (0 on older orders); M-Pesa charges also carry the FX spread.
   const escrowFee = (order.escrow_fee_cents as number | null) ?? 0;
-  // Migration 028: methods switched on + configured + within limits, and any open wire / crypto transfer.
-  const [payments, { data: manualRows }] = await Promise.all([
-    getPaymentSettings(supabase),
-    supabase.from('manual_payments')
-      .select('id, method, network, leg, usd_cents, fee_cents, charge_cents, reference, pay_to, tx_hash, proof_path, status, review_note, created_at, submitted_at')
-      .eq('order_id', id).order('created_at', { ascending: false }).limit(1),
-  ]);
   const lastManual = (manualRows?.[0] ?? null) as ManualPaymentView | null;
   const openManual = lastManual && (lastManual.status === 'awaiting' || lastManual.status === 'submitted') ? lastManual : null;
   const methods = methodsFor({ settings: payments.settings, fxSpread: payments.fxSpread, dueCents, cart: !!order.checkout_group_id });

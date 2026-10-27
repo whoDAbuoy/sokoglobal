@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import clsx from 'clsx';
 import { ArrowLeft, CalendarClock, FileQuestion, MapPin, Megaphone, Package, Users } from 'lucide-react';
 import { getSessionProfile } from '@/lib/supabase/server';
+import { getCategories } from '@/lib/categories-server';
 import { countryName, flag } from '@/lib/format';
 import { categoryWithin, parseTiers, type QuoteStatus } from '@/lib/rfq';
 import DashboardHeader from '@/components/dashboard/DashboardHeader';
@@ -38,10 +39,10 @@ export default async function SupplierRfqsPage() {
   if (!user || !profile) redirect('/login?redirectTo=/supplier/rfqs');
   if (profile.role !== 'supplier') redirect('/dashboard/rfqs');
 
-  const [{ data: feed, error }, { data: products }, { data: cats }] = await Promise.all([
+  const [{ data: feed, error }, { data: products }, cats] = await Promise.all([
     supabase.rpc('supplier_rfq_feed'),
     supabase.from('products').select('id, title, category_id').eq('supplier_id', user.id).eq('status', 'live').order('title'),
-    supabase.from('categories').select('id, parent_id'),
+    getCategories(),
   ]);
   if (error) throw new Error(`Could not load buyer requests: ${error.message}`);
 
@@ -51,7 +52,7 @@ export default async function SupplierRfqsPage() {
     ? await supabase.from('rfqs').select('id, order_id').in('id', acceptedIds)
     : { data: [] as { id: string; order_id: string | null }[] };
   const orderOf = new Map((acceptedRows ?? []).map((r) => [r.id as string, r.order_id as string | null]));
-  const parentOf = new Map((cats ?? []).map((c) => [c.id as string, (c.parent_id as string | null) ?? null]));
+  const parentOf = new Map((cats ?? []).map((c) => [c.id, c.parent_id ?? null]));
   const listings = (products ?? []) as { id: string; title: string; category_id: string | null }[];
   const rows = (feed ?? []) as FeedRow[];
   const now = Date.now();

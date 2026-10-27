@@ -39,13 +39,17 @@ export default async function CheckoutPage({ params, searchParams }: {
   const { supabase, user, profile } = await getSessionProfile();
   if (!user || !profile) redirect(`/login?redirectTo=/dashboard/checkout/${id}`);
 
-  const { data: group } = await supabase
-    .from('checkout_groups')
-    .select(`id, buyer_id, created_at, funded_at, payment_provider,
-             orders ( id, escrow_status, quantity, total_cents, goods_cents, freight_cents, customs_cents, escrow_fee_cents,
-                      product:products ( title, category, trial_units, origin_country, attributes, product_media ( public_url, media_type, sort_order ) ) )`)
-    .eq('id', id)
-    .maybeSingle();
+  // Payment settings don't depend on the cart: load them alongside it (wire and crypto are per order).
+  const [{ data: group }, payments] = await Promise.all([
+    supabase
+      .from('checkout_groups')
+      .select(`id, buyer_id, created_at, funded_at, payment_provider,
+               orders ( id, escrow_status, quantity, total_cents, goods_cents, freight_cents, customs_cents, escrow_fee_cents,
+                        product:products ( title, category, trial_units, origin_country, attributes, product_media ( public_url, media_type, sort_order ) ) )`)
+      .eq('id', id)
+      .maybeSingle(),
+    getPaymentSettings(supabase),
+  ]);
   if (!group || group.buyer_id !== user.id) notFound();
 
   const orders = ((group.orders ?? []) as unknown as Row[]).map((o) => ({ ...o, product: one(o.product) }));
@@ -53,8 +57,7 @@ export default async function CheckoutPage({ params, searchParams }: {
   const due = unpaid.reduce((s, o) => s + o.total_cents, 0);
   const total = orders.reduce((s, o) => s + o.total_cents, 0);
   const sum = (k: 'goods_cents' | 'freight_cents' | 'customs_cents' | 'escrow_fee_cents') => orders.reduce((s, o) => s + (o[k] ?? 0), 0);
-  // Migration 028: online methods switched on + configured + within limits (wire and crypto are per order).
-  const payments = await getPaymentSettings(supabase);
+  // Migration 028: online methods switched on + configured + within limits.
   const methods = methodsFor({ settings: payments.settings, fxSpread: payments.fxSpread, dueCents: due, cart: true });
   const gatewayReturn = gw === 'paypal' && paypalToken ? { gateway: 'paypal' as const, token: paypalToken }
     : gw === 'dpo' && dpoToken ? { gateway: 'dpo' as const, token: dpoToken } : null;

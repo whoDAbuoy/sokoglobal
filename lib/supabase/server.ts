@@ -1,3 +1,4 @@
+import { cache } from 'react';
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import type { Profile } from '@/lib/types';
@@ -27,32 +28,47 @@ export async function createClient() {
   );
 }
 
-/** Returns the verified user + profile, or nulls. Uses getUser() (validated with Supabase Auth), never getSession(). */
-export async function getSessionProfile() {
+/**
+ * Returns the verified user + profile, or nulls. Uses getUser() (validated with Supabase Auth), never getSession().
+ *
+ * Wrapped in React cache(): the root layout (display currency), the page and any nested server
+ * component share one auth check and one profile read per request. After auth, the profile and
+ * the delegated-admin lookup run in parallel (one round trip instead of two).
+ */
+export const getSessionProfile = cache(async () => {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { supabase, user: null, profile: null } as const;
 
-  // Newer columns arrive with migrations 016 (avatar, 2FA), 017 (KYC) and 031 (bio); fall back step by step before they exist.
+  const [profile, delegated] = await Promise.all([loadProfile(supabase, user.id), loadDelegatedAccess(supabase)]);
+  if (profile) profile.admin_access = adminAccessFor(profile, delegated);
+  return { supabase, user, profile } as const;
+});
+
+// Newer columns arrive with migrations 016 (avatar, 2FA), 017 (KYC) and 031 (bio); fall back step by step before they exist.
+async function loadProfile(supabase: Awaited<ReturnType<typeof createClient>>, userId: string): Promise<Profile | null> {
   const base = 'id, role, full_name, company_name, country_code, kyc_verified';
   let profile: Profile | null = null;
   for (const cols of [`${base}, avatar_url, two_factor_enabled, kyc_status, bio`, `${base}, avatar_url, two_factor_enabled, kyc_status`, `${base}, avatar_url, two_factor_enabled`, base]) {
-    const { data, error } = await supabase.from('profiles').select(cols).eq('id', user.id).single<Profile>();
+    const { data, error } = await supabase.from('profiles').select(cols).eq('id', userId).single<Profile>();
     profile = data;
     if (!error || !/column|does not exist/i.test(error.message)) break;
   }
-  if (profile) profile.admin_access = await resolveAdminAccess(supabase, profile);
-  return { supabase, user, profile } as const;
+  return profile;
 }
 
 /**
  * Admin level for the header, nav and page guards. Roles answer directly; anyone
  * else may hold a temporary grant (checked against now() in Postgres). If
  * migration 014 is not applied the RPC errors and nobody is a delegated admin.
+ * The grant is fetched alongside the profile, so it is ready whichever role comes back.
  */
-async function resolveAdminAccess(supabase: Awaited<ReturnType<typeof createClient>>, profile: Profile) {
-  const level = roleAdminLevel(profile.role);
-  if (level) return { level };
+async function loadDelegatedAccess(supabase: Awaited<ReturnType<typeof createClient>>) {
   const { data, error } = await supabase.rpc('my_admin_access');
   return error ? null : parseAdminAccess(data);
+}
+
+function adminAccessFor(profile: Profile, delegated: ReturnType<typeof parseAdminAccess> | null) {
+  const level = roleAdminLevel(profile.role);
+  return level ? { level } : delegated;
 }

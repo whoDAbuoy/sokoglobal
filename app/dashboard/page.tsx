@@ -45,7 +45,37 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   if (!user || !profile) redirect('/login?redirectTo=/dashboard');
   if (profile.role === 'supplier') redirect('/supplier');
 
-  const [poolsRes, productsRes, ordersRes, myPoolsRes, followsRes] = await Promise.all([
+  // Everything below depends only on the signed-in user, so it all starts at once. The two reads that need
+  // an earlier result (the followed-supplier feed needs the follow list; Gold badges need the supplier ids)
+  // chain off their own input instead of waiting for the whole batch: 3 round trips on the critical path, not 7.
+  const followsP = supabase.from('follows').select('following_id').order('created_at', { ascending: false }).limit(200)
+    // Followed suppliers (migration 030; RLS returns only this user's rows). Errors before the migration → no feed.
+    .then((res) => (res.error ? null : (res.data ?? []).map((f) => f.following_id as string)));
+  // "From suppliers you follow": their newest live listings (drafts stay private under "products: read live").
+  const feedP = followsP.then(async (ids) => ids?.length
+    ? ((await supabase.from('products').select(CATALOG_PRODUCT_SELECT).in('supplier_id', ids).eq('status', 'live').is('deleted_at', null)
+        .order('created_at', { ascending: false }).limit(6)).data ?? []) as unknown as CatalogProductRow[]
+    : []);
+  const productsP = supabase
+    .from('products')
+    .select(`id, supplier_id, title, brand, category, origin_country, trial_units, unit_price_cents, trial_goods_cents,
+             trial_freight_cents, trial_customs_cents, trial_landed_cost_cents, lead_time_days,
+             supplier:profiles!products_supplier_id_fkey ( company_name, kyc_verified ),
+             product_media ( public_url, media_type, sort_order )`)
+    .eq('status', 'live')
+    .order('created_at', { ascending: false })
+    .limit(6)
+    .then((res) => res);
+  // Gold badges: one lookup per source as soon as its supplier ids are known, merged below.
+  const goldP = Promise.all([
+    productsP.then((res) => goldSupplierIds(supabase, (res.data ?? []).map((p) => p.supplier_id as string))),
+    feedP.then((rows) => goldSupplierIds(supabase, rows.map((r) => r.supplier_id))),
+  ]).then(([a, b]) => new Set([...a, ...b]));
+  // KYC documents only refine the banner copy; fetched up front for buyers who aren't approved yet (cheap,
+  // own rows only) so the banner doesn't wait on the config read first.
+  const mayShowKyc = profile.role === 'importer' && !!profile.kyc_status && profile.kyc_status !== 'approved';
+
+  const [poolsRes, productsRes, ordersRes, myPoolsRes, followedIds, feedRows, rfqRes, configs, kycDocsRes, gold, { category }] = await Promise.all([
     supabase
       .from('trend_pools')
       .select(`id, title, description, destination_country, target_cents, pledged_cents, min_contribution_cents,
@@ -54,15 +84,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
       .in('status', ['open', 'funded'])
       .order('deadline', { ascending: true })
       .limit(6),
-    supabase
-      .from('products')
-      .select(`id, supplier_id, title, brand, category, origin_country, trial_units, unit_price_cents, trial_goods_cents,
-               trial_freight_cents, trial_customs_cents, trial_landed_cost_cents, lead_time_days,
-               supplier:profiles!products_supplier_id_fkey ( company_name, kyc_verified ),
-               product_media ( public_url, media_type, sort_order )`)
-      .eq('status', 'live')
-      .order('created_at', { ascending: false })
-      .limit(6),
+    productsP,
     supabase
       .from('orders')
       .select('id, order_type, escrow_status, total_cents, created_at, product:products ( title )')
@@ -71,31 +93,26 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
       .order('created_at', { ascending: false })
       .limit(20), // support widget only — the order list lives at /dashboard/orders (header "My orders")
     supabase.from('pool_members').select('pool_id, contribution_cents, payment_status').eq('buyer_id', user.id),
-    // Followed suppliers (migration 030; RLS returns only this user's rows). Errors before the migration → no feed.
-    supabase.from('follows').select('following_id').order('created_at', { ascending: false }).limit(200),
+    followsP,
+    feedP,
+    // RFQ activity for the overview (own rows under RLS; additive read, errors → the card says RFQs are unavailable).
+    supabase.from('rfqs').select('id, title, status, expires_at, quotes:rfq_quotes!rfq_quotes_rfq_id_fkey ( count )')
+      .eq('buyer_id', user.id).in('status', ['open', 'quoted']).gt('expires_at', new Date().toISOString())
+      .order('created_at', { ascending: false }).limit(10),
+    getSystemConfigs(supabase),
+    mayShowKyc ? supabase.from('kyc_verifications').select('document_type, status').eq('user_id', user.id) : null,
+    goldP,
+    // Category browsing filters the products already loaded above (no extra query).
+    searchParams,
   ]);
-  const followedIds = followsRes.error ? null : (followsRes.data ?? []).map((f) => f.following_id as string);
-  // "From suppliers you follow": their newest live listings (drafts stay private under "products: read live").
-  const feedRows = followedIds?.length
-    ? ((await supabase.from('products').select(CATALOG_PRODUCT_SELECT).in('supplier_id', followedIds).eq('status', 'live').is('deleted_at', null)
-        .order('created_at', { ascending: false }).limit(6)).data ?? []) as unknown as CatalogProductRow[]
-    : [];
 
-  // RFQ activity for the overview (own rows under RLS; additive read, errors → the card says RFQs are unavailable).
-  const rfqRes = await supabase.from('rfqs').select('id, title, status, expires_at, quotes:rfq_quotes!rfq_quotes_rfq_id_fkey ( count )')
-    .eq('buyer_id', user.id).in('status', ['open', 'quoted']).gt('expires_at', new Date().toISOString())
-    .order('created_at', { ascending: false }).limit(10);
   const rfqAlerts: RfqAlert[] | null = rfqRes.error ? null : (rfqRes.data ?? []).map((r) => ({
     id: r.id as string, title: r.title as string, expiresAt: r.expires_at as string,
     quotes: (one(r.quotes as unknown as { count: number }[] | { count: number }) ?? { count: 0 }).count,
   }));
-
-  const configs = await getSystemConfigs(supabase);
   // Banner state comes from profiles.kyc_status (the column every guard reads); documents only refine its copy.
-  const showKycBanner = profile.role === 'importer' && configs.kyc.orders && !!profile.kyc_status && profile.kyc_status !== 'approved';
-  const kycDocs = showKycBanner
-    ? ((await supabase.from('kyc_verifications').select('document_type, status').eq('user_id', user.id)).data ?? []) as KycDoc[]
-    : [];
+  const showKycBanner = mayShowKyc && configs.kyc.orders;
+  const kycDocs = showKycBanner ? (kycDocsRes?.data ?? []) as KycDoc[] : [];
   const kycChecklist = checklist(kycDocs);
   const kycApproved = (['identity', 'business'] as const).filter((g) => kycChecklist[g] === 'approved');
   const minTrialCents = minimumCents(configs.trial);
@@ -114,7 +131,6 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     };
   });
 
-  const gold = await goldSupplierIds(supabase, [...(productsRes.data ?? []).map((p) => p.supplier_id as string), ...feedRows.map((r) => r.supplier_id)]);
   const feed = feedRows.map((r) => toTrialProductView(r, null, gold));
   const products: TrialProductView[] = (productsRes.data ?? []).map((p) => {
     const supplier = one(p.supplier as unknown as { company_name: string; kyc_verified: boolean });
@@ -141,8 +157,6 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const viewPools = usingDemo ? DEMO_POOLS : pools;
   const viewProducts = usingDemo ? DEMO_PRODUCTS : products;
 
-  // Category browsing filters the products already loaded above (no extra query).
-  const { category } = await searchParams;
   const activeCategory: ProductCategory | null = category === 'beauty' || category === 'clothing' || category === 'general' ? category : null;
   const shownProducts = activeCategory ? viewProducts.filter((p) => p.category === activeCategory) : viewProducts;
   const inCategory = (c: ProductCategory) => viewProducts.filter((p) => p.category === c);
