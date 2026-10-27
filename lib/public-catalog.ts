@@ -49,7 +49,8 @@ const cardRow = z.object({
 });
 export type PublicListingCard = z.infer<typeof cardRow>;
 
-const sitemapRow = z.object({ kind: z.enum(['product', 'supplier']), id: z.string(), last_modified: z.string() });
+// "name" arrives with migration 038; before it, URLs fall back to the bare id (which redirects to the readable one).
+const sitemapRow = z.object({ kind: z.enum(['product', 'supplier']), id: z.string(), last_modified: z.string(), name: z.string().nullish() });
 export type SitemapEntry = z.infer<typeof sitemapRow>;
 
 function first<T>(schema: z.ZodType<T>, data: unknown, label: string): T | null {
@@ -97,4 +98,16 @@ export async function getSitemapEntries(): Promise<SitemapEntry[]> {
   const { data, error } = await db().rpc('public_sitemap_entries', { p_limit: 45_000 });
   if (error) throw new Error(`Could not build the sitemap: ${error.message}`);
   return all(sitemapRow, data, 'sitemap');
+}
+
+export const BROWSE_PAGE_SIZE = 24;
+const browseRow = cardRow.extend({ total: z.number().int() });
+
+/** One page of the public catalogue, newest first (migration 038). Errors are thrown: this is the page's main content. */
+export async function getBrowseListings(page: number): Promise<{ listings: PublicListingCard[]; total: number }> {
+  const offset = (Math.max(1, Math.floor(page)) - 1) * BROWSE_PAGE_SIZE;
+  const { data, error } = await db().rpc('public_browse_listings', { p_limit: BROWSE_PAGE_SIZE, p_offset: offset });
+  if (error) throw new Error(`Could not load the catalogue: ${error.message}`);
+  const rows = all(browseRow, data, 'browse');
+  return { listings: rows.map(({ total: _total, ...card }) => card), total: rows[0]?.total ?? 0 };
 }

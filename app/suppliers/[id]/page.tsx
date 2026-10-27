@@ -1,12 +1,12 @@
 import type { Metadata } from 'next';
 import Image from 'next/image';
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
+import { notFound, permanentRedirect } from 'next/navigation';
 import { BadgeCheck, CalendarDays, MessageSquare, Package, Star } from 'lucide-react';
 import { getPublicListings, getPublicSupplier } from '@/lib/public-catalog';
 import { countryName, flag } from '@/lib/format';
 import { initials } from '@/lib/admin-inbox';
-import { metaDescription, siteUrl, supplierJsonLd, supplierPath, SITE_NAME } from '@/lib/seo';
+import { idFromSegment, isCanonicalSegment, metaDescription, siteUrl, supplierJsonLd, supplierPath, SITE_NAME } from '@/lib/seo';
 import JsonLd from '@/components/seo/JsonLd';
 import GoldBadge from '@/components/supplier/GoldBadge';
 import { ListingGrid, PublicHeader } from '@/components/public/PublicCatalog';
@@ -19,14 +19,14 @@ import { ListingGrid, PublicHeader } from '@/components/public/PublicCatalog';
 type Props = { params: Promise<{ id: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { id } = await params;
-  const supplier = await getPublicSupplier(id);
+  const { id: segment } = await params;
+  const supplier = await getPublicSupplier(idFromSegment(segment) ?? '');
   if (!supplier) return { title: `Supplier not found · ${SITE_NAME}`, robots: { index: false } };
   // "Verified" only when KYC is approved: the title is what search results show.
   const title = `${supplier.company_name} · ${supplier.kyc_verified ? 'Verified supplier' : 'Supplier'} in ${countryName(supplier.country_code)}`;
   const description = metaDescription(supplier.bio)
     || `${supplier.live_listings} escrow-protected Trial Batch${supplier.live_listings === 1 ? '' : 'es'} from ${supplier.company_name}, landed in Africa with freight and customs included.`;
-  const url = `${siteUrl()}${supplierPath(supplier.id)}`;
+  const url = `${siteUrl()}${supplierPath(supplier.id, supplier.company_name)}`;
   return {
     title: `${title} · ${SITE_NAME}`,
     description,
@@ -36,10 +36,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function PublicSupplierPage({ params }: Props) {
-  const { id } = await params;
+  const { id: segment } = await params;
+  const id = idFromSegment(segment) ?? '';
   // Profile and listings are independent: one round trip, not two.
-  const [supplier, listings] = await Promise.all([getPublicSupplier(id), getPublicListings({ supplierId: id, limit: 48 })]);
+  const [supplier, listings] = await Promise.all([getPublicSupplier(id), id ? getPublicListings({ supplierId: id, limit: 48 }) : Promise.resolve([])]);
   if (!supplier) notFound();
+  // /suppliers/<company-slug>-<id>: any other slug redirects permanently to the current one.
+  if (!isCanonicalSegment(segment, supplier.id, supplier.company_name)) permanentRedirect(supplierPath(supplier.id, supplier.company_name));
   const since = new Date(supplier.created_at).toLocaleDateString('en-GB', { month: 'long', year: 'numeric', timeZone: 'UTC' });
 
   return (
