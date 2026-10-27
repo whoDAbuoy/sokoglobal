@@ -13,15 +13,23 @@ import PlatformBanner from '@/components/platform/PlatformBanner';
 import ThemedToaster from '@/components/platform/ThemedToaster';
 import ThemeSync from '@/components/platform/ThemeSync';
 import { THEME_INIT_SCRIPT } from '@/lib/theme';
+import { siteUrl, SITE_NAME } from '@/lib/seo';
 import './globals.css';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 
+const DESCRIPTION = 'Import from verified suppliers in Europe, the Americas and Asia. One fixed landed price, freight and customs included, held in escrow until delivery.';
+
 export const metadata: Metadata = {
-  title: 'SokoGlobal — Escrow-protected B2B imports to Africa',
-  description: 'Source beauty and apparel from verified Western suppliers with guaranteed landed cost and escrow protection.',
+  metadataBase: new URL(siteUrl()),
+  title: 'SokoGlobal · Escrow-protected B2B imports to Africa',
+  description: DESCRIPTION,
+  applicationName: SITE_NAME,
+  openGraph: { type: 'website', siteName: SITE_NAME, title: 'SokoGlobal · Escrow-protected B2B imports to Africa', description: DESCRIPTION, url: '/' },
+  twitter: { card: 'summary', title: 'SokoGlobal · Escrow-protected B2B imports to Africa', description: DESCRIPTION },
   // Google Search Console ownership of https://sokoglobal.shop (also public/google68175376fc092f5f.html). Keep both.
   verification: { google: 'hX4cYkiOS-NKcQFPbyaGW_EMY7uNkvozJkDB775TDGM' },
+  // Icons come from app/icon.svg, app/favicon.ico and app/apple-icon.png (Next.js file conventions).
 };
 
 // Android Chrome: the on-screen keyboard resizes the layout viewport, so sticky chat composers stay visible.
