@@ -1,6 +1,7 @@
 'use server';
 
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, revalidateTag } from 'next/cache';
+import { PUBLIC_CATALOG_TAG } from '@/lib/public-catalog';
 import { revalidateCategories } from '@/lib/categories-server';
 import { getSessionProfile } from '@/lib/supabase/server';
 import { friendlyError } from '@/lib/format';
@@ -48,6 +49,7 @@ export async function saveCategory(_prev: CategoryState, form: FormData): Promis
   if (error) return { ok: false, message: /categories_slug_key|duplicate/.test(error.message) ? `The slug "${slug}" is already used.` : friendlyError(error.message) };
   revalidatePath('/admin/categories');
   revalidatePath('/dashboard/discover');
+  revalidateTag(PUBLIC_CATALOG_TAG);   // category names on the public pages
   revalidateCategories();
   return { ok: true, message: id ? `Saved ${name}.` : `Created ${name}.` };
 }

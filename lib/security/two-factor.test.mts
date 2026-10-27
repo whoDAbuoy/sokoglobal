@@ -116,8 +116,7 @@ test('twoFactorGate: unverified sessions are challenged on private pages and ref
 import { financialOverrideBlock } from './two-factor-gate.ts';
 
 test('financial overrides need 2FA on and verified (unless migration 016 is not applied)', () => {
-  assert.equal(financialOverrideBlock({ available: false, enabled: false, ok: true }), null);
-  assert.match(financialOverrideBlock({ available: true, enabled: false, ok: true })!, /Turn on two-factor/);
-  assert.match(financialOverrideBlock({ available: true, enabled: true, ok: false })!, /Verify your two-factor code/);
-  assert.equal(financialOverrideBlock({ available: true, enabled: true, ok: true }), null);
+  assert.match(financialOverrideBlock({ enabled: false, ok: true })!, /Turn on two-factor/);
+  assert.match(financialOverrideBlock({ enabled: true, ok: false })!, /Verify your two-factor code/);
+  assert.equal(financialOverrideBlock({ enabled: true, ok: true }), null);
 });

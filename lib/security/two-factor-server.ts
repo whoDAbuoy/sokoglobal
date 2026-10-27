@@ -1,6 +1,7 @@
 import 'server-only';
 import { headers } from 'next/headers';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import type { Database } from '@/lib/supabase/database.types';
 import { getSessionProfile } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { requestFingerprint } from '@/lib/auth/admin-access';
@@ -46,12 +47,12 @@ export async function recordTwoFactorPass(db: SupabaseClient, ctx: TwoFactorCont
   if (error) throw new Error(`Could not record the two-factor check: ${error.message}`);
 }
 
-/** { enabled, ok } for the current session; before migration 016 → { available: false, enabled: false, ok: true }. */
-export async function twoFactorState(supabase: SupabaseClient): Promise<{ available: boolean; enabled: boolean; ok: boolean }> {
+/** { enabled, ok } for the current session. A failed read throws: it must never pass for "2FA satisfied". */
+export async function twoFactorState(supabase: SupabaseClient<Database>): Promise<{ enabled: boolean; ok: boolean }> {
   const { data, error } = await supabase.rpc('my_security_state');
-  if (error || !data) return { available: false, enabled: false, ok: true };
+  if (error || !data) throw new Error(`Could not read the two-factor state: ${error?.message ?? 'no profile'}`);
   const s = data as { two_factor_enabled?: boolean; two_factor_ok?: boolean };
-  return { available: true, enabled: !!s.two_factor_enabled, ok: s.two_factor_ok !== false };
+  return { enabled: !!s.two_factor_enabled, ok: s.two_factor_ok === true };
 }
 
 export const noStore = { 'Cache-Control': 'no-store' };
@@ -82,7 +83,8 @@ export async function twoFactorRoute() {
 
 export type SecondFactor =
   | { ok: true; method: 'totp' | 'backup_code'; patch: Partial<Pick<TotpRow, 'last_used_step' | 'backup_codes'>> }
-  | { ok: false; error: string };
+  /** `wrong`: a well-formed code that did not match (counts towards the lockout; typos in the format do not). */
+  | { ok: false; error: string; wrong?: true };
 
 /**
  * Checks an authenticator code (with replay guard) or a single-use backup code against
@@ -94,12 +96,12 @@ export async function checkSecondFactor(row: TotpRow, input: { code: string; bac
     if (!isTotpFormat(input.code)) return { ok: false, error: 'Enter the 6-digit code from your authenticator app.' };
     const secret = decryptSecret(row.secret, row.user_id, key);
     const r = await verifyTotp(secret, input.code, row.last_used_step);
-    return r.valid ? { ok: true, method: 'totp', patch: { last_used_step: r.timeStep } } : { ok: false, error: 'That code didn’t match. Check your device clock and try the newest code.' };
+    return r.valid ? { ok: true, method: 'totp', patch: { last_used_step: r.timeStep } } : { ok: false, wrong: true, error: 'That code didn’t match. Check your device clock and try the newest code.' };
   }
   if (allowBackup && input.backupCode) {
     if (!isBackupCodeFormat(input.backupCode)) return { ok: false, error: 'Backup codes look like ABCD-EFGH.' };
     const left = consumeBackupCode(row.backup_codes, input.backupCode, key);
-    return left ? { ok: true, method: 'backup_code', patch: { backup_codes: left } } : { ok: false, error: 'That backup code is not valid or was already used.' };
+    return left ? { ok: true, method: 'backup_code', patch: { backup_codes: left } } : { ok: false, wrong: true, error: 'That backup code is not valid or was already used.' };
   }
   return { ok: false, error: allowBackup ? 'Enter a code from your authenticator app or a backup code.' : 'Enter the 6-digit code from your authenticator app.' };
 }
@@ -115,4 +117,34 @@ export async function spendSecondFactor(db: SupabaseClient, row: TotpRow, patch:
   const { data, error } = await q.select('user_id');
   if (error) throw new Error(`Could not record the code: ${error.message}`);
   return (data ?? []).length === 1;
+}
+
+const lockedMessage = (until: Date) =>
+  `Too many wrong codes. Try again after ${until.toISOString().slice(11, 16)} UTC.`;
+const locked = (until: Date) => NextResponse.json({ error: lockedMessage(until), lockedUntil: until.toISOString() }, {
+  status: 429, headers: { ...noStore, 'Retry-After': String(Math.max(1, Math.ceil((until.getTime() - Date.now()) / 1000))) },
+});
+
+/**
+ * Wrong-code lockout (migration 041), on top of the per-minute rate limit: every 5th consecutive wrong
+ * code locks the challenge for 15 minutes, doubling up to 24 hours. Checked before any code is compared,
+ * so a locked account learns nothing from further guesses. Returns the 429 response while locked.
+ */
+export async function secondFactorLock(db: SupabaseClient, userId: string): Promise<NextResponse | null> {
+  const { data, error } = await db.rpc('two_factor_locked_until', { p_user: userId });
+  if (error) throw new Error(`Could not read the two-factor lock: ${error.message}`);
+  return typeof data === 'string' ? locked(new Date(data)) : null;
+}
+
+/** Records the outcome of a code check: clears the count on success, counts a wrong code (→ 429 once it locks). */
+export async function noteSecondFactorResult(db: SupabaseClient, userId: string, check: SecondFactor): Promise<NextResponse | null> {
+  if (check.ok) {
+    const { error } = await db.rpc('clear_two_factor_failures', { p_user: userId });
+    if (error) console.error('[2fa] could not clear the failure count', error.message);
+    return null;
+  }
+  if (!check.wrong) return null;
+  const { data, error } = await db.rpc('record_two_factor_failure', { p_user: userId });
+  if (error) throw new Error(`Could not record the failed code: ${error.message}`);
+  return typeof data === 'string' ? locked(new Date(data)) : null;
 }

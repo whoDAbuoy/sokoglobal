@@ -1,7 +1,6 @@
 /**
  * Supplier order catalogue (pure): paid orders waiting to ship, grouped per listing.
- * Contract: get_supplier_grouped_catalog() and orders.fulfillment_status (migration 018);
- * groupPaidOrders() is the same grouping for databases that predate it.
+ * Contract: get_supplier_grouped_catalog() and orders.fulfillment_status (migration 018).
  */
 import type { EscrowStatus } from './types';
 
@@ -53,40 +52,6 @@ export function parseGroupedCatalog(rows: unknown): ListingGroup[] {
       payment_structure: str(o.payment_structure), escrow_status: str(o.escrow_status), is_rfq: o.is_rfq === true,
     })),
   }));
-}
-
-export interface RawOrder {
-  id: string; product_id: string; escrow_status: EscrowStatus; current_status: string | null; funded_at: string | null;
-  quantity: number; batches: number | null; goods_cents: number; total_cents: number;
-  buyer_company?: string | null; buyer_country?: string | null; destination_label?: string | null; eta_timestamp?: string | null;
-  tracking_number?: string | null; carrier?: string | null;
-}
-
-/** Groups paid, not-yet-dispatched orders by listing; oldest payment first, both for groups and buyers. */
-export function groupPaidOrders(orders: readonly RawOrder[], listings: ReadonlyMap<string, { title: string; image_url: string | null; unit_of_measure: string | null }>): ListingGroup[] {
-  const groups = new Map<string, ListingGroup>();
-  const paidAt = (s: string | null) => (s ? Date.parse(s) : Number.POSITIVE_INFINITY);
-  for (const o of [...orders].sort((a, b) => paidAt(a.funded_at) - paidAt(b.funded_at))) {
-    if (fulfillmentStatus(o) !== 'pending_fulfillment') continue;
-    const l = listings.get(o.product_id);
-    let g = groups.get(o.product_id);
-    if (!g) {
-      g = { listing_id: o.product_id, title: l?.title ?? 'Listing', image_url: l?.image_url ?? null, unit_of_measure: l?.unit_of_measure ?? null,
-        order_count: 0, total_quantity: 0, total_batches: 0, total_goods_cents: 0, total_landed_cents: 0, oldest_paid_at: o.funded_at, orders: [] };
-      groups.set(o.product_id, g);
-    }
-    g.order_count += 1;
-    g.total_quantity += o.quantity;
-    g.total_batches += o.batches ?? 1;
-    g.total_goods_cents += o.goods_cents;
-    g.total_landed_cents += o.total_cents;
-    g.orders.push({
-      order_id: o.id, quantity: o.quantity, batches: o.batches ?? 1, goods_cents: o.goods_cents, paid_at: o.funded_at,
-      buyer_company: o.buyer_company ?? null, buyer_country: o.buyer_country ?? null, destination: o.destination_label ?? null,
-      eta: o.eta_timestamp ?? null, shipment_status: o.current_status, tracking_number: o.tracking_number ?? null, carrier: o.carrier ?? null,
-    });
-  }
-  return [...groups.values()];
 }
 
 export function catalogTotals(groups: readonly ListingGroup[]) {

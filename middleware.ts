@@ -7,24 +7,22 @@ import { maintenanceDecision } from '@/lib/platform';
 import { twoFactorGate } from '@/lib/security/two-factor-gate';
 import { kycGate, parseKycStatus, type KycRequirements } from '@/lib/kyc';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import type { Database } from '@/lib/supabase/database.types';
 
 /**
- * Ban + 2FA state in one round trip (my_security_state, migration 016). Before 016 the RPC
- * is missing: fall back to the ban flag alone; if that column is missing too, nobody is banned.
+ * Ban, 2FA and KYC state in one round trip (my_security_state). null when it can't be read: the caller
+ * then refuses API calls and lets pages through, where Postgres still enforces 2FA (check_request, migration
+ * 041), bans and KYC. It never falls back to "not banned, no 2FA".
  */
-async function loadSecurityState(supabase: SupabaseClient, userId: string) {
+async function loadSecurityState(supabase: SupabaseClient<Database>) {
   const { data, error } = await supabase.rpc('my_security_state');
-  if (!error && data) {
-    const s = data as { is_banned?: boolean; two_factor_enabled?: boolean; two_factor_ok?: boolean; kyc_status?: unknown; kyc_required?: Partial<KycRequirements> };
-    return {
-      is_banned: !!s.is_banned, two_factor_enabled: !!s.two_factor_enabled, two_factor_ok: s.two_factor_ok !== false,
-      // Migration 017+: KYC state for the listing / order gate (null before it → no gate).
-      kyc_status: parseKycStatus(s.kyc_status),
-      kyc_required: { listings: s.kyc_required?.listings !== false, orders: s.kyc_required?.orders !== false },
-    };
-  }
-  const { data: flags } = await supabase.from('profiles').select('is_banned').eq('id', userId).maybeSingle<{ is_banned: boolean }>();
-  return { is_banned: !!flags?.is_banned, two_factor_enabled: false, two_factor_ok: true, kyc_status: null, kyc_required: { listings: false, orders: false } };
+  if (error || !data) return null;
+  const s = data as { is_banned?: boolean; two_factor_enabled?: boolean; two_factor_ok?: boolean; kyc_status?: unknown; kyc_required?: Partial<KycRequirements> };
+  return {
+    is_banned: !!s.is_banned, two_factor_enabled: !!s.two_factor_enabled, two_factor_ok: s.two_factor_ok === true,
+    kyc_status: parseKycStatus(s.kyc_status),
+    kyc_required: { listings: s.kyc_required?.listings !== false, orders: s.kyc_required?.orders !== false },
+  };
 }
 
 // Maintenance flag (platform_settings, migration 014), cached per instance so pages don't each pay a query.
@@ -69,9 +67,17 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next({ request: { headers: requestHeaders } });
   };
   let response = next();
+  /** The page response with its CSP and reporting headers. */
+  const withCsp = (res: NextResponse) => {
+    if (csp && mode !== 'off') {
+      res.headers.set(cspHeaderName(mode), csp);
+      res.headers.set('Reporting-Endpoints', reportingEndpointsHeader(request.nextUrl.origin));
+    }
+    return res;
+  };
 
   // ── Supabase session ───────────────────────────────────────────────────────
-  const supabase = createServerClient(
+  const supabase = createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
@@ -99,9 +105,9 @@ export async function middleware(request: NextRequest) {
     // Capped at 1.5 s with no retries (supabase-js would otherwise retry 3× with 1/2/4 s backoff): a slow database must
     // not hold every page. An unanswered read counts as "off", like a missing table, and is re-read after 15 s.
     ? supabase.from('platform_settings').select('maintenance_mode').abortSignal(AbortSignal.timeout(1500)).retry(false).maybeSingle<{ maintenance_mode: boolean }>()
-        .then(({ data, error }) => { maintenanceCache = { on: !error && data?.maintenance_mode === true, at: Date.now() }; })   // table missing (pre-014) → off
+        .then(({ data, error }) => { maintenanceCache = { on: !error && data?.maintenance_mode === true, at: Date.now() }; })   // unanswered → off
     : null;
-  const securityRead = user && (isProtectedPage || path.startsWith('/api/')) ? loadSecurityState(supabase, user.id) : null;
+  const securityRead = user && (isProtectedPage || path.startsWith('/api/')) ? loadSecurityState(supabase) : null;
 
   // ── Rate limits on state-changing API routes and server actions (lib/security/rate-limit-core.ts) ──
   const limitName = limitFor(request.method, path, request.headers.has('next-action'));
@@ -148,9 +154,15 @@ export async function middleware(request: NextRequest) {
   // Banned accounts (profiles.is_banned, set from /admin/users) are signed out on any private page.
   // Supabase Auth also refuses their sign-in and token refresh; this catches sessions issued before the ban.
   // Two-factor (migration 016): a session that has not passed the code is sent to /auth/2fa (pages)
-  // or refused (API / server actions). Postgres enforces the same for audited admin actions.
+  // or refused (API / server actions). Postgres refuses the same session on every API call (migration 041).
   if (user && securityRead) {
     const security = await securityRead;
+    if (!security) {
+      if (path.startsWith('/api/') || request.headers.has('next-action')) {
+        return NextResponse.json({ error: 'Your account status could not be checked. Please try again in a moment.' }, { status: 503, headers: { 'Retry-After': '5' } });
+      }
+      return withCsp(response);
+    }
     if (security.is_banned && isProtectedPage) {
       await supabase.auth.signOut({ scope: 'local' }).catch(() => undefined);
       const url = request.nextUrl.clone();
@@ -201,11 +213,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  if (csp && mode !== 'off') {
-    response.headers.set(cspHeaderName(mode), csp);
-    response.headers.set('Reporting-Endpoints', reportingEndpointsHeader(request.nextUrl.origin));
-  }
-  return response;
+  return withCsp(response);
 }
 
 export const config = {

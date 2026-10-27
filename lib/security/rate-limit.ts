@@ -7,7 +7,8 @@ import { createMemoryLimiter, LIMIT_RULES, type LimitName, type LimitResult } fr
  *   UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN set → Upstash Redis sliding
  *   window, shared by every instance (production).
  *   Not set → in-memory per instance (dev / preview); logged once.
- * Fails OPEN if Redis is unreachable, so an outage never blocks payments.
+ * If Redis is unreachable: payment and other limits fail OPEN (an outage never blocks payments), but 2FA
+ * codes fall back to the per-instance memory limiter, so an outage never lifts the brute-force guard.
  */
 const url = process.env.UPSTASH_REDIS_REST_URL;
 const token = process.env.UPSTASH_REDIS_REST_TOKEN;
@@ -38,6 +39,10 @@ export async function rateLimit(name: LimitName, key: string): Promise<LimitResu
     const r = await l.limit(key);
     return { success: r.success, limit: r.limit, remaining: r.remaining, reset: r.reset };
   } catch (err) {
+    if (name === 'twofactor') {
+      console.error('[rate-limit] Upstash error — 2FA falls back to memory limits', err);
+      return memory(name, key);
+    }
     console.error('[rate-limit] Upstash error — allowing request', err);
     return { success: true, limit: LIMIT_RULES[name].limit, remaining: LIMIT_RULES[name].limit, reset: Date.now() };
   }

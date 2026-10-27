@@ -19,7 +19,7 @@ export const legalEffectiveDate = () =>
 
 /**
  * Whether an account must accept the current documents before using the portals. Staff are covered by their
- * employment terms. `terms_version` is absent (undefined) until migration 040 runs: no prompt then.
+ * employment terms. A profile read without `terms_version` (undefined) is never prompted.
  */
 export function needsTermsAcceptance(profile: { role: string; terms_version?: string | null } | null | undefined): boolean {
   if (!profile || profile.terms_version === undefined) return false;

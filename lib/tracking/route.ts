@@ -7,7 +7,7 @@
  * what aircraft/ships actually fly — a straight line in lat/lng is wrong
  * over intercontinental distances.
  */
-export interface GeoPoint { lat: number; lng: number }
+export type GeoPoint = { lat: number; lng: number };
 
 export interface Route {
   points: GeoPoint[];
@@ -26,6 +26,9 @@ export function isGeoPoint(p: unknown): p is GeoPoint {
   return typeof lat === 'number' && typeof lng === 'number'
     && Number.isFinite(lat) && Number.isFinite(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180;
 }
+
+/** A jsonb coordinate column (orders.origin_port_coords, …) as a point, or null when unset or malformed. */
+export const geoPointOrNull = (p: unknown): GeoPoint | null => (isGeoPoint(p) ? p : null);
 
 /** Central angle between two points (radians), haversine form — stable for small distances. */
 function centralAngle(a: GeoPoint, b: GeoPoint): number {

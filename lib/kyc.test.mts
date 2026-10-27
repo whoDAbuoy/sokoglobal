@@ -32,7 +32,7 @@ test('KYC gate: unverified accounts cannot open listing pages or post new orders
   assert.equal(buy('/api/orders/123/checkout', 'unsubmitted'), 'allow', 'paying an order that already exists is not a new order');
   assert.equal(buy('/api/orders', 'approved'), 'allow');
   assert.equal(buy('/api/orders', 'unsubmitted', { listings: true, orders: false }), 'allow', 'control-room switch off');
-  assert.equal(buy('/api/orders', null), 'allow', 'migration not applied');
+  assert.equal(buy('/api/orders', null), 'forbid', 'an unknown status is not "approved"');
   assert.equal(kycGate({ path: '/api/orders', method: 'GET', role: 'importer', status: 'pending', required: ON }).kind, 'allow');
 });
 

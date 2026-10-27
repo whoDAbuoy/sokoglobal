@@ -4,6 +4,7 @@ import { ArrowLeft } from 'lucide-react';
 import { getSessionProfile } from '@/lib/supabase/server';
 import { UUID_RE } from '@/lib/uploads';
 import { formatUSD } from '@/lib/format';
+import { geoPointOrNull } from '@/lib/tracking/route';
 import DashboardHeader from '@/components/dashboard/DashboardHeader';
 import TrackingForm, { type TrackingFormOrder } from './TrackingForm';
 import { isAdmin } from '@/lib/auth/admin-access';
@@ -49,8 +50,8 @@ export default async function TrackingPage({ params }: { params: Promise<{ id: s
     currentStatus: order.current_status,
     discharge: order.discharge_timestamp,
     eta: order.eta_timestamp,
-    origin: order.origin_port_coords,
-    destination: order.destination_coords,
+    origin: geoPointOrNull(order.origin_port_coords),
+    destination: geoPointOrNull(order.destination_coords),
     waypoints: Array.isArray(order.route_waypoints) ? order.route_waypoints : [],
     originLabel: order.origin_label,
     destinationLabel: order.destination_label,

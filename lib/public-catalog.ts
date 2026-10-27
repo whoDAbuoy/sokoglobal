@@ -1,7 +1,8 @@
 import 'server-only';
 import { cache } from 'react';
+import { unstable_cache } from 'next/cache';
 import { z } from 'zod';
-import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { anonClient as db } from '@/lib/supabase/anon';
 import { UUID_RE } from '@/lib/uploads';
 
 /**
@@ -9,15 +10,15 @@ import { UUID_RE } from '@/lib/uploads';
  * key with no cookies: the data is identical for every visitor (signed in or not) and comes only from
  * the public_* functions, which expose public columns of live listings and suppliers in good standing.
  * Rows are validated before use; a row that doesn't match is treated as missing, never half-rendered.
+ *
+ * Because the data is the same for everyone, results are also cached across requests (PUBLIC_CATALOG_TAG):
+ * a few minutes at most, and dropped at once by revalidateTag() when a listing is approved, edited or removed.
+ * Errors are thrown inside the cached functions, so a failed read is never cached.
  */
-let anonClient: SupabaseClient | undefined;
-function db(): SupabaseClient {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!url || !key) throw new Error('Supabase is not configured');
-  anonClient ??= createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } });
-  return anonClient;
-}
+export const PUBLIC_CATALOG_TAG = 'public-catalog';
+const shared = <A extends unknown[], R>(fn: (...args: A) => Promise<R>, key: string, revalidate: number) =>
+  unstable_cache(fn, [key], { revalidate, tags: [PUBLIC_CATALOG_TAG] });
+
 
 // numeric columns arrive as numbers or strings depending on size; nulls stay null.
 const num = z.union([z.number(), z.string()]).transform(Number).pipe(z.number().finite());
@@ -49,7 +50,7 @@ const cardRow = z.object({
 });
 export type PublicListingCard = z.infer<typeof cardRow>;
 
-// "name" arrives with migration 038; before it, URLs fall back to the bare id (which redirects to the readable one).
+// Without a "name" (migration 038) a URL falls back to the bare id, which redirects to the readable one.
 const sitemapRow = z.object({ kind: z.enum(['product', 'supplier']), id: z.string(), last_modified: z.string(), name: z.string().nullish() });
 export type SitemapEntry = z.infer<typeof sitemapRow>;
 
@@ -69,45 +70,66 @@ function all<T>(schema: z.ZodType<T>, data: unknown, label: string): T[] {
 }
 
 /** A live listing, or null (not found, not public, invalid id). Cached per request: metadata and page share it. */
-export const getPublicListing = cache(async (id: string): Promise<PublicListing | null> => {
-  if (!UUID_RE.test(id)) return null;
+const listingData = shared(async (id: string) => {
   const { data, error } = await db().rpc('public_listing', { p_id: id });
   if (error) throw new Error(`Could not load listing: ${error.message}`);
-  return first(listingRow, data, 'listing');
+  return data;
+}, 'public-listing', 300);
+
+export const getPublicListing = cache(async (id: string): Promise<PublicListing | null> => {
+  if (!UUID_RE.test(id)) return null;
+  return first(listingRow, await listingData(id), 'listing');
 });
+
+const supplierData = shared(async (id: string) => {
+  const { data, error } = await db().rpc('public_supplier', { p_id: id });
+  if (error) throw new Error(`Could not load supplier: ${error.message}`);
+  return data;
+}, 'public-supplier', 300);
 
 export const getPublicSupplier = cache(async (id: string): Promise<PublicSupplier | null> => {
   if (!UUID_RE.test(id)) return null;
-  const { data, error } = await db().rpc('public_supplier', { p_id: id });
-  if (error) throw new Error(`Could not load supplier: ${error.message}`);
-  return first(supplierRow, data, 'supplier');
+  return first(supplierRow, await supplierData(id), 'supplier');
 });
+
+const listingsData = shared(async (supplierId: string | null, categoryId: string | null, excludeId: string | null, limit: number) => {
+  const { data, error } = await db().rpc('public_listings', { p_supplier_id: supplierId, p_category_id: categoryId, p_exclude_id: excludeId, p_limit: limit });
+  if (error) throw new Error(error.message);
+  return data;
+}, 'public-listings', 300);
 
 /** Listing cards for a supplier or a category (newest first, at most 48). Errors → empty (secondary content). */
 export async function getPublicListings(opts: { supplierId?: string; categoryId?: string; excludeId?: string; limit?: number }): Promise<PublicListingCard[]> {
   if (!opts.supplierId && !opts.categoryId) return [];
-  const { data, error } = await db().rpc('public_listings', {
-    p_supplier_id: opts.supplierId ?? null, p_category_id: opts.categoryId ?? null, p_exclude_id: opts.excludeId ?? null, p_limit: opts.limit ?? 12,
-  });
-  if (error) { console.error('[public-catalog] listings unavailable', error.message); return []; }
-  return all(cardRow, data, 'listing card');
+  try {
+    return all(cardRow, await listingsData(opts.supplierId ?? null, opts.categoryId ?? null, opts.excludeId ?? null, opts.limit ?? 12), 'listing card');
+  } catch (err) {
+    console.error('[public-catalog] listings unavailable', err instanceof Error ? err.message : err);
+    return [];
+  }
 }
 
 /** Every public listing and supplier, for the sitemap. Errors are thrown so a broken sitemap isn't cached as empty. */
-export async function getSitemapEntries(): Promise<SitemapEntry[]> {
+const sitemapData = shared(async () => {
   const { data, error } = await db().rpc('public_sitemap_entries', { p_limit: 45_000 });
   if (error) throw new Error(`Could not build the sitemap: ${error.message}`);
-  return all(sitemapRow, data, 'sitemap');
+  return data;
+}, 'public-sitemap', 3600);
+
+export async function getSitemapEntries(): Promise<SitemapEntry[]> {
+  return all(sitemapRow, await sitemapData(), 'sitemap');
 }
 
 export const BROWSE_PAGE_SIZE = 24;
 const browseRow = cardRow.extend({ total: z.number().int() });
+const browseData = shared(async (offset: number) => {
+  const { data, error } = await db().rpc('public_browse_listings', { p_limit: BROWSE_PAGE_SIZE, p_offset: offset });
+  if (error) throw new Error(`Could not load the catalogue: ${error.message}`);
+  return data;
+}, 'public-browse', 120);
 
 /** One page of the public catalogue, newest first (migration 038). Errors are thrown: this is the page's main content. */
 export async function getBrowseListings(page: number): Promise<{ listings: PublicListingCard[]; total: number }> {
-  const offset = (Math.max(1, Math.floor(page)) - 1) * BROWSE_PAGE_SIZE;
-  const { data, error } = await db().rpc('public_browse_listings', { p_limit: BROWSE_PAGE_SIZE, p_offset: offset });
-  if (error) throw new Error(`Could not load the catalogue: ${error.message}`);
-  const rows = all(browseRow, data, 'browse');
+  const rows = all(browseRow, await browseData((Math.max(1, Math.floor(page)) - 1) * BROWSE_PAGE_SIZE), 'browse');
   return { listings: rows.map(({ total: _total, ...card }) => card), total: rows[0]?.total ?? 0 };
 }

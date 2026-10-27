@@ -24,7 +24,7 @@ export const ALL_PAYMENT_METHODS: readonly PaymentMethod[] = ORDER;
 export const WIRE_SUGGESTED_CENTS = 500_000;
 
 export interface PaymentSwitches {
-  /** Card (Paystack) and M-Pesa switches arrive with migration 039; before it both count as on. */
+  /** Card (Paystack) and M-Pesa (migration 039): on unless switched off. */
   enable_card: boolean; enable_mpesa: boolean;
   enable_dpo_pay: boolean; enable_airtel_money: boolean; enable_paypal: boolean; enable_swift_wire: boolean; enable_crypto: boolean;
 }
@@ -42,7 +42,7 @@ export interface PaymentSettings extends PaymentSwitches {
 
 const str = (v: unknown) => (typeof v === 'string' ? v.trim() : '');
 
-/** platform_settings row → settings; missing pieces (before migration 028) fall back to "off / empty". */
+/** platform_settings row → settings; missing or malformed pieces fall back to "off / empty" (card and M-Pesa: on). */
 export function parsePaymentSettings(raw: unknown): PaymentSettings {
   const r = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
   const flag = (k: keyof PaymentSwitches, fallback = false) => (typeof r[k] === 'boolean' ? (r[k] as boolean) : fallback);

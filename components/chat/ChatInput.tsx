@@ -11,6 +11,7 @@ import {
 import { insertAtCursor } from '@/lib/emoji';
 import EmojiPicker from './EmojiPicker';
 import VoiceRecorder, { type VoiceClip } from './VoiceRecorder';
+import type { Json } from '@/lib/supabase/database.types';
 
 const COUNTER_FROM = MAX_MESSAGE_LENGTH - 500;
 const MAX_FILES_AT_ONCE = 5;
@@ -44,7 +45,8 @@ export default function ChatInput({ threadId, attachmentScope, myId, onSent, com
   const media = !!attachmentScope && !!myId;
   const busy = sending || !!uploading;
 
-  async function insert(row: { content: string; message_type: ChatMessageType; metadata?: Record<string, unknown> }) {
+  async function insert(row: { content: string; message_type: ChatMessageType; metadata?: { [key: string]: Json } }) {
+    if (!myId) throw new Error('Sign in to send messages.');
     const { data, error: e } = await supabase.from('chat_messages')
       .insert({ thread_id: threadId, sender_id: myId, ...row }).select(CHAT_MESSAGE_COLUMNS).single();
     if (e) throw e;

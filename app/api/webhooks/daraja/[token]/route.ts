@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { mpesaConfig, parseStkCallback, stkQuery } from '@/lib/payments/mpesa';
 import { settle } from '@/lib/payments/mpesa-checkout';
+import type { Json } from '@/lib/supabase/database.types';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -35,7 +36,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ tok
 
   const raw = await request.text();
   if (raw.length > MAX_BODY_BYTES) return NextResponse.json({ error: 'Payload too large' }, { status: 413 });
-  let body: unknown;
+  let body: Json;
   try { body = JSON.parse(raw); } catch { return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 }); }
   const cb = parseStkCallback(body);
   if (!cb) return NextResponse.json({ error: 'Unrecognised payload' }, { status: 400 });

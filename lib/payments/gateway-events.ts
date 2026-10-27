@@ -1,6 +1,7 @@
 import 'server-only';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { gatewayRowByToken, settleGatewayRow, type Gateway } from '@/lib/payments/gateways';
+import type { Json } from '@/lib/supabase/database.types';
 
 export type EventResult = { outcome: string } | { pending: true } | { error: string };
 
@@ -13,7 +14,7 @@ export type EventResult = { outcome: string } | { pending: true } | { error: str
 export async function handleGatewayEvent(input: { gateway: Gateway; eventId: string; eventType: string; token: string | null; payload: unknown }): Promise<EventResult> {
   const db = createAdminClient();
   const { error: logError } = await db.from('payment_events').upsert(
-    { provider: input.gateway, event_id: input.eventId.slice(0, 200), event_type: input.eventType.slice(0, 80), tx_ref: input.token, payload: input.payload ?? {} },
+    { provider: input.gateway, event_id: input.eventId.slice(0, 200), event_type: input.eventType.slice(0, 80), tx_ref: input.token, payload: (input.payload ?? {}) as Json },   // parsed JSON (or XML wrapped in { raw }) from the gateway
     { onConflict: 'provider,event_id', ignoreDuplicates: true },
   );
   if (logError) return { error: `could not log event: ${logError.message}` };

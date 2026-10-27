@@ -1,7 +1,8 @@
 /**
  * Pure helpers for the admin Overview dashboard (no React, no Supabase), so the
  * numbers shown to ops are unit-tested. Inputs are rows the admin RLS policies
- * already let an admin read (orders, escrow_events, products).
+ * already let an admin read (orders, escrow_events, products) and the
+ * admin_order_metrics() totals.
  */
 import type { EscrowStatus } from './types';
 
@@ -105,55 +106,43 @@ export function parsePage(value: string | undefined, totalPages = Number.POSITIV
   return Math.min(n, Math.max(1, totalPages));
 }
 
-export interface MetricOrder {
-  buyer_id: string;
-  escrow_status: EscrowStatus;
-  total_cents: number;
-  created_at: string;
-  funded_at: string | null;
-  payment_provider: string | null;
-  category: string | null;
-  /** Milestone escrow (migration 021): while 'deposit_paid', only this much is held. */
-  deposit_amount?: number | null;
+/** admin_order_metrics() (migration 041): figures over every paid order, summed in Postgres. */
+export interface OrderMetricsRow {
+  paid_count: number;
+  gmv: number;
+  held: number;
+  released: number;
+  refunded: number;
+  disputed: number;
+  buyers: number;
+  repeat_buyers: number;
+  by_category: { category: string; cents: number }[];
+  /** Rolling 30 days ending now, by orders.payment_provider. */
+  month: { gmv: number; by_provider: { provider: string; cents: number; count: number }[] };
+  prev_month_gmv: number;
+  /** Orders paid per UTC day ('YYYY-MM-DD'), last 7 days. */
+  paid_days: Record<string, number>;
 }
 
-const HELD: EscrowStatus[] = ['deposit_paid', 'funded', 'in_transit', 'customs_cleared', 'delivered_pending_verification', 'disputed'];
-
-/** Money and buyer-cohort figures over a set of orders (unpaid checkouts are ignored). */
-export function escrowSummary(orders: readonly MetricOrder[]) {
-  let held = 0, released = 0, refunded = 0, paidCount = 0, gmv = 0;
-  const perBuyer = new Map<string, number>();
+/** Money and buyer-cohort figures for the overview, with the percentages and payment-method labels derived. */
+export function orderMetrics(row: OrderMetricsRow) {
   const byMethod = new Map<string, { label: string; kind: PaymentKind; cents: number; count: number }>();
-  const byCategory = new Map<string, number>();
-
-  for (const o of orders) {
-    if (o.escrow_status === 'pending_payment') continue;
-    if (o.escrow_status === 'cancelled' && !o.funded_at) continue; // abandoned before payment
-    paidCount += 1;
-    gmv += o.total_cents;
-    if (HELD.includes(o.escrow_status)) held += o.escrow_status === 'deposit_paid' ? o.deposit_amount ?? o.total_cents : o.total_cents;
-    else if (o.escrow_status === 'released') released += o.total_cents;
-    else if (o.escrow_status === 'refunded' || o.escrow_status === 'cancelled') refunded += o.total_cents;
-    perBuyer.set(o.buyer_id, (perBuyer.get(o.buyer_id) ?? 0) + 1);
-
-    const m = paymentMethod(o.payment_provider);
+  for (const p of row.month.by_provider) {
+    const m = paymentMethod(p.provider || null);
     const entry = byMethod.get(m.label) ?? { ...m, cents: 0, count: 0 };
-    entry.cents += o.total_cents; entry.count += 1;
+    entry.cents += Number(p.cents); entry.count += Number(p.count);
     byMethod.set(m.label, entry);
-
-    const cat = o.category ?? 'other';
-    byCategory.set(cat, (byCategory.get(cat) ?? 0) + o.total_cents);
   }
-
-  const buyers = perBuyer.size;
-  const repeatBuyers = [...perBuyer.values()].filter((n) => n > 1).length;
+  const paidCount = Number(row.paid_count), gmv = Number(row.gmv), held = Number(row.held), released = Number(row.released);
+  const buyers = Number(row.buyers), repeatBuyers = Number(row.repeat_buyers);
   const settledBase = held + released;
   return {
     paidCount,
     gmv,
     held,
     released,
-    refunded,
+    refunded: Number(row.refunded),
+    disputesOpen: Number(row.disputed),
     avgOrder: paidCount ? Math.round(gmv / paidCount) : 0,
     /** Share of escrow value (held + released) already released to suppliers, 0–100. */
     settledPct: settledBase ? Math.round((released / settledBase) * 100) : 0,
@@ -161,9 +150,16 @@ export function escrowSummary(orders: readonly MetricOrder[]) {
     repeatBuyers,
     /** Share of buyers with 2+ paid orders, 0–100. */
     repeatPct: buyers ? Math.round((repeatBuyers / buyers) * 100) : 0,
-    byMethod: [...byMethod.values()].sort((a, b) => b.cents - a.cents),
-    byCategory: [...byCategory.entries()].map(([category, cents]) => ({ category, cents })).sort((a, b) => b.cents - a.cents),
+    byCategory: row.by_category.map((c) => ({ category: c.category, cents: Number(c.cents) })),
+    month: { gmv: Number(row.month.gmv), byMethod: [...byMethod.values()].sort((a, b) => b.cents - a.cents) },
+    prevMonthGmv: Number(row.prev_month_gmv),
   };
+}
+
+/** Per-day counts keyed 'YYYY-MM-DD' (UTC) → the `days` days ending today, oldest first. */
+export function dailyCountsByDay(byDay: Readonly<Record<string, number>>, now: Date, days = 7): number[] {
+  const today = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+  return Array.from({ length: days }, (_, i) => Number(byDay[new Date(today - (days - 1 - i) * DAY_MS).toISOString().slice(0, 10)] ?? 0));
 }
 
 /** Count of ISO timestamps per day for the `days` days ending today (UTC), oldest first. */

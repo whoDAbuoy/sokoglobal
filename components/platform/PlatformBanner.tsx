@@ -1,6 +1,5 @@
 import { AlertTriangle } from 'lucide-react';
-import { createClient } from '@/lib/supabase/server';
-import { getPlatformSettings } from '@/lib/platform-server';
+import { getCachedPlatformSettings } from '@/lib/platform-server';
 
 /**
  * Site-wide notice while the kill switch pauses orders or checkout (set in /admin/control).
@@ -8,7 +7,7 @@ import { getPlatformSettings } from '@/lib/platform-server';
  */
 export default async function PlatformBanner() {
   let s;
-  try { s = await getPlatformSettings(await createClient(), { bestEffort: true }); } catch { return null; }
+  try { s = await getCachedPlatformSettings(); } catch { return null; }
   if (s.maintenance_mode || (!s.pause_new_orders && !s.pause_checkout && !s.banner_message)) return null;
   const status = s.pause_new_orders && s.pause_checkout ? 'Orders and checkout are paused.'
     : s.pause_new_orders ? 'New orders are paused.' : s.pause_checkout ? 'Checkout is paused; saved orders can be paid later.' : null;

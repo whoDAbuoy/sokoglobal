@@ -1,7 +1,7 @@
 // Run: npx tsx --conditions=react-server --test lib/supplier-orders.test.mts
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { catalogTotals, fulfillmentStatus, groupPaidOrders, parseGroupedCatalog, visibleToSupplier, type RawOrder } from './supplier-orders.ts';
+import { catalogTotals, fulfillmentStatus, parseGroupedCatalog, visibleToSupplier, type ListingGroup } from './supplier-orders.ts';
 
 test('fulfillment status mirrors the generated column; unpaid orders are never visible to suppliers', () => {
   assert.equal(fulfillmentStatus({ escrow_status: 'pending_payment' }), 'awaiting_payment');
@@ -16,32 +16,14 @@ test('fulfillment status mirrors the generated column; unpaid orders are never v
   assert.equal(visibleToSupplier({ escrow_status: 'refunded' }), true);
 });
 
-const o = (id: string, product_id: string, escrow_status: RawOrder['escrow_status'], funded_at: string | null, quantity: number, goods_cents: number, extra: Partial<RawOrder> = {}): RawOrder => ({
-  id, product_id, escrow_status, funded_at, quantity, goods_cents, total_cents: goods_cents + 6000, batches: 1, current_status: 'awaiting_dispatch', ...extra,
+const group = (listing_id: string, order_count: number, total_goods_cents: number): ListingGroup => ({
+  listing_id, title: listing_id, image_url: null, unit_of_measure: null, order_count, total_quantity: 0, total_batches: 0,
+  total_goods_cents, total_landed_cents: total_goods_cents, oldest_paid_at: null, orders: [],
 });
 
-test('groupPaidOrders: one card per listing with summed quantity and value, oldest payment first', () => {
-  const listings = new Map([['shea', { title: 'Shea butter', image_url: 'https://cdn/1.jpg', unit_of_measure: 'kg' }], ['kit', { title: 'Kitenge', image_url: null, unit_of_measure: null }]]);
-  const groups = groupPaidOrders([
-    o('o1', 'shea', 'pending_payment', null, 100, 50_000),                                 // unpaid → never shown
-    o('o2', 'shea', 'funded', '2026-10-19T10:00:00Z', 100, 50_000, { buyer_company: 'Imp Co' }),
-    o('o3', 'shea', 'funded', '2026-10-18T10:00:00Z', 200, 100_000, { buyer_company: 'Imp Two', batches: 2 }),
-    o('o4', 'kit', 'funded', '2026-10-20T10:00:00Z', 30, 60_000, { current_status: 'in_transit' }),   // already shipped
-    o('o5', 'kit', 'funded', '2026-10-20T11:00:00Z', 30, 60_000),
-    o('o6', 'kit', 'cancelled', null, 30, 60_000),
-  ], listings);
-  assert.deepEqual(groups.map((g) => g.listing_id), ['shea', 'kit']);
-  const shea = groups[0];
-  assert.equal(shea.order_count, 2);
-  assert.equal(shea.total_quantity, 300);
-  assert.equal(shea.total_batches, 3);
-  assert.equal(shea.total_goods_cents, 150_000);
-  assert.equal(shea.total_landed_cents, 162_000);
-  assert.equal(shea.oldest_paid_at, '2026-10-18T10:00:00Z');
-  assert.deepEqual(shea.orders.map((x) => x.buyer_company), ['Imp Two', 'Imp Co']);
-  assert.equal(groups[1].order_count, 1);
-  assert.deepEqual(catalogTotals(groups), { listings: 2, orders: 3, goodsCents: 210_000 });
-  assert.deepEqual(groupPaidOrders([o('x', 'shea', 'pending_payment', null, 1, 1)], listings), []);
+test('catalogTotals sums listings, orders and goods value', () => {
+  assert.deepEqual(catalogTotals([group('shea', 2, 150_000), group('kit', 1, 60_000)]), { listings: 2, orders: 3, goodsCents: 210_000 });
+  assert.deepEqual(catalogTotals([]), { listings: 0, orders: 0, goodsCents: 0 });
 });
 
 test('parseGroupedCatalog handles bigint-as-string sums and missing fields', () => {

@@ -60,7 +60,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     .from('products')
     .select(`id, supplier_id, title, brand, category, origin_country, trial_units, unit_price_cents, trial_goods_cents,
              trial_freight_cents, trial_customs_cents, trial_landed_cost_cents, lead_time_days,
-             supplier:profiles!products_supplier_id_fkey ( company_name, kyc_verified ),
+             supplier:supplier_profiles!products_supplier_id_fkey ( company_name, kyc_verified ),
              product_media ( public_url, media_type, sort_order )`)
     .eq('status', 'live')
     .order('created_at', { ascending: false })
@@ -152,8 +152,11 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     product_title: one(o.product as unknown as { title: string })?.title ?? 'Product',
   }));
 
-  // Fresh project with no data yet → show labelled sample content.
-  const usingDemo = pools.length === 0 && products.length === 0;
+  // Fresh project with no data yet → show labelled sample content. A failed read is never "no data":
+  // signed-in buyers must not see sample listings as if they were live while the database is unreachable.
+  const catalogError = poolsRes.error ?? productsRes.error;
+  if (catalogError) console.error('[dashboard] catalogue read failed', catalogError.message);
+  const usingDemo = !catalogError && pools.length === 0 && products.length === 0;
   const viewPools = usingDemo ? DEMO_POOLS : pools;
   const viewProducts = usingDemo ? DEMO_PRODUCTS : products;
 
@@ -222,6 +225,11 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
           <Info className="h-3.5 w-3.5 shrink-0" /> Showing sample listings. Run <code className="font-mono">supabase/seed.sql</code> to load live data.
         </p>
       )}
+      {catalogError && (
+        <p role="alert" className="flex items-center justify-center gap-2 border-b border-red-200 bg-red-50 px-4 py-2 text-center text-xs text-red-800">
+          <Info className="h-3.5 w-3.5 shrink-0" /> Listings and Trend Pools could not be loaded right now. Refresh in a moment.
+        </p>
+      )}
 
       {/* Modular overview over the live mint waves (Sellsy layout) */}
       <div className="relative">
@@ -252,7 +260,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
           </section>
         )}
 
-        {/* Followed suppliers' newest listings (hidden until migration 030 is applied). */}
+        {/* Followed suppliers' newest listings (hidden when the follow list can't be read). */}
         {followedIds !== null && (
           <section id="following" aria-labelledby="following-title" className="scroll-mt-32">
             <SectionHeader icon={UserCheck} title="From suppliers you follow" titleId="following-title"

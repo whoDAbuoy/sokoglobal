@@ -24,7 +24,7 @@ const loadCategories = unstable_cache(async (): Promise<CategoryRow[]> => {
   return (data ?? []) as CategoryRow[];
 }, ['catalog-categories'], { revalidate: 300, tags: [CATEGORIES_TAG] });
 
-/** All categories, or null when they can't be read (table missing before migration 015, or a network error). */
+/** All categories, or null when they can't be read. */
 export async function getCategories(): Promise<CategoryRow[] | null> {
   try {
     return await loadCategories();

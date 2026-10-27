@@ -51,6 +51,7 @@ export default function WishlistView() {
   const gate = checkoutGate({ loading: auth.loading, signedIn: !!auth.user, role: auth.profile?.role });
   const [products, setProducts] = useState<Map<string, SavedProduct>>(new Map());
   const [loading, setLoading] = useState(true);
+  const [failed, setFailed] = useState(false);
   const key = wishlist.ids.join(',');
 
   useEffect(() => {
@@ -66,11 +67,13 @@ export default function WishlistView() {
       }
       const real = ids.filter((id) => UUID_RE.test(id));
       if (real.length) {
-        const { data } = await createClient().from('products')
+        const { data, error } = await createClient().from('products')
           .select(`id, title, category, origin_country, status, trial_units, trial_landed_cost_cents,
-                   supplier:profiles!products_supplier_id_fkey ( company_name, kyc_verified ),
+                   supplier:supplier_profiles!products_supplier_id_fkey ( company_name, kyc_verified ),
                    product_media ( public_url, media_type, sort_order )`)
           .in('id', real);
+        // A failed read is not "removed": keep the saved ids and say so instead of offering to delete them.
+        if (!cancelled) setFailed(!!error);
         for (const p of (data ?? []) as Row[]) {
           const supplier = Array.isArray(p.supplier) ? p.supplier[0] : p.supplier;
           const image = [...(p.product_media ?? [])].filter((m) => m.media_type === 'image').sort((a, b) => a.sort_order - b.sort_order)[0]?.public_url ?? null;
@@ -126,9 +129,10 @@ export default function WishlistView() {
               <li key={id} className="flex items-center gap-4 py-4">
                 <div className="h-24 w-24 shrink-0 rounded-md bg-neutral-100" />
                 <div className="flex-1 text-sm text-neutral-500">
-                  {loading ? <span className="inline-flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Loading…</span> : 'This product is no longer available.'}
+                  {loading ? <span className="inline-flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Loading…</span>
+                    : failed ? 'This product could not be loaded right now. Refresh in a moment.' : 'This product is no longer available.'}
                 </div>
-                {!loading && <RemoveButton onClick={() => remove({ id, title: 'Unavailable product' })} />}
+                {!loading && !failed && <RemoveButton onClick={() => remove({ id, title: 'Unavailable product' })} />}
               </li>
             );
           }

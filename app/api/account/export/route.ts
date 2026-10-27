@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { getSessionProfile } from '@/lib/supabase/server';
 import { rateLimit } from '@/lib/security/rate-limit';
 import { EXPORT_ROW_LIMIT, EXPORT_SOURCES, redactRow } from '@/lib/account';
@@ -17,11 +18,12 @@ export async function GET() {
   const limited = await rateLimit('twofactor', `export:${user.id}`);
   if (!limited.success) return NextResponse.json({ error: 'Too many exports. Wait a minute and try again.' }, { status: 429 });
 
-  const { data: fullProfile } = await supabase.from('profiles').select('*').eq('id', user.id).maybeSingle<Record<string, unknown>>();
+  const { data: fullProfile } = await supabase.from('profiles').select('*').eq('id', user.id).maybeSingle();
   const sections: Record<string, unknown> = {};
   const skipped: string[] = [];
   await Promise.all(EXPORT_SOURCES.map(async ([section, table, column]) => {
-    const { data, error } = await supabase.from(table).select('*').eq(column, user.id).limit(EXPORT_ROW_LIMIT);
+    // Table and column come from the fixed list; rows are exported whole, so the untyped client is enough here.
+    const { data, error } = await (supabase as SupabaseClient).from(table).select('*').eq(column, user.id).limit(EXPORT_ROW_LIMIT);
     if (error) { skipped.push(section); return; }
     sections[section] = (data as Record<string, unknown>[]).map(redactRow);
   }));

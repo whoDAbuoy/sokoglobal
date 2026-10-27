@@ -9,8 +9,8 @@ import { inAppNotification } from '@/lib/notifications/templates';
 /**
  * Header bell: order, payment, quote, KYC and support updates for the signed-in user
  * (user_notifications, migration 037). The badge counts unread items and updates live (Realtime);
- * opening the panel loads the latest 30 and marks them read. Before migration 037 the panel says
- * notifications aren't available yet instead of failing.
+ * opening the panel loads the latest 30 and marks them read. If they can't be read, the panel says
+ * notifications aren't available right now instead of failing.
  */
 interface Row { id: string; template_key: string; payload: Record<string, unknown>; created_at: string; read_at: string | null }
 

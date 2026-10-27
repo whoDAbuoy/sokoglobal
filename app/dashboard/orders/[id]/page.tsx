@@ -14,6 +14,7 @@ import MessageSupplierButton from '@/components/chat/MessageSupplierButton';
 import OrderChatButton from '@/components/chat/OrderChatButton';
 import { orderChatOpen } from '@/lib/chat-admin';
 import AnimatedShipmentMap from '@/components/tracking/AnimatedShipmentMap';
+import { geoPointOrNull } from '@/lib/tracking/route';
 import { invoiceAvailable } from '@/lib/documents/model';
 import { milestoneEligible, paymentStep, type PaymentStructure } from '@/lib/milestone';
 import { trackingLink, trackingTimeline, type TimelineShipment } from '@/lib/shipping';
@@ -164,8 +165,8 @@ export default async function OrderPage({ params, searchParams }: {
             tracking={{
               discharge_timestamp: order.discharge_timestamp,
               eta_timestamp: order.eta_timestamp,
-              origin_port_coords: order.origin_port_coords,
-              destination_coords: order.destination_coords,
+              origin_port_coords: geoPointOrNull(order.origin_port_coords),
+              destination_coords: geoPointOrNull(order.destination_coords),
               route_waypoints: order.route_waypoints,
               current_status: order.current_status,
               origin_label: order.origin_label,

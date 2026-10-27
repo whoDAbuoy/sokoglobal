@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { Truck, Zap } from 'lucide-react';
 import { getSessionProfile } from '@/lib/supabase/server';
-import { groupPaidOrders, parseGroupedCatalog, type ListingGroup, type RawOrder } from '@/lib/supplier-orders';
+import { parseGroupedCatalog, type ListingGroup } from '@/lib/supplier-orders';
 import DashboardHeader from '@/components/dashboard/DashboardHeader';
 import OrderCatalog from '@/components/supplier/OrderCatalog';
 import ShipOrderDialog, { type ExistingShipment } from '@/components/supplier/ShipOrderDialog';
@@ -30,7 +30,6 @@ export default async function SupplierOrdersPage() {
   if (!user || !profile) redirect('/login?redirectTo=/supplier/orders');
   if (profile.role !== 'supplier') redirect('/dashboard');
 
-  let groups: ListingGroup[];
   // Shipments (migration 021; RLS: own orders only) don't depend on the grouped catalogue: load both at once.
   const [{ data, error }, { data: shipmentRows }] = await Promise.all([
     supabase.rpc('get_supplier_grouped_catalog'),
@@ -39,23 +38,8 @@ export default async function SupplierOrdersPage() {
                order:orders ( quantity, escrow_status, payment_structure, product:products ( title ) )`)
       .neq('status', 'delivered').order('dispatched_at', { ascending: true, nullsFirst: true }).limit(200),
   ]);
-  if (!error) groups = parseGroupedCatalog(data);
-  else {
-    // Before migration 018: group the visible orders here with the same rules.
-    const { data: products } = await supabase.from('products')
-      .select('id, title, product_media ( public_url, media_type, sort_order )').eq('supplier_id', user.id);
-    const meta = new Map((products ?? []).map((p) => {
-      const img = [...((p.product_media ?? []) as { public_url: string; media_type: string; sort_order: number }[])]
-        .filter((m) => m.media_type === 'image').sort((a, b) => a.sort_order - b.sort_order)[0]?.public_url ?? null;
-      return [p.id as string, { title: p.title as string, image_url: img, unit_of_measure: null }];
-    }));
-    const ids = [...meta.keys()];
-    const { data: orders } = ids.length
-      ? await supabase.from('orders').select('id, product_id, escrow_status, current_status, funded_at, quantity, batches, goods_cents, total_cents, destination_label, eta_timestamp')
-          .in('product_id', ids).eq('escrow_status', 'funded')
-      : { data: [] };
-    groups = groupPaidOrders((orders ?? []) as RawOrder[], meta);
-  }
+  if (error) throw new Error(`Could not load your orders: ${error.message}`);
+  const groups: ListingGroup[] = parseGroupedCatalog(data);
 
   // Saved waybills prefill the dialog; parcels on the way can be moved forward.
   const shipments = (shipmentRows ?? []) as unknown as ShipmentRow[];

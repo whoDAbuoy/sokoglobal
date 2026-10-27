@@ -7,12 +7,11 @@ import DashboardHeader from '@/components/dashboard/DashboardHeader';
 import NewListingForm from './NewListingForm';
 import { getSystemConfigs } from '@/lib/system-config-server';
 import { minimumCents } from '@/lib/trial-batch';
-import LegacyListingForm from './LegacyListingForm';
 
 export const metadata = { title: 'New listing · SokoGlobal' };
 export const dynamic = 'force-dynamic';
 
-/** New listing for any commodity. Before migration 015 (no categories table) the original beauty / clothing form is shown. */
+/** New listing for any commodity (categories: migration 015, managed in /admin/categories). */
 export default async function NewProductPage() {
   const { supabase, user, profile } = await getSessionProfile();
   if (!user || !profile) redirect('/login?redirectTo=/supplier/products/new');
@@ -20,7 +19,7 @@ export default async function NewProductPage() {
 
   const { data: categories, error } = await supabase.from('categories')
     .select('id, parent_id, slug, name, description, icon, sort_order, is_active, attribute_schema, legacy_category, requires_compliance');
-  if (error || !categories?.length) return <LegacyListingForm />;
+  if (error) throw new Error(`Could not load categories: ${error.message}`);
 
   return (
     <>
@@ -34,7 +33,9 @@ export default async function NewProductPage() {
           </div>
           <Link href="/supplier/products/import" className="btn-secondary px-3 py-2 text-sm"><FileSpreadsheet className="h-4 w-4" aria-hidden /> Bulk import (CSV / Excel)</Link>
         </div>
-        <NewListingForm categories={categories as CategoryRow[]} supplierId={user.id} defaultOrigin={profile.country_code} minTrialCents={minimumCents((await getSystemConfigs(supabase)).trial)} />
+        {categories.length
+          ? <NewListingForm categories={categories as CategoryRow[]} supplierId={user.id} defaultOrigin={profile.country_code} minTrialCents={minimumCents((await getSystemConfigs(supabase)).trial)} />
+          : <p className="card mt-8 p-6 text-sm text-neutral-600">No listing categories are open yet. Please check back soon or contact support.</p>}
       </main>
     </>
   );

@@ -39,3 +39,6 @@ yarn-error.log*
 
 # Integration stack secrets (infrastructure/docker-compose.integrations.yml)
 infrastructure/.env.integrations
+
+# Supabase CLI scratch (npm run db:types)
+supabase/.temp/

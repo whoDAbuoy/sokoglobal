@@ -12,46 +12,16 @@
  *   npm run test:db
  *   DB_TEST_REPLAY_FROM=002 DB_TEST_REPLAY_REPORT=1 npm run test:db   # list which older files are not re-runnable
  */
-import { spawnSync } from 'node:child_process';
-import { readFileSync, readdirSync } from 'node:fs';
-import { join } from 'node:path';
+import { migrations, migrationSql, startDb, testFiles, testSql } from './db-docker.mjs';
 
-const root = join(import.meta.dirname, '..');
-const sb = join(root, 'supabase');
 const name = `sokoglobal-dbtest-${process.pid}`;
-const image = process.env.DB_TEST_IMAGE || 'postgres:15-alpine';
-
-const docker = (args, input) => spawnSync('docker', args, { input, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
-const psql = (label, sql, { quiet = true } = {}) => {
-  const r = docker(['exec', '-i', name, 'psql', '-U', 'postgres', '-v', 'ON_ERROR_STOP=1', '--single-transaction', ...(quiet ? ['-q'] : []), '-f', '-'], sql);
-  if (r.status !== 0) {
-    console.error(`✖ ${label}\n${(r.stderr || r.stdout).split('\n').filter((l) => !/NOTICE|wal_level|HINT/.test(l)).join('\n')}`);
-    throw new Error(`${label} failed`);
-  }
-  return r;
-};
-const sleep = (ms) => Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
 
 let exit = 0;
+let db;
 try {
-  const run = docker(['run', '-d', '--rm', '--name', name, '-e', 'POSTGRES_PASSWORD=pg', image]);
-  if (run.status !== 0) throw new Error(`docker run failed: ${run.stderr}`);
-  // pg_isready can pass during the image's init restart; wait until a query succeeds twice.
-  for (let i = 0, ok = 0; ok < 2; i += 1) {
-    if (i > 60) throw new Error('postgres did not start');
-    ok = docker(['exec', name, 'psql', '-U', 'postgres', '-c', 'select 1']).status === 0 ? ok + 1 : 0;
-    sleep(500);
-  }
-
-  psql('supabase stubs', readFileSync(join(sb, 'tests', 'supabase-stubs.sql'), 'utf8'));
-  // schema.sql creates pgcrypto in public; Supabase keeps it in "extensions" (already created by the stubs).
-  psql('schema.sql', readFileSync(join(sb, 'schema.sql'), 'utf8').replace(/create extension if not exists "pgcrypto";/i, ''));
-  const migrations = readdirSync(join(sb, 'migrations')).filter((f) => f.endsWith('.sql')).sort();
-  const migrationSql = (f) => readFileSync(join(sb, 'migrations', f), 'utf8').replace(/^create extension if not exists supabase_vault.*$/im, '');
-  for (const f of migrations) {
-    psql(f, migrationSql(f));
-    console.log(`✔ ${f}`);
-  }
+  db = startDb(name);
+  const { psql } = db;
+  db.applySchema((f) => console.log(`✔ ${f}`));
   const replayFrom = process.env.DB_TEST_REPLAY_FROM ?? '021';
   const replay = migrations.filter((f) => f >= replayFrom);
   const report = process.env.DB_TEST_REPLAY_REPORT === '1';
@@ -65,8 +35,8 @@ try {
     throw new Error('replay report only (tests skipped)');
   }
   console.log(`✔ re-ran ${replay[0] ?? '-'}…${replay.at(-1) ?? '-'} (${replay.length} files) on the full schema`);
-  for (const f of readdirSync(join(sb, 'tests')).filter((f) => f.endsWith('.test.sql')).sort()) {
-    const r = psql(f, readFileSync(join(sb, 'tests', f), 'utf8'), { quiet: false });
+  for (const f of testFiles) {
+    const r = psql(f, testSql(f), { quiet: false });
     const passes = (r.stderr.match(/NOTICE: {2}pass/g) ?? []).length;
     console.log(`✔ ${f} (${passes} checks)`);
   }
@@ -75,6 +45,6 @@ try {
   console.error(err instanceof Error ? err.message : err);
   exit = 1;
 } finally {
-  docker(['rm', '-f', name]);
+  db?.remove();
 }
 process.exit(exit);

@@ -8,7 +8,7 @@ import type { PaymentStructure } from './milestone';
 
 export type RfqStatus = 'open' | 'quoted' | 'accepted' | 'rejected' | 'expired';
 export type QuoteStatus = 'pending' | 'accepted' | 'rejected';
-export interface PriceTier { min_qty: number; unit_price_kes: number }
+export type PriceTier = { min_qty: number; unit_price_kes: number };
 
 export const RFQ_STATUS_LABEL: Record<RfqStatus, string> = {
   open: 'Waiting for quotes', quoted: 'Quotes received', accepted: 'Accepted', rejected: 'Closed', expired: 'Expired',

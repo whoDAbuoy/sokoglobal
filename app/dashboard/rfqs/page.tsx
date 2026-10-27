@@ -45,7 +45,7 @@ export default async function BuyerRfqsPage({ searchParams }: { searchParams: Pr
                is_featured, needs_white_glove, category:categories ( name ),
                quotes:rfq_quotes!rfq_quotes_rfq_id_fkey ( id, supplier_id, status, unit_price_kes, price_tiers, moq, lead_time_days, valid_until, terms_note, allowed_payment_structures, created_at,
                                    product:products ( title, unit_of_measure ),
-                                   supplier:profiles!rfq_quotes_supplier_id_fkey ( company_name, country_code, kyc_verified ) )`)
+                                   supplier:supplier_profiles!rfq_quotes_supplier_id_fkey ( company_name, country_code, kyc_verified ) )`)
       .eq('buyer_id', user.id).order('created_at', { ascending: false }).limit(100),
     getCategories(),
     productParam && UUID_RE.test(productParam)

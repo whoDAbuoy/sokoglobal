@@ -1,5 +1,6 @@
 import 'server-only';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import type { Database } from '@/lib/supabase/database.types';
 import { availableMethods, parsePaymentSettings, type PaymentMethod, type PaymentSettings } from '@/lib/payment-methods';
 import { isDpoConfigured } from '@/lib/payments/dpo';
 import { isPaystackConfigured } from '@/lib/payments/paystack';
@@ -7,24 +8,13 @@ import { isPaypalConfigured } from '@/lib/payments/paypal';
 import { airtelConfig, isAirtelConfigured } from '@/lib/payments/airtel';
 import { exceedsMpesaLimit } from '@/lib/payments/mpesa';
 
-const COLUMNS_028 = 'enable_dpo_pay, enable_airtel_money, enable_paypal, enable_swift_wire, enable_crypto, swift_bank_details, crypto_deposit_wallets, crypto_markup_percent, fx_spread_percent, payments_updated_at';
-
-const COLUMNS_039 = `enable_card, enable_mpesa, ${COLUMNS_028}`;
-
-/**
- * Payment switches, bank details and wallets (migration 028; card and M-Pesa switches from 039).
- * Before 028: only card and M-Pesa. `cardSwitches` says whether 039's switches exist yet.
- */
-export async function getPaymentSettings(supabase: SupabaseClient): Promise<{ available: boolean; cardSwitches: boolean; settings: PaymentSettings; fxSpread: number; updatedAt: string | null }> {
-  let cardSwitches = true;
-  let { data, error } = await supabase.from('platform_settings').select(COLUMNS_039).maybeSingle();
-  if (error && /column|does not exist/i.test(error.message)) {
-    cardSwitches = false;
-    ({ data, error } = await supabase.from('platform_settings').select(COLUMNS_028).maybeSingle());
-  }
-  if (error || !data) return { available: false, cardSwitches: false, settings: parsePaymentSettings(null), fxSpread: 0, updatedAt: null };
-  const row = data as unknown as Record<string, unknown>;
-  return { available: true, cardSwitches, settings: parsePaymentSettings(row), fxSpread: Number(row.fx_spread_percent) || 0, updatedAt: (row.payments_updated_at as string | null) ?? null };
+/** Payment switches, bank details and wallets (migrations 028 and 039). A failed read → `available: false`, every method off. */
+export async function getPaymentSettings(supabase: SupabaseClient<Database>): Promise<{ available: boolean; settings: PaymentSettings; fxSpread: number; updatedAt: string | null }> {
+  const { data, error } = await supabase.from('platform_settings')
+    .select('enable_card, enable_mpesa, enable_dpo_pay, enable_airtel_money, enable_paypal, enable_swift_wire, enable_crypto, swift_bank_details, crypto_deposit_wallets, crypto_markup_percent, fx_spread_percent, payments_updated_at')
+    .maybeSingle();
+  if (error || !data) return { available: false, settings: parsePaymentSettings(null), fxSpread: 0, updatedAt: null };
+  return { available: true, settings: parsePaymentSettings(data), fxSpread: Number(data.fx_spread_percent) || 0, updatedAt: data.payments_updated_at };
 }
 
 /** Which gateways have their API keys set on this deployment. */

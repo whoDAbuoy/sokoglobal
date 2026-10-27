@@ -41,7 +41,7 @@ export const PRICING_BOUNDS: Record<PricingKey, { min: number; max: number; labe
   logistics_markup_percent: { min: 0, max: 1, label: 'Logistics markup' },
 };
 
-/** platform_settings row → pricing; missing or malformed fields (before migration 026) fall back to the defaults. */
+/** platform_settings row → pricing; missing or malformed fields fall back to the defaults. */
 export function parsePricing(raw: unknown): PlatformPricing {
   const r = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
   const out = { ...DEFAULT_PRICING };

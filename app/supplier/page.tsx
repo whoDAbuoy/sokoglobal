@@ -25,19 +25,12 @@ export default async function SupplierHome() {
   if (!user || !profile) redirect('/login?redirectTo=/supplier');
   if (profile.role !== 'supplier') redirect('/dashboard');
 
-  // Only paid orders reach suppliers: RLS hides unpaid ones (migration 018). Before 018 the
-  // fulfillment_status column is missing, so fall back and drop unpaid orders here. Orders are scoped by
-  // an inner join on the listing's supplier (not by RLS alone: a supplier holding a delegated admin grant
-  // can read every order), so they load in parallel with the listings instead of after them.
-  const orderQuery = async () => {
-    const cols = 'id, product_id, escrow_status, total_cents, goods_cents, created_at, batches, current_status, eta_timestamp';
-    const mine = (select: string) => supabase.from('orders').select(`${select}, product:products!inner ( supplier_id )`)
-      .eq('product.supplier_id', user.id).order('created_at', { ascending: false });
-    const withStatus = await mine(`${cols}, fulfillment_status`);
-    if (!withStatus.error) return withStatus;
-    const legacy = await mine(cols);
-    return { data: ((legacy.data ?? []) as unknown as { escrow_status: string }[]).filter((o) => o.escrow_status !== 'pending_payment') };
-  };
+  // Only paid orders reach suppliers: RLS hides unpaid ones (migration 018). Orders are scoped by an inner join
+  // on the listing's supplier (not by RLS alone: a supplier holding a delegated admin grant can read every order),
+  // so they load in parallel with the listings instead of after them.
+  const orderQuery = () => supabase.from('orders')
+    .select('id, product_id, escrow_status, total_cents, goods_cents, created_at, batches, current_status, eta_timestamp, fulfillment_status, product:products!inner ( supplier_id )')
+    .eq('product.supplier_id', user.id).order('created_at', { ascending: false });
   const [{ data: productRows }, { data: orderRows }, { data: payoutRows }, { data: goldRow }] = await Promise.all([
     supabase
       .from('products')

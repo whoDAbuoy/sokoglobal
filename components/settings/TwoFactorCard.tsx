@@ -20,7 +20,7 @@ type Step =
 async function post<T>(path: string, body?: object): Promise<{ ok: true; data: T } | { ok: false; error: string }> {
   const res = await fetch(`/api/auth/2fa/${path}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body ?? {}) });
   const data = await res.json().catch(() => ({})) as T & { error?: string };
-  if (res.status === 429) return { ok: false, error: 'Too many attempts. Wait a minute and try again.' };
+  if (res.status === 429) return { ok: false, error: data.error ?? 'Too many attempts. Wait a minute and try again.' };
   return res.ok ? { ok: true, data } : { ok: false, error: data.error ?? 'Something went wrong. Please try again.' };
 }
 

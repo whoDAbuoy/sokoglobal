@@ -10,9 +10,9 @@ import { SWIFT_FIELDS, WALLET_KEYS, swiftComplete, swiftFieldError, validWallet,
 
 type Flag = keyof PaymentSettingsInput['flags'];
 type Needs = 'paystack' | 'mpesa' | 'dpo' | 'paypal' | 'airtel';
-const FLAGS: { key: Flag; label: string; note: string; needs?: Needs; since039?: boolean }[] = [
-  { key: 'enable_card', label: 'Card (Paystack)', note: 'Card checkout for orders, carts and group-buy pledges. Subscriptions and RFQ add-ons always use card.', needs: 'paystack', since039: true },
-  { key: 'enable_mpesa', label: 'M-Pesa', note: 'STK push to the buyer’s Safaricom phone (orders and carts).', needs: 'mpesa', since039: true },
+const FLAGS: { key: Flag; label: string; note: string; needs?: Needs }[] = [
+  { key: 'enable_card', label: 'Card (Paystack)', note: 'Card checkout for orders, carts and group-buy pledges. Subscriptions and RFQ add-ons always use card.', needs: 'paystack' },
+  { key: 'enable_mpesa', label: 'M-Pesa', note: 'STK push to the buyer’s Safaricom phone (orders and carts).', needs: 'mpesa' },
   { key: 'enable_airtel_money', label: 'Airtel Money', note: 'PIN prompt on the buyer’s phone (orders and carts).', needs: 'airtel' },
   { key: 'enable_dpo_pay', label: 'DPO Pay', note: 'Hosted card and mobile-money page (orders and carts).', needs: 'dpo' },
   { key: 'enable_paypal', label: 'PayPal', note: 'PayPal balance or linked card, captured in USD (orders and carts).', needs: 'paypal' },
@@ -36,12 +36,12 @@ function Switch({ id, on, onChange, disabled }: { id: string; on: boolean; onCha
 }
 
 /** Payment channels (migration 028): switches, SWIFT escrow account and crypto wallets. Postgres validates and audits. */
-export default function PaymentSettingsForm({ settings, configured, cardSwitches, updatedAt }: {
-  settings: PaymentSettings; configured: Record<Needs, boolean>; cardSwitches: boolean; updatedAt: string | null;
+export default function PaymentSettingsForm({ settings, configured, updatedAt }: {
+  settings: PaymentSettings; configured: Record<Needs, boolean>; updatedAt: string | null;
 }) {
   const router = useRouter();
   const [flags, setFlags] = useState<PaymentSettingsInput['flags']>({
-    ...(cardSwitches ? { enable_card: settings.enable_card, enable_mpesa: settings.enable_mpesa } : {}),
+    enable_card: settings.enable_card, enable_mpesa: settings.enable_mpesa,
     enable_dpo_pay: settings.enable_dpo_pay, enable_airtel_money: settings.enable_airtel_money, enable_paypal: settings.enable_paypal,
     enable_swift_wire: settings.enable_swift_wire, enable_crypto: settings.enable_crypto,
   });
@@ -68,7 +68,7 @@ export default function PaymentSettingsForm({ settings, configured, cardSwitches
           Payments already started still complete after a switch-off.
         </p>
         <ul className="glass-inset mt-4 divide-y divide-black/[0.06] px-4 dark:divide-snow/[0.08]">
-          {FLAGS.filter((f) => cardSwitches || !f.since039).map((f) => {
+          {FLAGS.map((f) => {
             const keysMissing = f.needs && !configured[f.needs];
             const detailsMissing = (f.key === 'enable_swift_wire' && !wireReady) || (f.key === 'enable_crypto' && !WALLET_KEYS.some((k) => wallets[k].trim()));
             return (

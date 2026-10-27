@@ -171,7 +171,7 @@ export default async function FinancialsPage() {
           <h2 id="gateways" className="text-xl font-semibold text-neutral-900">Payment gateways</h2>
           <p className="mb-4 mt-1 text-sm text-neutral-600">Turn channels on or off instantly, and set the escrow bank account and wallets buyers pay into.</p>
           {payments.available
-            ? <PaymentSettingsForm settings={payments.settings} updatedAt={payments.updatedAt} cardSwitches={payments.cardSwitches}
+            ? <PaymentSettingsForm settings={payments.settings} updatedAt={payments.updatedAt}
                 configured={{ paystack: isPaystackConfigured(), mpesa: process.env.NEXT_PUBLIC_MPESA_ENABLED === 'true', dpo: isDpoConfigured(), paypal: isPaypalConfigured(), airtel: isAirtelConfigured() }} />
             : <p role="alert" className="rounded-2xl border px-4 py-3 text-sm tone-pending">Run <code className="font-mono">supabase/migrations/028_payment_gateways_expansion.sql</code> to enable payment gateway controls.</p>}
         </section>

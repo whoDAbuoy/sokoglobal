@@ -18,7 +18,7 @@ export const dynamic = 'force-dynamic';
 
 /**
  * Public supplier profile for signed-in users: identity, verification, follower count and
- * live listings. Every read goes through RLS ("profiles: read suppliers", "products: read live",
+ * live listings. Every read goes through RLS (the supplier_profiles view from migration 041, "products: read live",
  * "follows: read own"); the count comes from supplier_follower_count() and never lists followers.
  */
 export default async function SupplierProfilePage({ params }: { params: Promise<{ id: string }> }) {
@@ -28,7 +28,7 @@ export default async function SupplierProfilePage({ params }: { params: Promise<
   if (!user || !profile) redirect(`/login?redirectTo=/dashboard/suppliers/${id}`);
 
   const [supplierRes, productsRes, countRes, followRes, gold] = await Promise.all([
-    supabase.from('profiles').select('id, role, company_name, country_code, kyc_verified, created_at, avatar_url, is_banned').eq('id', id).maybeSingle(),
+    supabase.from('supplier_profiles').select('id, role, company_name, country_code, kyc_verified, created_at, avatar_url, is_banned').eq('id', id).maybeSingle(),
     supabase.from('products').select(CATALOG_PRODUCT_SELECT).eq('supplier_id', id).eq('status', 'live').is('deleted_at', null)
       .order('created_at', { ascending: false }).limit(48),
     supabase.rpc('supplier_follower_count', { p_supplier_id: id }),
@@ -43,7 +43,7 @@ export default async function SupplierProfilePage({ params }: { params: Promise<
   if (!supplier || supplier.role !== 'supplier' || supplier.is_banned) notFound();
 
   const products = ((productsRes.data ?? []) as unknown as CatalogProductRow[]).map((r) => toTrialProductView(r, null, gold));
-  // Before migration 030 the count / follow reads fail: show the page without them.
+  // If the follower count can't be read, show the page without the follow controls.
   const followsAvailable = !countRes.error;
   const followers = typeof countRes.data === 'number' ? countRes.data : 0;
   const since = new Date(supplier.created_at).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });

@@ -18,6 +18,12 @@ export const isKycDocumentType = (v: string): v is KycDocumentType => KYC_DOCUME
 export const groupOf = (t: KycDocumentType) => KYC_DOCUMENTS.find((d) => d.type === t)!.group;
 
 export const KYC_MAX_BYTES = 10 * 1024 * 1024;   // matches the kyc-documents bucket limit
+
+/** The string fields of a jsonb object (payout_accounts.international: SWIFT, routing number, …); anything else is dropped. */
+export function stringFields(v: unknown): Record<string, string> {
+  if (!v || typeof v !== 'object' || Array.isArray(v)) return {};
+  return Object.fromEntries(Object.entries(v).filter((e): e is [string, string] => typeof e[1] === 'string'));
+}
 export const KYC_MIME: Record<string, 'pdf' | 'jpg' | 'png'> = { 'application/pdf': 'pdf', 'image/jpeg': 'jpg', 'image/png': 'png' };
 
 /** Mirrors submit_kyc_verification(): upper-cased, 3–40 letters / digits / space / . / - */
@@ -72,7 +78,7 @@ const ORDER_APIS = [/^\/api\/orders\/?$/, /^\/api\/checkout\/?$/, /^\/api\/pools
  * Supplier payouts are held until KYC approval by begin_payout() itself.
  */
 export function kycGate(input: { path: string; method: string; isServerAction?: boolean; role: string | null | undefined; status: KycStatus | null; required: KycRequirements }): KycGate {
-  if (input.status === 'approved' || input.status === null) return { kind: 'allow' };   // null: migration 017 not applied
+  if (input.status === 'approved') return { kind: 'allow' };   // unknown (null) counts as not verified
   const p = input.path;
   if (input.required.listings && LISTING_PAGES.some((x) => p === x || p.startsWith(`${x}/`))) {
     if (input.isServerAction || input.method !== 'GET') return { kind: 'forbid', error: 'Complete business verification (KYC) before creating listings.' };

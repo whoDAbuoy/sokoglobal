@@ -35,8 +35,7 @@ export default async function UserProfilePage({ params }: { params: Promise<{ id
   if (!user || !profile) redirect(`/login?redirectTo=/dashboard/users/${id}`);
 
   const res = await supabase.rpc('public_profile', { p_id: id });
-  // Before migration 031 there is no public_profile(): supplier pages still work at their old address.
-  if (res.error) redirect(`/dashboard/suppliers/${id}`);
+  if (res.error) throw new Error(`Could not load this profile: ${res.error.message}`);
   const p = (Array.isArray(res.data) ? res.data[0] : res.data) as PublicProfile | undefined;
   if (!p) notFound();
 
@@ -51,7 +50,7 @@ export default async function UserProfilePage({ params }: { params: Promise<{ id
     ])
     : [null, null, new Set<string>()] as const;
   const products = ((productsRes?.data ?? []) as unknown as CatalogProductRow[]).map((r) => toTrialProductView(r, null, gold));
-  // Star rating (migration 032): public aggregate, plus the viewer's own rating when they may rate. Absent before 032.
+  // Star rating (migration 032): public aggregate, plus the viewer's own rating when they may rate.
   const [aggRes, canRes, mineRes] = isSupplier && !isSelf
     ? await Promise.all([
       supabase.rpc('supplier_rating', { p_supplier_id: id }),

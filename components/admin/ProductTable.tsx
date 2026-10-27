@@ -19,7 +19,7 @@ export interface AdminProductRow {
   supplier: { company_name: string; country_code: string } | null;
   order_count: number;
   pool_count: number;
-  /** Migration 015 (absent before it runs). */
+  /** Migration 015 catalogue fields. */
   is_featured?: boolean;
   category_name?: string | null;
 }

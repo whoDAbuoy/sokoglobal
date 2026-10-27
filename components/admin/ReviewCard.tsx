@@ -27,7 +27,7 @@ export interface PendingProduct {
   updated_at: string;
   supplier: { company_name: string; full_name: string; country_code: string; kyc_verified: boolean } | null;
   media: { id: string; media_type: MediaType; public_url: string; captured_at: string | null; width: number | null; height: number | null }[];
-  /** Migration 015 catalogue fields (null before it runs). */
+  /** Migration 015 catalogue fields (null when they couldn't be read). */
   catalog?: { sku: string | null; moq: number | null; unit: string | null; tiers: number; category_name: string | null; requires_compliance: boolean } | null;
 }
 

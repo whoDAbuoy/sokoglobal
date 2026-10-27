@@ -8,8 +8,8 @@ import {
 import { getSessionProfile } from '@/lib/supabase/server';
 import { formatUSD } from '@/lib/format';
 import {
-  dailyCounts, escrowSummary, likePattern, pageList, parsePage, percentChange, periodWindows, TXN_FILTERS,
-  txnFilterStatuses, txnStatus, paymentMethod, type MetricOrder, type TxnTone,
+  dailyCounts, dailyCountsByDay, likePattern, orderMetrics, pageList, parsePage, percentChange, periodWindows, TXN_FILTERS,
+  txnFilterStatuses, txnStatus, paymentMethod, type OrderMetricsRow, type TxnTone,
 } from '@/lib/admin-metrics';
 import { initials } from '@/lib/admin-inbox';
 import type { EscrowStatus } from '@/lib/types';
@@ -25,7 +25,6 @@ export const dynamic = 'force-dynamic';
 const one = <T,>(v: T | T[] | null | undefined): T | null => (Array.isArray(v) ? v[0] ?? null : v ?? null);
 
 const PER_PAGE = 10;
-const METRIC_SAMPLE = 2000; // most recent orders used for money / cohort figures
 const ACTIVE_SHIPMENT: EscrowStatus[] = ['deposit_paid', 'funded', 'in_transit', 'customs_cleared', 'delivered_pending_verification'];
 const TRACKABLE = new Set<string>(ACTIVE_SHIPMENT);
 
@@ -59,7 +58,6 @@ export default async function AdminOverviewPage({ searchParams }: {
 
   const now = new Date();
   const week = periodWindows(now, 7);
-  const month = periodWindows(now, 30);
   const head = { count: 'exact' as const, head: true };
 
   // Transactions table (server-side filter, search and pagination).
@@ -89,32 +87,24 @@ export default async function AdminOverviewPage({ searchParams }: {
     supabase.from('support_tickets').select('id', head).eq('status', 'open').lt('last_message_at', week.current.from),
     supabase.from('products').select('id', head).eq('status', 'live').is('deleted_at', null),
     supabase.from('products').select('updated_at', { count: 'exact' }).eq('status', 'pending_review').is('deleted_at', null).limit(500),
-    supabase.from('orders')
-      .select('buyer_id, escrow_status, total_cents, deposit_amount, created_at, funded_at, payment_provider, product:products ( category )')
-      .order('created_at', { ascending: false }).limit(METRIC_SAMPLE),
+    // Money and cohort figures over every paid order, summed in Postgres (migration 041).
+    supabase.rpc('admin_order_metrics', { p_now: now.toISOString() }),
     txq,
   ]);
 
-  if (metricRes.error) throw new Error(`Could not load order metrics: ${metricRes.error.message}`);
+  if (metricRes.error || !metricRes.data) throw new Error(`Could not load order metrics: ${metricRes.error?.message ?? 'no data'}`);
   if (txRes.error) throw new Error(`Could not load transactions: ${txRes.error.message}`);
 
-  const metricOrders: MetricOrder[] = (metricRes.data ?? []).map((o) => ({
-    buyer_id: o.buyer_id, escrow_status: o.escrow_status, total_cents: o.total_cents, created_at: o.created_at,
-    funded_at: o.funded_at, payment_provider: o.payment_provider, deposit_amount: o.deposit_amount,
-    category: one(o.product as unknown as { category: string })?.category ?? null,
-  }));
-  const inWindow = (o: MetricOrder, w: { from: string; to: string }) => !!o.funded_at && o.funded_at >= w.from && o.funded_at < w.to;
-  const all = escrowSummary(metricOrders);
-  const thisMonth = escrowSummary(metricOrders.filter((o) => inWindow(o, month.current)));
-  const lastMonth = escrowSummary(metricOrders.filter((o) => inWindow(o, month.previous)));
-  const truncated = (metricRes.data ?? []).length === METRIC_SAMPLE;
+  const metricsRow = metricRes.data as unknown as OrderMetricsRow;   // jsonb built by admin_order_metrics()
+  const all = orderMetrics(metricsRow);
+  const thisMonth = all.month;
 
   const days = Array.from({ length: 7 }, (_, i) => DAY_LABEL.format(new Date(now.getTime() - (6 - i) * 86_400_000)));
-  const paidPerDay = dailyCounts(metricOrders.map((o) => o.funded_at), now);
+  const paidPerDay = dailyCountsByDay(metricsRow.paid_days, now);
   const submittedPerDay = dailyCounts((pendingRes.data ?? []).map((p) => p.updated_at as string), now);
 
   const c = (r: { count: number | null }) => r.count ?? 0;
-  const disputesOpen = metricOrders.filter((o) => o.escrow_status === 'disputed').length;
+  const disputesOpen = all.disputesOpen;
 
   // Transactions
   const total = txRes.count ?? 0;
@@ -206,8 +196,8 @@ export default async function AdminOverviewPage({ searchParams }: {
                 <p className="text-2xl font-semibold tabular-nums text-neutral-900">{formatUSD(thisMonth.gmv)}</p>
                 <TrendingUp className="h-4 w-4 text-neutral-500" aria-hidden />
               </div>
-              <ChangeBadge change={percentChange(thisMonth.gmv, lastMonth.gmv)} current={thisMonth.gmv}
-                suffix={`vs previous 30 days (${formatUSD(lastMonth.gmv)})`} />
+              <ChangeBadge change={percentChange(thisMonth.gmv, all.prevMonthGmv)} current={thisMonth.gmv}
+                suffix={`vs previous 30 days (${formatUSD(all.prevMonthGmv)})`} />
               <ul className="mt-5 space-y-4">
                 {thisMonth.byMethod.length === 0 && <li className="text-sm text-neutral-500">No payments in the last 30 days.</li>}
                 {thisMonth.byMethod.map((m) => {
@@ -244,7 +234,7 @@ export default async function AdminOverviewPage({ searchParams }: {
                   <span className="grid h-10 w-10 place-items-center rounded-md bg-neutral-900"><ShieldCheck className="h-5 w-5 text-white" aria-hidden /></span>
                   <div>
                     <p className="font-semibold text-neutral-900">SokoGlobal Escrow</p>
-                    <p className="text-xs text-neutral-500">{truncated ? `Latest ${METRIC_SAMPLE.toLocaleString('en-US')} orders` : 'All paid orders'}</p>
+                    <p className="text-xs text-neutral-500">All paid orders</p>
                   </div>
                 </div>
                 <div className="mt-4 grid gap-3 sm:grid-cols-2">
