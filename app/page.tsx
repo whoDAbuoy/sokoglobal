@@ -11,6 +11,6 @@ export const metadata = { alternates: { canonical: '/' } };
 /** Signed-in users go to their portal (role-based, as before); visitors see the landing page. */
 export default async function Home() {
   const { supabase, user, profile } = await getSessionProfile();
-  if (!user) return <Landing minTrialCents={minimumCents((await getSystemConfigs(supabase)).trial)} />;
+  if (!user) return <Landing minTrialCents={minimumCents((await getSystemConfigs(supabase, { bestEffort: true })).trial)} />;
   redirect(homePathFor(profile?.role));
 }
