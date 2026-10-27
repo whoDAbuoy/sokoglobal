@@ -136,7 +136,9 @@ function BusinessDetails({ userId, initial, editable }: { userId: string; initia
   async function save(e: FormEvent) {
     e.preventDefault();
     setSaving(true); setError(null);
-    const values = Object.fromEntries(Object.entries(form).map(([k, v]) => [k, v.trim() || null]));
+    const blank = (v: string) => v.trim() || null;
+    const values = { legal_name: blank(form.legal_name), tax_id: blank(form.tax_id),
+      registration_number: blank(form.registration_number), registered_address: blank(form.registered_address) };
     // Insert the first time; afterwards update (RLS only allows edits before submission).
     const { error } = initial
       ? await supabase.from('supplier_kyc').update(values).eq('supplier_id', userId)

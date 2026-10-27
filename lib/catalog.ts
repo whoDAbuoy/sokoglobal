@@ -6,7 +6,7 @@
 
 export type AttributeType = 'text' | 'number' | 'select' | 'multiselect' | 'list' | 'boolean';
 
-export interface AttributeField {
+export type AttributeField = {
   key: string;
   label: string;
   type: AttributeType;
@@ -15,7 +15,7 @@ export interface AttributeField {
   required?: boolean;
   /** Offered as a filter on /dashboard/discover. */
   facet?: boolean;
-}
+};
 
 export interface CategoryRow {
   id: string;
@@ -273,7 +273,7 @@ export function formatAttribute(field: AttributeField | undefined, value: unknow
 
 /* ── Price tiers ─────────────────────────────────────────────────────────── */
 
-export interface PriceTier { min_qty: number; unit_price_cents: number }
+export type PriceTier = { min_qty: number; unit_price_cents: number };
 
 /** Mirrors products_catalog_sync(): ≤10 tiers, increasing quantities, never pricier per unit, ≤ the base unit price. */
 export function validatePriceTiers(tiers: readonly PriceTier[], baseUnitCents: number): { ok: true; tiers: PriceTier[] } | { ok: false; error: string } {

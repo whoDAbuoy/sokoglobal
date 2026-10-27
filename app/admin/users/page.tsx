@@ -24,7 +24,7 @@ interface DirectoryRow {
   id: string; full_name: string; company_name: string; email: string | null; role: UserRole; country_code: string;
   kyc_verified: boolean; is_banned: boolean; ban_reason: string | null; created_at: string; last_sign_in_at: string | null;
   pending_change: boolean; total_count: number;
-  /** Migration 014 columns (absent before it runs). */
+  /** Migration 014 columns. */
   is_frozen?: boolean; grant_id?: string | null; grant_expires_at?: string | null;
 }
 

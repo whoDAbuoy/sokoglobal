@@ -54,15 +54,10 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   const refreshUnread = useCallback(async () => {
     if (!enabledRef.current) { setUnreadCount(0); setAdminUnreadCount(0); return; }
     const summary = await supabase.rpc('chat_unread_summary');
-    if (!summary.error && enabledRef.current) {
-      const s = (summary.data ?? {}) as { total?: number; from_admin?: number };
-      setUnreadCount(Number(s.total ?? 0));
-      setAdminUnreadCount(Number(s.from_admin ?? 0));
-      return;
-    }
-    // Before migration 025: total only.
-    const { data, error: rpcError } = await supabase.rpc('chat_unread_count');
-    if (!rpcError && enabledRef.current) setUnreadCount(typeof data === 'number' ? data : 0);
+    if (summary.error || !enabledRef.current) return;   // keep the last known badge
+    const s = (summary.data ?? {}) as { total?: number; from_admin?: number };
+    setUnreadCount(Number(s.total ?? 0));
+    setAdminUnreadCount(Number(s.from_admin ?? 0));
   }, [supabase]);
 
   // Unread badge: fetch on sign-in, then re-fetch on every message insert we can see (RLS-filtered).

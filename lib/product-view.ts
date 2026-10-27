@@ -14,7 +14,7 @@ const one = <T,>(v: T | T[] | null | undefined): T | null => (Array.isArray(v) ?
 /** Columns for a CatalogProductRow (catalogue, supplier profile, follow feed). */
 export const CATALOG_PRODUCT_SELECT = `id, supplier_id, title, brand, category, origin_country, trial_units, unit_price_cents, trial_goods_cents, trial_freight_cents,
   trial_customs_cents, trial_landed_cost_cents, lead_time_days, created_at, attributes, category_id, is_featured, moq, unit_of_measure, price_tiers,
-  supplier:profiles!products_supplier_id_fkey ( company_name, kyc_verified ), product_media ( public_url, media_type, sort_order )`;
+  supplier:supplier_profiles!products_supplier_id_fkey ( company_name, kyc_verified ), product_media ( public_url, media_type, sort_order )`;
 
 export interface CatalogProductRow {
   id: string; title: string; brand: string | null; category: ProductCategory; origin_country: string;

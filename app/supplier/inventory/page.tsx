@@ -38,11 +38,10 @@ export default async function SupplierInventoryPage({ searchParams }: { searchPa
   const { status } = await searchParams;
   const filter: FilterKey = FILTERS.some((f) => f.key === status) ? (status as FilterKey) : 'all';
 
-  // `moq` arrives with migration 015; read without it before that.
-  const cols = 'id, title, category, status, trial_units, trial_goods_cents, trial_landed_cost_cents, deleted_at, updated_at, product_media ( media_type, public_url, sort_order )';
-  const load = (select: string) => supabase.from('products').select(select).eq('supplier_id', user.id).is('deleted_at', null).order('updated_at', { ascending: false });
-  let res = await load(`${cols}, moq`);
-  if (res.error) res = await load(cols);
+  const res = await supabase.from('products')
+    .select('id, title, category, status, trial_units, trial_goods_cents, trial_landed_cost_cents, deleted_at, updated_at, moq, product_media ( media_type, public_url, sort_order )')
+    .eq('supplier_id', user.id).is('deleted_at', null).order('updated_at', { ascending: false });
+  if (res.error) throw new Error(`Could not load your inventory: ${res.error.message}`);
   const all = (res.data ?? []) as unknown as Row[];
 
   const ids = all.map((p) => p.id);

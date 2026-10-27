@@ -30,7 +30,8 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
       .eq('user_id', user.id).neq('status', 'cancelled').order('created_at', { ascending: false }).limit(1).maybeSingle<LatestChangeRequest>(),
     supabase.from('user_totp_secrets').select('is_verified, verified_at').maybeSingle<{ is_verified: boolean; verified_at: string | null }>(),
   ]);
-  const ready = !ext.error && !!ext.data;   // false until migration 016 is applied
+  if (ext.error) throw new Error(`Could not load your settings: ${ext.error.message}`);
+  const ready = !!ext.data;
   const d = ext.data;
 
   // Remaining backup codes: count only (the hashes never leave the server).

@@ -5,6 +5,7 @@ import DashboardHeader from '@/components/dashboard/DashboardHeader';
 import KycReviewCard, { type KycCase } from './KycReviewCard';
 import { isAdmin } from '@/lib/auth/admin-access';
 import IdentityQueue, { KycTabs } from './IdentityQueue';
+import { stringFields } from '@/lib/kyc';
 
 export const metadata = { title: 'Supplier KYC · SokoGlobal Ops', robots: { index: false, follow: false } };
 export const dynamic = 'force-dynamic';
@@ -27,10 +28,10 @@ export default async function KycAdminPage({ searchParams }: { searchParams: Pro
   const [queueRes, recentRes] = await Promise.all([
     supabase.from('supplier_kyc')
       .select(`supplier_id, legal_name, tax_id, registration_number, registered_address, status, submitted_at, review_notes,
-               supplier:profiles!supplier_kyc_supplier_id_fkey ( company_name, full_name, country_code, created_at )`)
+               supplier:supplier_profiles!supplier_kyc_supplier_id_fkey ( company_name, full_name, country_code, created_at )`)
       .eq('status', 'submitted').order('submitted_at', { ascending: true }).limit(30),
     supabase.from('supplier_kyc')
-      .select('supplier_id, legal_name, status, reviewed_at, supplier:profiles!supplier_kyc_supplier_id_fkey ( company_name )')
+      .select('supplier_id, legal_name, status, reviewed_at, supplier:supplier_profiles!supplier_kyc_supplier_id_fkey ( company_name )')
       .in('status', ['approved', 'rejected']).order('reviewed_at', { ascending: false }).limit(10),
   ]);
   if (queueRes.error) throw new Error(`Could not load KYC queue: ${queueRes.error.message}`);
@@ -55,6 +56,10 @@ export default async function KycAdminPage({ searchParams }: { searchParams: Pro
     : [];
   const urlFor = new Map(signed.map((s) => [s.path, s.signedUrl]));
 
+  const account = (supplierId: string) => {
+    const a = (acctRes.data ?? []).find((r) => r.supplier_id === supplierId);
+    return a ? { ...a, international: stringFields(a.international) } : null;
+  };
   const cases: KycCase[] = (queueRes.data ?? []).map((k) => {
     const held = (heldRes.data ?? []).filter((h) => h.supplier_id === k.supplier_id);
     return {
@@ -66,7 +71,7 @@ export default async function KycAdminPage({ searchParams }: { searchParams: Pro
         id: d.id, docType: d.doc_type, fileName: d.file_name, mimeType: d.mime_type, bytes: d.bytes,
         uploadedAt: d.uploaded_at, url: urlFor.get(d.storage_path) ?? null,
       })),
-      account: (acctRes.data ?? []).find((a) => a.supplier_id === k.supplier_id) ?? null,
+      account: account(k.supplier_id),
       heldPayouts: { count: held.length, cents: held.reduce((s, h) => s + h.amount_cents, 0) },
       duplicateAccounts: dupFor.get(k.supplier_id) ?? 0,
     };

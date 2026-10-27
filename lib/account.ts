@@ -1,6 +1,7 @@
 /**
  * Self-service account closure (migration 040) and data export (app/api/account/export), pure helpers.
  */
+import type { Database } from './supabase/database.types';
 
 /** my_account_closure_blockers() → what the owner must finish first, in plain words (empty = can close). */
 export function closureBlockers(raw: unknown): string[] {
@@ -28,7 +29,7 @@ export const closedEmail = (userId: string) => `closed+${userId}@closed.sokoglob
  * Everything the export collects, as [section, table, column holding the owner's id]. Reads run as the user, so
  * row-level security limits each one to what the account may see. Missing tables (older databases) are skipped.
  */
-export const EXPORT_SOURCES: readonly (readonly [string, string, string])[] = [
+export const EXPORT_SOURCES: readonly (readonly [string, keyof Database['public']['Tables'], string])[] = [
   ['orders_placed', 'orders', 'buyer_id'],
   ['checkouts', 'checkout_groups', 'buyer_id'],
   ['card_payments', 'card_payments', 'buyer_id'],

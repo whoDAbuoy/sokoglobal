@@ -5,6 +5,7 @@ import { getSessionProfile } from '@/lib/supabase/server';
 import { friendlyError } from '@/lib/format';
 import { UUID_RE } from '@/lib/uploads';
 import { validateTracking, type FieldErrors, type TrackingDraft } from '@/lib/tracking/validate';
+import { geoPointOrNull } from '@/lib/tracking/route';
 import { isAdmin } from '@/lib/auth/admin-access';
 
 export type TrackingActionState = { ok: boolean; message: string; errors?: FieldErrors; savedAt?: string } | null;
@@ -47,7 +48,9 @@ export async function saveTracking(_prev: TrackingActionState, form: FormData): 
     originLabel: str(form.get('originLabel')),
     destinationLabel: str(form.get('destinationLabel')),
   };
-  const result = validateTracking(draft, existing);
+  const result = validateTracking(draft, {
+    ...existing, origin_port_coords: geoPointOrNull(existing.origin_port_coords), destination_coords: geoPointOrNull(existing.destination_coords),
+  });
   if (!result.ok) return { ok: false, message: result.errors.form ?? 'Please fix the highlighted fields.', errors: result.errors };
 
   const v = result.value;

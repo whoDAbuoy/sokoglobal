@@ -14,6 +14,8 @@ import { financialOverrideBlock } from '@/lib/security/two-factor-gate';
 import { parseTrialConfigInput } from '@/lib/trial-batch';
 import { twoFactorState } from '@/lib/security/two-factor-server';
 import { isCurrency } from '@/lib/currency';
+import type { Json } from '@/lib/supabase/database.types';
+import { PLATFORM_SETTINGS_TAG } from '@/lib/platform-server';
 
 /** 2FA gate for money-moving overrides, checked BEFORE any provider call (Postgres re-checks on insert). */
 async function moneyGate(ctx: { supabase: Parameters<typeof twoFactorState>[0] }): Promise<string | null> {
@@ -50,6 +52,7 @@ export async function savePlatformSettings(input: { pauseNewOrders: boolean; pau
   });
   if (error) return { ok: false, message: friendlyError(error.message) };
   revalidatePath('/', 'layout');
+  revalidateTag(PLATFORM_SETTINGS_TAG);   // the banner's 15 s shared copy
   return { ok: true, message: input.maintenance ? 'Saved. Maintenance mode reaches every page within ~15 seconds.' : 'Platform switches saved.' };
 }
 
@@ -65,7 +68,7 @@ function payoutMessage(r: PayoutResult): string {
 
 async function runPayout(ctx: NonNullable<Awaited<ReturnType<typeof caller>>>, orderId: string, action: string, reason: string) {
   let summary: string;
-  let detail: Record<string, unknown>;
+  let detail: { [key: string]: Json };
   try {
     const r = await processPayout(orderId);
     summary = payoutMessage(r);
@@ -228,7 +231,7 @@ export async function overrideLandedCost(orderId: string, goods: string, freight
 
 /* ── Marketplace rules (migration 018 system_configs; super admins; audited) ── */
 
-async function saveConfig(key: 'trial_batch_config' | 'kyc_requirements', value: Record<string, unknown>): Promise<ControlResult> {
+async function saveConfig(key: 'trial_batch_config' | 'kyc_requirements', value: { [key: string]: Json }): Promise<ControlResult> {
   const ctx = await caller('super');
   if (!ctx) return { ok: false, message: 'Super admin access required.' };
   const { error } = await ctx.supabase.rpc('super_set_system_config', { p_key: key, p_value: value, p_ip: ctx.fp.ip, p_ua: ctx.fp.ua });

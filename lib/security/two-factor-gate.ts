@@ -22,10 +22,9 @@ export function safeReturnPath(v: string | null | undefined, fallback = '/'): st
 
 /**
  * Money-moving overrides (force release, refunds, payouts, landed cost) need 2FA switched on
- * and verified for this session. `available: false` = migration 016 not applied yet (no 2FA to require).
+ * and verified for this session (Postgres enforces the same on financial_overrides).
  */
-export function financialOverrideBlock(state: { available: boolean; enabled: boolean; ok: boolean }): string | null {
-  if (!state.available) return null;
+export function financialOverrideBlock(state: { enabled: boolean; ok: boolean }): string | null {
   if (!state.enabled) return 'Turn on two-factor authentication in Settings → Security before using financial overrides.';
   if (!state.ok) return 'Verify your two-factor code to continue.';
   return null;

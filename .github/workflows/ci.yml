@@ -46,6 +46,7 @@ jobs:
         with:
           node-version: 22
       - run: npm run test:db
+      - run: npm run db:types:check   # lib/supabase/database.types.ts matches the migrations
 
   e2e-smoke:
     name: Browser smoke tests (Playwright, enforced CSP)

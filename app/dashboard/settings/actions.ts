@@ -1,7 +1,8 @@
 'use server';
 
 import { createHash } from 'node:crypto';
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, revalidateTag } from 'next/cache';
+import { PUBLIC_CATALOG_TAG } from '@/lib/public-catalog';
 import { createClient as createStatelessClient } from '@supabase/supabase-js';
 import { getSessionProfile } from '@/lib/supabase/server';
 import { friendlyError } from '@/lib/format';
@@ -10,6 +11,9 @@ import { rateLimit } from '@/lib/security/rate-limit';
 import {
   avatarObjectPath, checkAvatarFile, isNotificationPref, normalizeBio, normalizeDesignation, normalizePhone, type NotificationPref,
 } from '@/lib/settings';
+import type { Database } from '@/lib/supabase/database.types';
+
+type ProfileUpdate = Database['public']['Tables']['profiles']['Update'];
 
 export type SettingsResult = { ok: boolean; message: string };
 const AVATAR_BUCKET = 'avatars';
@@ -24,7 +28,8 @@ async function session() {
   return ctx.user && ctx.profile ? { ...ctx, user: ctx.user, profile: ctx.profile } : null;
 }
 
-const refresh = () => { revalidatePath('/dashboard/settings'); revalidatePath('/', 'layout'); };
+// The public supplier pages show the bio and avatar, so profile changes also drop the cached catalogue.
+const refresh = () => { revalidatePath('/dashboard/settings'); revalidatePath('/', 'layout'); revalidateTag(PUBLIC_CATALOG_TAG); };
 
 /** Bio + job title + phone (name and business name keep the reviewed change-request flow). The bio is required (migration 031). */
 export async function saveProfileDetails(_prev: SettingsResult | null, form: FormData): Promise<SettingsResult> {
@@ -35,9 +40,8 @@ export async function saveProfileDetails(_prev: SettingsResult | null, form: For
   const phone = normalizePhone(String(form.get('phone_number') ?? ''), ctx.profile.country_code);
   if (!phone.ok) return { ok: false, message: phone.error };
 
-  const patch: Record<string, unknown> = { designation: designation.value, phone_number: phone.phone };
-  // Forms rendered before migration 031 has run carry no bio field; they keep saving as before.
-  if (form.has('bio')) {
+  const patch: ProfileUpdate = { designation: designation.value, phone_number: phone.phone };
+  if (form.has('bio')) {   // suppliers' form only
     const bio = normalizeBio(String(form.get('bio') ?? ''));
     if (!bio.ok) return { ok: false, message: bio.error };
     patch.bio = bio.value;
@@ -100,7 +104,9 @@ export async function setNotificationPref(key: NotificationPref, value: boolean)
   const ctx = await session();
   if (!ctx) return { ok: false, message: 'Sign in first.' };
   if (!isNotificationPref(key) || typeof value !== 'boolean') return { ok: false, message: 'Invalid setting.' };
-  const { error } = await ctx.supabase.from('profiles').update({ [key]: value }).eq('id', ctx.user.id);
+  const patch: ProfileUpdate = {};
+  patch[key] = value;
+  const { error } = await ctx.supabase.from('profiles').update(patch).eq('id', ctx.user.id);
   if (error) {
     return { ok: false, message: /sms_needs_phone/.test(error.message) ? 'Add a phone number on the Profile tab first.' : friendlyError(error.message) };
   }

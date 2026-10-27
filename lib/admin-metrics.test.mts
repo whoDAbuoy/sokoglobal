@@ -2,8 +2,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  barHeights, dailyCounts, escrowSummary, filledDots, formatChange, likePattern, pageList, parsePage,
-  paymentMethod, percentChange, periodWindows, txnFilterStatuses, txnStatus, type MetricOrder,
+  barHeights, dailyCounts, dailyCountsByDay, filledDots, formatChange, likePattern, orderMetrics, pageList, parsePage,
+  paymentMethod, percentChange, periodWindows, txnFilterStatuses, txnStatus, type OrderMetricsRow,
 } from './admin-metrics.ts';
 
 test('percent change vs last period', () => {
@@ -56,38 +56,45 @@ test('pagination buttons', () => {
   assert.equal(parsePage(undefined), 1);
 });
 
-const order = (o: Partial<MetricOrder>): MetricOrder => ({
-  buyer_id: 'b1', escrow_status: 'funded', total_cents: 100_00, created_at: '2026-10-18T00:00:00Z',
-  funded_at: '2026-10-18T00:00:00Z', payment_provider: 'mpesa', category: 'electronics', ...o,
+const metrics = (o: Partial<OrderMetricsRow>): OrderMetricsRow => ({
+  paid_count: 3, gmv: 1050_00, held: 600_00, released: 400_00, refunded: 50_00, disputed: 1, buyers: 2, repeat_buyers: 1,
+  by_category: [{ category: 'electronics', cents: 650_00 }, { category: 'apparel', cents: 400_00 }],
+  month: { gmv: 1050_00, by_provider: [{ provider: 'mpesa', cents: 600_00, count: 1 }, { provider: 'paystack', cents: 400_00, count: 1 },
+    { provider: 'daraja', cents: 50_00, count: 1 }] },
+  prev_month_gmv: 500_00, paid_days: {}, ...o,
 });
 
-test('escrow summary ignores unpaid checkouts and splits held / released / refunded', () => {
-  const s = escrowSummary([
-    order({ total_cents: 600_00 }),
-    order({ escrow_status: 'released', total_cents: 400_00, payment_provider: 'paystack', buyer_id: 'b2', category: 'apparel' }),
-    order({ escrow_status: 'refunded', total_cents: 50_00, buyer_id: 'b2' }),
-    order({ escrow_status: 'pending_payment', total_cents: 999_00, funded_at: null, buyer_id: 'b3' }),
-    order({ escrow_status: 'cancelled', total_cents: 70_00, funded_at: null, buyer_id: 'b4' }),
-  ]);
+test('order metrics derive averages, shares and payment-method labels from the SQL totals', () => {
+  const s = orderMetrics(metrics({}));
   assert.equal(s.paidCount, 3);
   assert.equal(s.gmv, 1050_00);
-  assert.equal(s.held, 600_00);
-  assert.equal(s.released, 400_00);
-  assert.equal(s.refunded, 50_00);
   assert.equal(s.settledPct, 40);
-  assert.equal(s.buyers, 2);
-  assert.equal(s.repeatBuyers, 1);
   assert.equal(s.repeatPct, 50);
   assert.equal(s.avgOrder, 350_00);
-  assert.deepEqual(s.byMethod.map((m) => [m.label, m.cents]), [['M-Pesa', 650_00], ['Card', 400_00]]);
+  assert.equal(s.disputesOpen, 1);
+  assert.equal(s.prevMonthGmv, 500_00);
+  assert.deepEqual(s.month.byMethod.map((m) => [m.label, m.cents, m.count]), [['M-Pesa', 650_00, 2], ['Card', 400_00, 1]]);
   assert.equal(s.byCategory[0]!.category, 'electronics');
 });
 
+test('Postgres bigint sums arriving as strings are still numbers', () => {
+  const s = orderMetrics(metrics({ gmv: '1050000' as unknown as number, paid_count: '3' as unknown as number }));
+  assert.equal(s.gmv, 1_050_000);
+  assert.equal(s.avgOrder, 350_000);
+});
+
 test('empty data gives zeros, not NaN', () => {
-  const s = escrowSummary([]);
+  const s = orderMetrics(metrics({ paid_count: 0, gmv: 0, held: 0, released: 0, refunded: 0, buyers: 0, repeat_buyers: 0, disputed: 0,
+    by_category: [], month: { gmv: 0, by_provider: [] } }));
   assert.equal(s.settledPct, 0);
   assert.equal(s.repeatPct, 0);
   assert.equal(s.avgOrder, 0);
+  assert.deepEqual(s.month.byMethod, []);
+});
+
+test('per-day counts from SQL fill the last 7 UTC days, oldest first', () => {
+  const now = new Date('2026-10-19T09:00:00Z');
+  assert.deepEqual(dailyCountsByDay({ '2026-10-19': 2, '2026-10-17': 1, '2026-10-01': 9 }, now, 7), [0, 0, 0, 0, 1, 0, 2]);
 });
 
 test('daily counts bucket by UTC day, oldest first', () => {

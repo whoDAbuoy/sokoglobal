@@ -1,7 +1,7 @@
 import 'server-only';
 import { cookies } from 'next/headers';
 import { unstable_cache } from 'next/cache';
-import { createClient } from '@supabase/supabase-js';
+import { anonClient } from '@/lib/supabase/anon';
 import { getSessionProfile } from '@/lib/supabase/server';
 import {
   CURRENCY_COOKIE, getDefaultCurrencyForCountry, isCurrency, normalizeRates, type CurrencyCode, type ExchangeRates,
@@ -21,10 +21,7 @@ export interface CurrencyState {
  * thrown, not cached; callers fall back to the built-in rates.
  */
 const loadRates = unstable_cache(async () => {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!url || !key) throw new Error('Supabase is not configured');
-  const db = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
+  const db = anonClient();
   // Capped, no retries: this runs in the root layout, so a slow database must not hold every page (callers fall back to built-in rates).
   const { data, error } = await db.from('exchange_rates').select('currency_code, rate_to_kes, updated_at').abortSignal(AbortSignal.timeout(2000)).retry(false);
   if (error) throw new Error(error.message);

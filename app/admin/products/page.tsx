@@ -27,25 +27,20 @@ export default async function AdminProductsPage({ searchParams }: {
 
   const params = await searchParams;
   const q = (params.q ?? '').trim().slice(0, 100);
-  const status = FILTERS.some(([v]) => v === params.status) ? params.status! : '';
+  const status = FILTERS.find(([v]) => v === params.status)?.[0] ?? '';
 
-  const run = (columns: string) => {
-    let query = supabase.from('products').select(columns).order('updated_at', { ascending: false }).limit(200);
-    if (status === 'removed') query = query.not('deleted_at', 'is', null);
-    else {
-      query = query.is('deleted_at', null);
-      if (status) query = query.eq('status', status);
-    }
-    if (q) query = query.ilike('title', `%${q.replace(/[\\%_]/g, '\\$&')}%`);
-    return query;
-  };
-  const BASE = `id, title, brand, status, trial_landed_cost_cents, updated_at, deleted_at, deletion_reason,
-             supplier:profiles!products_supplier_id_fkey ( company_name, country_code ),
-             orders ( count ), trend_pools ( count )`;
-  // Catalogue columns arrive with migration 015; fall back to the base columns before it runs.
-  let res = await run(`${BASE}, is_featured, category:categories ( name )`);
-  if (res.error) res = await run(BASE);
-  const { data, error } = res;
+  let query = supabase.from('products')
+    .select(`id, title, brand, status, trial_landed_cost_cents, updated_at, deleted_at, deletion_reason, is_featured,
+             supplier:supplier_profiles!products_supplier_id_fkey ( company_name, country_code ),
+             orders ( count ), trend_pools ( count ), category:categories ( name )`)
+    .order('updated_at', { ascending: false }).limit(200);
+  if (status === 'removed') query = query.not('deleted_at', 'is', null);
+  else {
+    query = query.is('deleted_at', null);
+    if (status) query = query.eq('status', status);
+  }
+  if (q) query = query.ilike('title', `%${q.replace(/[\\%_]/g, '\\$&')}%`);
+  const { data, error } = await query;
   if (error) throw new Error(`Could not load products: ${error.message}`);
 
   type Row = Omit<AdminProductRow, 'supplier' | 'order_count' | 'pool_count' | 'category_name'> & { supplier: unknown; orders: unknown; trend_pools: unknown; category?: unknown };

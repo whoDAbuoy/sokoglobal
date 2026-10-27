@@ -34,14 +34,14 @@ export default async function AdminPage() {
       .from('products')
       .select(`id, title, brand, category, description, origin_country, attributes, unit_price_cents,
                trial_units, trial_goods_cents, lead_time_days, updated_at,
-               supplier:profiles!products_supplier_id_fkey ( company_name, full_name, country_code, kyc_verified ),
+               supplier:supplier_profiles!products_supplier_id_fkey ( company_name, full_name, country_code, kyc_verified ),
                product_media ( id, media_type, public_url, captured_at, width, height, sort_order )`)
       .eq('status', 'pending_review')
       .order('updated_at', { ascending: true }) // oldest first (FIFO SLA)
       .limit(50),
     supabase
       .from('products')
-      .select('id, title, trial_landed_cost_cents, reviewed_at, supplier:profiles!products_supplier_id_fkey ( company_name )')
+      .select('id, title, trial_landed_cost_cents, reviewed_at, supplier:supplier_profiles!products_supplier_id_fkey ( company_name )')
       .eq('status', 'live')
       .not('reviewed_at', 'is', null)
       .order('reviewed_at', { ascending: false })
@@ -52,7 +52,7 @@ export default async function AdminPage() {
 
   if (pendingRes.error) throw new Error(`Could not load review queue: ${pendingRes.error.message}`);
 
-  // Catalogue fields (migration 015). Optional: before it runs the query errors and cards show the basics.
+  // Catalogue fields for the cards (a failed read shows the basics only).
   const ids = (pendingRes.data ?? []).map((p) => p.id);
   const { data: extra } = ids.length
     ? await supabase.from('products').select('id, sku, moq, unit_of_measure, price_tiers, category:categories ( name, requires_compliance )').in('id', ids)

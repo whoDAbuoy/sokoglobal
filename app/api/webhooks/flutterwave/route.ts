@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { normalizeWebhook, verifyWebhookSignature } from '@/lib/payments/flutterwave';
 import { handleCharge, handleTransfer } from '@/lib/payments/flutterwave-events';
+import type { Json } from '@/lib/supabase/database.types';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -39,7 +40,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
   }
 
-  let body: unknown;
+  let body: Json;
   try { body = JSON.parse(raw); } catch { return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 }); }
   const event = normalizeWebhook(body);
   if (!event) return NextResponse.json({ error: 'Unrecognised payload' }, { status: 400 });

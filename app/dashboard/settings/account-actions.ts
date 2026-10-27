@@ -1,6 +1,7 @@
 'use server';
 
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, revalidateTag } from 'next/cache';
+import { PUBLIC_CATALOG_TAG } from '@/lib/public-catalog';
 import { getSessionProfile } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { friendlyError } from '@/lib/format';
@@ -71,5 +72,6 @@ export async function closeAccount(confirmation: string): Promise<AccountResult>
   }
   await supabase.auth.signOut().catch(() => undefined);
   revalidatePath('/', 'layout');
+  revalidateTag(PUBLIC_CATALOG_TAG);   // a closed supplier's listings are archived
   return { ok: true, message: `Your account is closed.${note}` };
 }

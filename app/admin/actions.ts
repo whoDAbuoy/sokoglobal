@@ -1,6 +1,7 @@
 'use server';
 
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, revalidateTag } from 'next/cache';
+import { PUBLIC_CATALOG_TAG } from '@/lib/public-catalog';
 import { getSessionProfile } from '@/lib/supabase/server';
 import { friendlyError, formatUSD } from '@/lib/format';
 import { MEDIA_BUCKET, UUID_RE } from '@/lib/uploads';
@@ -49,6 +50,7 @@ export async function approveProduct(_prev: ReviewState, form: FormData): Promis
 
   revalidatePath('/admin', 'layout'); // overview counts + /admin/review
   revalidatePath('/dashboard');
+  revalidateTag(PUBLIC_CATALOG_TAG);   // public /products pages and sitemap
   return { ok: true, message: `Approved — live at ${formatUSD(data.trial_landed_cost_cents, true)} landed.` };
 }
 
@@ -85,11 +87,12 @@ export async function removeProduct(productId: string, reason: string): Promise<
     p_product_id: productId, p_reason: reason.slice(0, 2000),
   });
   if (error) return { ok: false, message: friendlyError(error.message) };
-  const result = data as ProductRemovalResult;
+  const result = data as unknown as ProductRemovalResult;   // jsonb built by admin_remove_product()
 
   revalidatePath('/admin', 'layout');
   revalidatePath('/dashboard');
   revalidatePath('/supplier');
+  revalidateTag(PUBLIC_CATALOG_TAG);
 
   if (result.mode === 'archived') {
     const notes = [
@@ -128,5 +131,6 @@ export async function setProductState(productId: string, state: ProductStateOver
   if (error) return { ok: false, message: friendlyError(error.message) };
   revalidatePath('/admin', 'layout');
   revalidatePath('/dashboard', 'layout');
+  revalidateTag(PUBLIC_CATALOG_TAG);
   return { ok: true, message: `Listing is now ${state.replace('_', ' ')}.` };
 }

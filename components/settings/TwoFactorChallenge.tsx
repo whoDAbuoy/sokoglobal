@@ -26,7 +26,7 @@ export default function TwoFactorChallenge({ next }: { next: string }) {
         body: JSON.stringify(useBackup ? { backupCode: backup } : { code }),
       });
       const body = await res.json().catch(() => ({})) as { error?: string };
-      if (!res.ok) { setError(res.status === 429 ? 'Too many attempts. Wait a minute and try again.' : body.error ?? 'Could not verify the code.'); return; }
+      if (!res.ok) { setError(body.error ?? (res.status === 429 ? 'Too many attempts. Wait a minute and try again.' : 'Could not verify the code.')); return; }
       router.replace(next);
       router.refresh();
     } finally {

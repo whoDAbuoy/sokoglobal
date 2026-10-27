@@ -43,7 +43,7 @@ export default async function OrdersPage() {
       .from('orders')
       .select(`id, product_id, batches, quantity, rfq_quote_id, released_at, verified_at,
                product:products ( title, status, category, trial_landed_cost_cents,
-                                  supplier:profiles!products_supplier_id_fkey ( company_name ),
+                                  supplier:supplier_profiles!products_supplier_id_fkey ( company_name ),
                                   product_media ( public_url, media_type, sort_order ) )`)
       .eq('buyer_id', user.id).eq('escrow_status', 'released')
       .order('released_at', { ascending: false, nullsFirst: false })

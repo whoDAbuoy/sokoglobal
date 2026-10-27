@@ -1,6 +1,7 @@
 'use server';
 
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, revalidateTag } from 'next/cache';
+import { PUBLIC_CATALOG_TAG } from '@/lib/public-catalog';
 import { getSessionProfile } from '@/lib/supabase/server';
 import { friendlyError } from '@/lib/format';
 import type { CategoryRow, ProductInsert } from '@/lib/catalog';
@@ -75,6 +76,7 @@ export async function importListings(_prev: ImportState, form: FormData): Promis
     }
   }
   revalidatePath('/supplier');
+  revalidateTag(PUBLIC_CATALOG_TAG);
   return {
     ok: created > 0, mode, created, rows: summary(result.rows),
     message: created ? `Created ${created} draft listing${created === 1 ? '' : 's'}. Add at least 3 photos to each, then submit for review.` : 'No listings were created.',
@@ -97,6 +99,7 @@ export async function deleteDraft(productId: string): Promise<DeleteDraftResult>
   const { data, error } = await supabase.rpc('delete_supplier_draft', { p_product_id: productId });
   if (error) return { ok: false, message: friendlyError(error.message) };
   revalidatePath('/supplier');
+  revalidateTag(PUBLIC_CATALOG_TAG);
   revalidatePath('/supplier/drafts');
 
   // The row is already gone; a storage failure only leaves orphaned files (their paths are in moderation_log).

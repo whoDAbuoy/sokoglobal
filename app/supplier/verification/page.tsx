@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import { getSessionProfile } from '@/lib/supabase/server';
 import DashboardHeader from '@/components/dashboard/DashboardHeader';
 import KycWorkspace, { type KycState } from './KycWorkspace';
+import { stringFields } from '@/lib/kyc';
 
 export const metadata = { title: 'Verification · SokoGlobal' };
 
@@ -26,7 +27,7 @@ export default async function VerificationPage({ searchParams }: { searchParams:
   const initial: KycState = {
     kyc: kyc.data ?? null,
     documents: docs.data ?? [],
-    account: account.data ?? null,
+    account: account.data ? { ...account.data, international: stringFields(account.data.international) } : null,
   };
 
   return (

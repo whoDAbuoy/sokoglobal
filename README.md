@@ -53,6 +53,8 @@ MVP built with Next.js 15 (App Router) + Tailwind + Supabase (Postgres, Auth, St
 | RFQs, display currencies, supplier shipments, milestone escrow, quick reorder | `supabase/migrations/021_enterprise_features.sql`, `lib/{rfq,currency,milestone,shipping,reorder}.ts` (+ tests), `app/{dashboard,supplier}/rfqs`, `context/CurrencyContext.tsx`, `components/{currency,rfq}`, `components/supplier/ShipOrderDialog.tsx`, `components/tracking/OrderTimeline.tsx`, `components/dashboard/QuickReorder.tsx`, `app/api/cron/restock-reminders` |
 | Tests (`npm test`) | `lib/**/*.test.mts`, `tests/*.test.mts` (256 tests) |
 | Database tests (`npm run test:db`, needs Docker) | `scripts/db-test.mjs` applies `schema.sql` + every migration to a throwaway Postgres with `supabase/tests/supabase-stubs.sql`, then runs `supabase/tests/*.test.sql` |
+| Database types (`npm run db:types`, needs Docker) | `scripts/db-types.mjs` generates `lib/supabase/database.types.ts` from the same throwaway Postgres; every Supabase client is typed with it. Run after adding a migration (CI runs `db:types:check`) |
+| 2FA on every API call, private supplier contacts, 2FA lockout, admin KPIs in SQL | `supabase/migrations/041_security_and_metrics.sql` (+ `supabase/tests/041_*.test.sql`): PostgREST pre-request hook `check_request()`, `supplier_profiles` view, `two_factor_failures`, `admin_order_metrics()` |
 
 ## How the trust rules are enforced (server-side, not just UI)
 

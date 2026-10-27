@@ -25,7 +25,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   const { data: order } = await supabase.from('orders')
     .select(`id, buyer_id, escrow_status, created_at, funded_at, released_at, quantity, goods_cents, freight_cents, customs_cents, total_cents, escrow_fee_cents,
              payment_provider, payment_ref, origin_label, destination_label,
-             product:products ( title, brand, category, origin_country, supplier:profiles!products_supplier_id_fkey ( company_name, country_code ) ),
+             product:products ( title, brand, category, origin_country, supplier:supplier_profiles!products_supplier_id_fkey ( company_name, country_code ) ),
              buyer:profiles!orders_buyer_id_fkey ( company_name, full_name, country_code )`)
     .eq('id', id).maybeSingle();
   if (!order || (order.buyer_id !== user.id && !isAdmin(profile))) return NextResponse.json({ error: 'Not found' }, { status: 404 });

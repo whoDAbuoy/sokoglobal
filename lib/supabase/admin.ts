@@ -1,8 +1,9 @@
 import 'server-only';
 import { createServerClient } from '@supabase/ssr';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import type { Database } from '@/lib/supabase/database.types';
 
-let adminClient: SupabaseClient | undefined;
+let adminClient: SupabaseClient<Database> | undefined;
 
 /**
  * Service-role Supabase client — BYPASSES RLS. Server-only (the `server-only`
@@ -15,12 +16,12 @@ let adminClient: SupabaseClient | undefined;
  * Use only after the caller is authenticated by other means (e.g. a verified
  * webhook signature). Never pass user input into it unchecked.
  */
-export function createAdminClient(): SupabaseClient {
+export function createAdminClient(): SupabaseClient<Database> {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !serviceKey) throw new Error('SUPABASE_SERVICE_ROLE_KEY is not configured');
 
-  adminClient ??= createServerClient(url, serviceKey, {
+  adminClient ??= createServerClient<Database>(url, serviceKey, {
     cookies: { getAll: () => [], setAll: () => {} },
     auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
   });
