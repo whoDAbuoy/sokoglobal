@@ -14,6 +14,7 @@ import DashboardHeader from '@/components/dashboard/DashboardHeader';
 import InboxRealtime from '@/components/admin/support/InboxRealtime';
 import MutedIcon from '@/components/admin/support/MutedIcon';
 import ReplyBox from '@/components/admin/support/ReplyBox';
+import MobileThreadSheet from '@/components/admin/support/MobileThreadSheet';
 import ThreadHistory from '@/components/admin/support/ThreadHistory';
 import { resolveTicket } from './actions';
 import { isAdmin } from '@/lib/auth/admin-access';
@@ -117,10 +118,11 @@ export default async function SupportInbox({ searchParams }: {
       <DashboardHeader profile={profile} />
       <InboxRealtime subjects={subjects} />
       <main className="page-wide py-6">
-        <div className="card grid overflow-hidden lg:h-[calc(100vh-9rem)] lg:min-h-[36rem] lg:grid-cols-[13rem_20rem_minmax(0,1fr)]">
+        {/* grid-cols-1 = minmax(0, 1fr): on phones the column is capped at the screen width (chips and rows scroll inside it). */}
+        <div className="card grid grid-cols-1 overflow-hidden lg:h-[calc(100vh-9rem)] lg:min-h-[36rem] lg:grid-cols-[13rem_20rem_minmax(0,1fr)]">
 
           {/* Column 1: mailboxes + labels (horizontal chips below lg) */}
-          <aside className="border-b border-neutral-200 p-3 lg:overflow-y-auto lg:border-b-0 lg:border-r">
+          <aside className={clsx('min-w-0 border-b border-neutral-200 p-3 lg:overflow-y-auto lg:border-b-0 lg:border-r', explicit && 'max-lg:hidden')}>
             <p className="hidden px-2.5 pb-2 text-[11px] font-semibold uppercase tracking-eyebrow text-neutral-500 lg:block">Mailboxes</p>
             <nav aria-label="Mailboxes" className="no-scrollbar flex gap-1 overflow-x-auto lg:flex-col lg:overflow-visible">
               {MAILBOXES.map((m) => {
@@ -207,10 +209,22 @@ export default async function SupportInbox({ searchParams }: {
 
           {/* Column 3: thread */}
           <section aria-label="Conversation" className={clsx('min-h-[28rem] min-w-0 flex-col', explicit ? 'flex' : 'hidden lg:flex')}>
+            <MobileThreadSheet open={!!explicit && !!active}>
             {active ? (
               <>
-                <header className="flex flex-wrap items-center gap-2 border-b border-neutral-200 px-4 py-2.5">
-                  <Link href={link({ t: null })} className="mr-1 rounded-md p-1.5 text-neutral-600 hover:bg-neutral-100 lg:hidden" aria-label="Back to conversations">
+                {/* Phones: one compact row (back · who · what), the status and actions below it. */}
+                <div className="flex items-center gap-3 border-b border-neutral-200 px-3 py-2.5 md:hidden">
+                  <Link href={link({ t: null })} className="-ml-1 grid h-10 w-10 shrink-0 place-items-center rounded-full text-neutral-700 hover:bg-neutral-100" aria-label="Back to conversations">
+                    <ArrowLeft className="h-5 w-5" aria-hidden />
+                  </Link>
+                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-neutral-300 text-xs font-semibold text-neutral-700">{initials(customerName)}</span>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold text-neutral-900">{customerName}</p>
+                    <p className="truncate text-xs text-neutral-500">{active.subject}{active.customer?.company_name ? ` · ${active.customer.company_name}` : ''}</p>
+                  </div>
+                </div>
+                <header className="flex flex-wrap items-center gap-2 border-b border-neutral-200 px-3 py-2 md:px-4 md:py-2.5">
+                  <Link href={link({ t: null })} className="mr-1 hidden rounded-md p-1.5 text-neutral-600 hover:bg-neutral-100 md:block lg:hidden" aria-label="Back to conversations">
                     <ArrowLeft className="h-4 w-4" aria-hidden />
                   </Link>
                   <span className="pill">
@@ -235,7 +249,7 @@ export default async function SupportInbox({ searchParams }: {
                     )}
                   </div>
                 </header>
-                <div className="flex items-start gap-3 border-b border-neutral-200 px-5 py-4">
+                <div className="hidden items-start gap-3 border-b border-neutral-200 px-5 py-4 md:flex">
                   <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-neutral-300 text-sm font-semibold text-neutral-700">{initials(customerName)}</span>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-start justify-between gap-3">
@@ -247,7 +261,7 @@ export default async function SupportInbox({ searchParams }: {
                   </div>
                 </div>
 
-                <div className="min-h-0 flex-1 overflow-y-auto">
+                <div data-thread-scroll className="min-h-0 flex-1 overflow-y-auto py-2 md:py-0">
                   <ThreadHistory count={earlier.length}>
                     {earlier.map((m) => <MessageItem key={m.id} m={m} customerName={customerName} />)}
                   </ThreadHistory>
@@ -264,6 +278,7 @@ export default async function SupportInbox({ searchParams }: {
                 <p className="mt-1 text-sm text-neutral-500">Pick a thread from the list.</p>
               </div>
             )}
+            </MobileThreadSheet>
           </section>
         </div>
       </main>
@@ -274,20 +289,23 @@ export default async function SupportInbox({ searchParams }: {
 function MessageItem({ m, customerName }: { m: Message; customerName: string }) {
   const agent = m.sender_role === 'agent';
   const name = agent ? 'Trade Support' : customerName;
+  const time = new Date(m.created_at).toLocaleString('en-GB', { dateStyle: 'short', timeStyle: 'short' });
   return (
-    <article className="flex gap-3 px-5 py-4">
-      <span className={clsx('grid h-8 w-8 shrink-0 place-items-center rounded-full text-xs font-semibold',
+    <article className={clsx('flex gap-3 px-3 py-1.5 md:px-5 md:py-4', agent && 'max-md:justify-end')}>
+      <span className={clsx('hidden h-8 w-8 shrink-0 place-items-center rounded-full text-xs font-semibold md:grid',
         agent ? 'bg-neutral-900 text-white' : 'border border-neutral-300 text-neutral-700')}>
         {agent ? 'TS' : initials(name)}
       </span>
-      <div className="min-w-0 flex-1">
-        <div className="flex items-baseline justify-between gap-3">
+      {/* Phones: a chat bubble (customer left, Trade Support right). From md up: the full-width list row. */}
+      <div className={clsx('min-w-0 max-md:max-w-[85%] max-md:rounded-2xl max-md:px-3.5 max-md:py-2 md:flex-1',
+        agent ? 'max-md:rounded-br-md max-md:bg-[#5a9895]/25' : 'max-md:rounded-bl-md max-md:bg-neutral-900/[0.06] dark:max-md:bg-snow/[0.08]')}>
+        <div className="flex items-baseline justify-between gap-3 max-md:hidden">
           <p className="text-sm font-semibold text-neutral-900">{name}{agent && <span className="ml-1.5 text-xs font-normal text-neutral-500">(agent)</span>}</p>
-          <time dateTime={m.created_at} className="shrink-0 text-xs text-neutral-500">
-            {new Date(m.created_at).toLocaleString('en-GB', { dateStyle: 'short', timeStyle: 'short' })}
-          </time>
+          <time dateTime={m.created_at} className="shrink-0 text-xs text-neutral-500">{time}</time>
         </div>
-        <p className="mt-1.5 whitespace-pre-wrap text-sm leading-relaxed text-neutral-700">{m.body}</p>
+        {agent && <p className="text-[11px] font-medium text-[#8fd3cc] md:hidden">Trade Support</p>}
+        <p className="whitespace-pre-wrap text-sm leading-relaxed text-neutral-800 md:mt-1.5 md:text-neutral-700">{m.body}</p>
+        <time dateTime={m.created_at} className="mt-0.5 block text-right text-[10px] text-neutral-500 md:hidden">{time}</time>
       </div>
     </article>
   );
