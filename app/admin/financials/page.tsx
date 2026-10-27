@@ -11,6 +11,7 @@ import { KpiCard, MiniStat, Panel } from '@/components/admin/overview/Widgets';
 import PricingForm from '@/components/admin/financials/PricingForm';
 import PaymentSettingsForm from '@/components/admin/financials/PaymentSettingsForm';
 import ManualPaymentsQueue, { type QueueRow } from '@/components/admin/financials/ManualPaymentsQueue';
+import GoldGrantForm from '@/components/admin/financials/GoldGrantForm';
 import { getPaymentSettings } from '@/lib/payment-settings-server';
 import { isDpoConfigured } from '@/lib/payments/dpo';
 import { isPaypalConfigured } from '@/lib/payments/paypal';
@@ -23,12 +24,14 @@ export const dynamic = 'force-dynamic';
 
 const money = (cents: number) => formatUSD(cents, true);
 
-/** Audit actions the financial desk writes (super_set_pricing 026; super_set_payment_settings, approve/reject_manual_payment 028). */
+/** Audit actions the financial desk writes (super_set_pricing 026; super_set_payment_settings, approve/reject_manual_payment 028; Gold grants 034). */
 const FINANCE_AUDIT: Record<string, string> = {
   'platform.pricing': 'Pricing changed',
   'platform.payments': 'Payment gateways changed',
   'escrow.manual_payment_approved': 'Wire / crypto approved',
   'escrow.manual_payment_rejected': 'Wire / crypto rejected',
+  'subscription.gold_granted': 'Complimentary Gold granted',
+  'subscription.gold_revoked': 'Gold ended',
 };
 interface AuditRow { id: number; actor_id: string | null; action: string; target_type: string | null; target_id: string | null; created_at: string }
 
@@ -58,10 +61,13 @@ export default async function FinancialsPage() {
   ]);
   const audit = (auditRes.data ?? []) as AuditRow[];
   const actorIds = [...new Set(audit.map((a) => a.actor_id).filter((v): v is string => !!v))];
-  const { data: actors } = actorIds.length
-    ? await supabase.from('profiles').select('id, full_name').in('id', actorIds)
-    : { data: [] as { id: string; full_name: string }[] };
-  const actorName = new Map((actors ?? []).map((a) => [a.id, a.full_name]));
+  const targetIds = [...new Set(audit.filter((a) => a.target_type === 'user' && a.target_id).map((a) => a.target_id!))];
+  const peopleIds = [...new Set([...actorIds, ...targetIds])];
+  const { data: people } = peopleIds.length
+    ? await supabase.from('profiles').select('id, full_name, company_name').in('id', peopleIds)
+    : { data: [] as { id: string; full_name: string; company_name: string }[] };
+  const actorName = new Map((people ?? []).map((a) => [a.id, a.full_name]));
+  const targetName = new Map((people ?? []).map((a) => [a.id, a.company_name]));
   const moneyBlocked = financialOverrideBlock(twoFactor);
   // Proofs live in the private payment-proofs bucket: short-lived signed links for the reviewer.
   const queue = (queueRes.data ?? []) as unknown as (Omit<QueueRow, 'product_title' | 'buyer' | 'proof_url'> & { proof_path: string | null; order: unknown; buyer: unknown })[];
@@ -169,6 +175,12 @@ export default async function FinancialsPage() {
             : <p role="alert" className="rounded-2xl border px-4 py-3 text-sm tone-pending">Run <code className="font-mono">supabase/migrations/028_payment_gateways_expansion.sql</code> to enable payment gateway controls.</p>}
         </section>
 
+        <section aria-labelledby="gold-grants" className="mt-10">
+          <h2 id="gold-grants" className="flex items-center gap-2 text-xl font-semibold text-neutral-900"><Crown className="h-5 w-5 text-neutral-500" aria-hidden /> Complimentary Gold</h2>
+          <p className="mb-4 mt-1 text-sm text-neutral-600">Give a supplier Gold without a charge (partners, promotions, support credits), or end it. Every change is in the audit log below.</p>
+          <GoldGrantForm moneyBlocked={moneyBlocked} />
+        </section>
+
         <section aria-labelledby="pricing" className="mt-10">
           <div className="mb-4">
             <h2 id="pricing" className="text-xl font-semibold text-neutral-900">Pricing controls</h2>
@@ -188,7 +200,7 @@ export default async function FinancialsPage() {
             <Link href="/admin/control" className="inline-flex items-center gap-1 text-xs font-medium text-neutral-700 hover:text-neutral-900">Full audit trail in Control <ArrowRight className="h-3.5 w-3.5" aria-hidden /></Link>
           </div>
           {audit.length === 0
-            ? <p className="px-5 py-8 text-center text-sm text-neutral-500">{auditRes.error ? 'The audit log is unavailable right now.' : 'No pricing, gateway or wire / crypto decisions recorded yet.'}</p>
+            ? <p className="px-5 py-8 text-center text-sm text-neutral-500">{auditRes.error ? 'The audit log is unavailable right now.' : 'No pricing, gateway, wire / crypto or Gold decisions recorded yet.'}</p>
             : (
               <ol className="divide-y divide-black/[0.06] dark:divide-snow/[0.08]">
                 {audit.map((a) => (
@@ -199,6 +211,9 @@ export default async function FinancialsPage() {
                         {a.actor_id ? actorName.get(a.actor_id) ?? a.actor_id.slice(0, 8) : 'System'}
                         {a.target_type === 'order' && a.target_id && (
                           <> · <Link href={`/admin/control?order=${a.target_id}`} className="font-mono text-blue-700 hover:underline dark:text-cyan-300">order {a.target_id.slice(0, 8)}</Link></>
+                        )}
+                        {a.target_type === 'user' && a.target_id && (
+                          <> · <Link href={`/dashboard/suppliers/${a.target_id}`} className="text-blue-700 hover:underline dark:text-cyan-300">{targetName.get(a.target_id) ?? `user ${a.target_id.slice(0, 8)}`}</Link></>
                         )}
                         {' · '}<code className="font-mono">{a.action}</code>
                       </p>

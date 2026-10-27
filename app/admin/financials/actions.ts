@@ -14,6 +14,7 @@ import { financialOverrideBlock } from '@/lib/security/two-factor-gate';
 import { twoFactorState } from '@/lib/security/two-factor-server';
 import { dispatchNotificationsAfterResponse } from '@/lib/notifications/dispatch';
 import { SWIFT_FIELDS, WALLET_KEYS, swiftFieldError, validWallet, type CryptoWalletKey } from '@/lib/payment-methods';
+import { fieldErrors, formatPeriodEnd, grantGoldInput, revokeGoldInput, type FieldErrors, type GrantGoldInput, type RevokeGoldInput } from '@/lib/gold-grant';
 
 export type PricingResult = { ok: boolean; message: string; errors?: Partial<Record<PricingKey, string>> };
 
@@ -120,4 +121,46 @@ export async function rejectManualPayment(paymentId: string, note: string): Prom
   dispatchNotificationsAfterResponse();
   revalidatePath('/admin/financials');
   return { ok: true, message: 'Rejected — the buyer has been told why and can pay again.' };
+}
+
+export type GoldGrantResult = { ok: boolean; message: string; errors?: FieldErrors };
+
+/**
+ * Complimentary Gold Supplier (super_grant_gold / super_revoke_gold, migration 034). Lowering a
+ * supplier's commission is a financial override, so it needs a super admin with a verified 2FA
+ * session; Postgres re-checks is_super_admin() and writes the audit log with IP + UA.
+ * Runs as the signed-in admin (not the service role) so the audit records who did it.
+ */
+async function goldDesk() {
+  const ctx = await getSessionProfile();
+  if (!ctx.user || !isSuperAdmin(ctx.profile)) return { error: 'Super admin access required.' } as const;
+  const blocked = financialOverrideBlock(await twoFactorState(ctx.supabase));
+  if (blocked) return { error: blocked } as const;
+  return { ctx, fp: requestFingerprint(await headers()) } as const;
+}
+
+export async function grantGold(input: GrantGoldInput): Promise<GoldGrantResult> {
+  const parsed = grantGoldInput.safeParse(input);
+  if (!parsed.success) return { ok: false, message: 'Please fix the highlighted fields.', errors: fieldErrors(parsed.error) };
+  const r = await goldDesk();
+  if ('error' in r) return { ok: false, message: r.error ?? 'Not allowed.' };
+  const { email, months, reason } = parsed.data;
+  const { data, error } = await r.ctx.supabase.rpc('super_grant_gold', { p_email: email, p_months: months, p_reason: reason, p_ip: r.fp.ip, p_ua: r.fp.ua });
+  if (error) return { ok: false, message: friendlyError(error.message) };
+  const res = data as { company_name: string; period_end: string };
+  revalidatePath('/admin/financials');
+  revalidatePath('/supplier/subscription');
+  return { ok: true, message: `${res.company_name} is Gold until ${formatPeriodEnd(res.period_end)}.` };
+}
+
+export async function revokeGold(input: RevokeGoldInput): Promise<GoldGrantResult> {
+  const parsed = revokeGoldInput.safeParse(input);
+  if (!parsed.success) return { ok: false, message: 'Please fix the highlighted fields.', errors: fieldErrors(parsed.error) };
+  const r = await goldDesk();
+  if ('error' in r) return { ok: false, message: r.error ?? 'Not allowed.' };
+  const { data, error } = await r.ctx.supabase.rpc('super_revoke_gold', { p_email: parsed.data.email, p_reason: parsed.data.reason, p_ip: r.fp.ip, p_ua: r.fp.ua });
+  if (error) return { ok: false, message: friendlyError(error.message) };
+  revalidatePath('/admin/financials');
+  revalidatePath('/supplier/subscription');
+  return { ok: true, message: `Gold ended for ${(data as { company_name: string }).company_name}.` };
 }
