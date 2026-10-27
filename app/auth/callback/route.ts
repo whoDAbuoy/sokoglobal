@@ -13,5 +13,7 @@ export async function GET(request: Request) {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) return NextResponse.redirect(`${origin}${safeNext}`);
   }
-  return NextResponse.redirect(`${origin}/login?error=confirmation_failed`);
+  // A failed reset link gets its own message (the link was for a password reset, not an email confirmation).
+  const failure = safeNext.startsWith('/auth/reset-password') ? 'reset_failed' : 'confirmation_failed';
+  return NextResponse.redirect(`${origin}/login?error=${failure}`);
 }

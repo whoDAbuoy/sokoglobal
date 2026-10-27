@@ -28,7 +28,7 @@ export default function ImportWorkspace({ categories }: { categories: { slug: st
       <section className="card p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="flex items-center gap-2 font-semibold text-neutral-900"><FileSpreadsheet className="h-4 w-4 text-neutral-500" aria-hidden /> 1. Prepare your sheet</h2>
-          <a href="/supplier/products/import/template" className="btn-secondary px-3 py-2 text-sm"><Download className="h-4 w-4" aria-hidden /> Download template</a>
+          <a href="/supplier/products/import/template" download className="btn-secondary px-3 py-2 text-sm"><Download className="h-4 w-4" aria-hidden /> Download template</a>
         </div>
         <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-neutral-700">
           <li><strong>Required:</strong> category, title, unit_price_usd, trial_units (or moq).</li>

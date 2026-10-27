@@ -17,7 +17,7 @@ import ProductVisual from '@/components/dashboard/ProductVisual';
 import RevenueChart from '@/components/supplier/sellsy/RevenueChart';
 import OrderHeatmap from '@/components/supplier/sellsy/OrderHeatmap';
 import CategoryDonut from '@/components/supplier/sellsy/CategoryDonut';
-import { GrowthPill, OrderStatusPill, PageHead, Panel, ProductStatusPill, ViewAll } from '@/components/supplier/sellsy/ui';
+import { GrowthPill, OrderStatusPill, PageHead, Panel, ViewAll } from '@/components/supplier/sellsy/ui';
 import { categoryShares, countSince, dailySeries, growthPct, orderHeatmap, productSales } from '@/lib/supplier-dashboard';
 
 export default async function SupplierHome() {
