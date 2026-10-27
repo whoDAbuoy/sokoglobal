@@ -1,7 +1,7 @@
 // Run: npx tsx --conditions=react-server --test lib/notifications/templates.test.mts
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { SMS_MAX, formatMoney, renderNotification } from './templates.ts';
+import { SMS_MAX, formatMoney, inAppNotification, renderNotification } from './templates.ts';
 
 const ORDER = { order_id: '3f2a9c1e-0000-4000-8000-000000000000', product_title: 'Shea butter trial batch', total_cents: 52500, currency: 'USD' };
 
@@ -63,4 +63,13 @@ test('admin chat messages link to the right inbox and quote the preview', () => 
   assert.match(buyer.text, /“Your goods cleared customs”/);
   assert.match(buyer.text, /\/dashboard\/messages/);
   assert.match(renderNotification('support.admin_message', { kind: 'direct', role: 'supplier' }, 'https://x.test').text, /\/supplier\/messages/);
+});
+
+test('in-app (bell) copy: same title as the email, first line as the summary, a site-relative link', () => {
+  const n = inAppNotification('order.funded', ORDER);
+  assert.equal(n.title, renderNotification('order.funded', ORDER, 'https://x').subject);
+  assert.ok(n.body.length > 0);
+  assert.equal(n.href, `/dashboard/orders/${ORDER.order_id}`);
+  assert.deepEqual(inAppNotification('something.unknown', {}), { title: 'Update from SokoGlobal', body: 'There is an update on your SokoGlobal account.', href: null });
+  assert.equal(inAppNotification('kyc.document_rejected', { document_type: 'passport' }).href, '/dashboard/kyc');
 });
