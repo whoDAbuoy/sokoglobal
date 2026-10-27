@@ -171,8 +171,8 @@ export default function MessagingHub({ basePath, role, initialThreadId = null }:
       </section>,
       document.body,
     )}
-    // grid-cols-1 = minmax(0, 1fr): on phones the column is capped at the screen width, so the scrolling mailbox
-    // tabs scroll inside the card instead of stretching it (and the search box and rows) past the viewport.
+    {/* grid-cols-1 = minmax(0, 1fr): on phones the column is capped at the screen width, so the scrolling mailbox
+        tabs scroll inside the card instead of stretching it (and the search box and rows) past the viewport. */}
     <div className="card mt-6 grid grid-cols-1 overflow-hidden p-0 lg:h-[calc(100dvh-14rem)] lg:min-h-[32rem] lg:grid-cols-[13rem_20rem_minmax(0,1fr)]">
       {/* Column 1: mailboxes + product labels (chips below lg) */}
       <aside className="min-w-0 border-b border-neutral-200 p-3 lg:overflow-y-auto lg:border-b-0 lg:border-r">
