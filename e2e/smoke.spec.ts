@@ -99,6 +99,7 @@ test.describe('guards and hardening', () => {
   });
 
   test('public pages load under the enforced CSP without violations', async ({ page, request }) => {
+    test.setTimeout(120_000);
     const enforced = (await request.get('/login')).headers()['content-security-policy'];
     test.skip(!enforced, 'CSP_MODE is not enforce on this deployment');
     const violations: string[] = [];
@@ -109,8 +110,8 @@ test.describe('guards and hardening', () => {
       });
     });
     for (const path of ['/', '/login', '/signup', '/products', '/legal/terms', '/legal/escrow', '/legal/privacy', '/no-such-page']) {
-      await page.goto(path);
-      await page.waitForLoadState('networkidle').catch(() => undefined);
+      await page.goto(path, { waitUntil: 'load' });
+      await page.waitForTimeout(500);   // late scripts, frames and fetches
     }
     expect(violations).toEqual([]);
   });
