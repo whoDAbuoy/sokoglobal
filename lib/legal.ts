@@ -16,3 +16,13 @@ export const LEGAL_DOCS = [
 
 export const legalEffectiveDate = () =>
   new Date(`${LEGAL_VERSION}T12:00:00Z`).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' });
+
+/**
+ * Whether an account must accept the current documents before using the portals. Staff are covered by their
+ * employment terms. `terms_version` is absent (undefined) until migration 040 runs: no prompt then.
+ */
+export function needsTermsAcceptance(profile: { role: string; terms_version?: string | null } | null | undefined): boolean {
+  if (!profile || profile.terms_version === undefined) return false;
+  if (profile.role !== 'importer' && profile.role !== 'supplier') return false;
+  return profile.terms_version !== LEGAL_VERSION;
+}

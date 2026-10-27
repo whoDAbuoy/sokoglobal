@@ -8,7 +8,8 @@ export const dynamic = 'force-dynamic';
 
 /** Shown (via middleware rewrite, HTTP 503) to non-admins while maintenance mode is on. */
 export default async function MaintenancePage() {
-  const settings = await getPlatformSettings(await createClient());
+  // Shown while the platform is down for work: never wait on a slow database for the optional message.
+  const settings = await getPlatformSettings(await createClient(), { bestEffort: true });
   return (
     <main className="grid min-h-screen place-items-center px-4 py-16">
       <div className="card w-full max-w-lg p-8 text-center sm:p-10">

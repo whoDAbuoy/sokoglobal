@@ -72,9 +72,12 @@ test.describe('guards and hardening', () => {
     await expect(page.getByRole('link', { name: /staff sign in/i })).toHaveAttribute('href', '/login');
   });
 
-  test('2FA endpoints need a session; the challenge page sends visitors to sign in', async ({ page, request }) => {
+  test('2FA endpoints need a session; the challenge page sends visitors to sign in', async ({ page, request }, testInfo) => {
+    // Own client IP per project and retry: the 2FA limit is 6 a minute per IP, and the desktop and mobile runs
+    // of this test can land in the same minute (5 calls each).
+    const ip = `203.0.113.${(testInfo.project.name === 'mobile' ? 100 : 10) + testInfo.retry}`;
     for (const path of ['enroll', 'verify', 'challenge', 'disable', 'backup-codes']) {
-      expect((await request.post(`/api/auth/2fa/${path}`, { data: { code: '123456' } })).status(), path).toBe(401);
+      expect((await request.post(`/api/auth/2fa/${path}`, { data: { code: '123456' }, headers: { 'x-forwarded-for': ip } })).status(), path).toBe(401);
     }
     await page.goto('/auth/2fa');
     await expect(page).toHaveURL(/\/login/);

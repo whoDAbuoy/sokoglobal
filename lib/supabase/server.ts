@@ -45,11 +45,11 @@ export const getSessionProfile = cache(async () => {
   return { supabase, user, profile } as const;
 });
 
-// Newer columns arrive with migrations 016 (avatar, 2FA), 017 (KYC) and 031 (bio); fall back step by step before they exist.
+// Newer columns arrive with migrations 016 (avatar, 2FA), 017 (KYC), 031 (bio) and 040 (terms_version); fall back step by step before they exist.
 async function loadProfile(supabase: Awaited<ReturnType<typeof createClient>>, userId: string): Promise<Profile | null> {
   const base = 'id, role, full_name, company_name, country_code, kyc_verified';
   let profile: Profile | null = null;
-  for (const cols of [`${base}, avatar_url, two_factor_enabled, kyc_status, bio`, `${base}, avatar_url, two_factor_enabled, kyc_status`, `${base}, avatar_url, two_factor_enabled`, base]) {
+  for (const cols of [`${base}, avatar_url, two_factor_enabled, kyc_status, bio, terms_version`, `${base}, avatar_url, two_factor_enabled, kyc_status, bio`, `${base}, avatar_url, two_factor_enabled, kyc_status`, `${base}, avatar_url, two_factor_enabled`, base]) {
     const { data, error } = await supabase.from('profiles').select(cols).eq('id', userId).single<Profile>();
     profile = data;
     if (!error || !/column|does not exist/i.test(error.message)) break;
