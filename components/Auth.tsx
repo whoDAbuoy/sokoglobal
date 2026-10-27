@@ -71,6 +71,7 @@ export default function Auth({ mode }: { mode: Mode }) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(
     searchParams.get('error') === 'confirmation_failed' ? 'That confirmation link is invalid or expired.'
+      : searchParams.get('error') === 'reset_failed' ? 'That password reset link is invalid or expired. Enter your email and choose “Forgot password?” to get a new one.'
       : searchParams.get('error') === 'banned' ? 'This account has been suspended. Contact SokoGlobal trade support if you think this is a mistake.' : null,
   );
   const [confirmationSentTo, setConfirmationSentTo] = useState<string | null>(null);
@@ -107,10 +108,10 @@ export default function Auth({ mode }: { mode: Mode }) {
   async function handleResetPassword() {
     setError(null);
     if (!/^\S+@\S+\.\S+$/.test(email.trim())) return setError('Enter your email above, then click “Forgot password?”.');
-    // Supabase emails a recovery link; after the callback the user is signed in and can
-    // set a new password via supabase.auth.updateUser({ password }).
+    // Supabase emails a recovery link; /auth/callback signs the user in with a recovery session and
+    // sends them to /auth/reset-password to choose a new password.
     const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-      redirectTo: `${window.location.origin}/auth/callback`,
+      redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent('/auth/reset-password')}`,
     });
     if (error) setError(mapAuthError(error.message));
     else setConfirmationSentTo(email.trim());

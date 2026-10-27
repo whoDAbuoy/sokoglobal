@@ -79,7 +79,6 @@ export default function VoicePlayer({ src, durationSeconds, waveform, mine }: {
           {playing || current > 0 ? `${formatDuration(current)} / ` : ''}{formatDuration(duration)}
         </p>
       </div>
-      {/* eslint-disable-next-line jsx-a11y/media-has-caption -- a voice note has no caption track */}
       {src && <audio ref={audioRef} src={src} preload="metadata" className="hidden" />}
     </div>
   );

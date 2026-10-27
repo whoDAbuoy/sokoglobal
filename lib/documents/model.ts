@@ -192,6 +192,5 @@ export function winAnsi(s: string): string {
   return s
     .replace(/[–—−]/g, '-').replace(/[‘’‚]/g, "'").replace(/[“”„]/g, '"')
     .replace(/…/g, '...').replace(/ /g, ' ').replace(/[•·]/g, '·')
-    // eslint-disable-next-line no-control-regex
     .replace(/[^\x20-\x7E -ÿ]/g, '?');
 }

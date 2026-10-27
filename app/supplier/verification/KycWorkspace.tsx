@@ -244,7 +244,7 @@ function DocumentSlot({ userId, spec, files, editable, onAdded, onRemoved }: {
 // Must match supported_payout_currencies() in migration 004.
 const CURRENCIES = ['USD', 'EUR', 'GBP', 'KES', 'NGN', 'GHS', 'ZAR', 'UGX', 'TZS', 'RWF', 'XOF', 'XAF', 'EGP', 'MAD', 'ZMW'];
 
-function PayoutAccountForm({ userId, defaultCountry, initial, kycStatus }: {
+function PayoutAccountForm({ defaultCountry, initial, kycStatus }: {
   userId: string; defaultCountry: string; initial: KycState['account']; kycStatus: Status;
 }) {
   const supabase = createClient();
