@@ -17,6 +17,7 @@ import { formatChatTime, pickChannelName, type ChatMessage, type ChatThreadSumma
 import { CHAT_BOXES, CHAT_BOX_LABEL, chatBoxCounts, filterThreads, productLabels, threadDot, type ChatBox } from '@/lib/chat-hub';
 import { initials, snippet } from '@/lib/admin-inbox';
 import { useMutedIds } from '@/hooks/useMutedIds';
+import MuteSwitch from './MuteSwitch';
 import ChatThread from '@/components/chat/ChatThread';
 import { useMediaQuery, useVisualViewport } from '@/hooks/useViewport';
 
@@ -148,13 +149,7 @@ export default function MessagingHub({ basePath, role, initialThreadId = null }:
       </div>
       <ChatThread key={selectedId} threadId={selectedId} onRead={onRead} className="flex-1" collapseAfter={8}
         composerExtra={(
-          <label className="inline-flex cursor-pointer items-center gap-2 text-xs text-neutral-600">
-            <button type="button" role="switch" aria-checked={isMuted(selectedId)} onClick={() => setMutedFor(selectedId, !isMuted(selectedId))}
-              className={clsx('relative h-5 w-9 rounded-full transition-colors', isMuted(selectedId) ? 'bg-blue-600' : 'bg-neutral-300')}>
-              <span className={clsx('absolute top-0.5 h-4 w-4 rounded-full bg-snow shadow transition-transform', isMuted(selectedId) ? 'translate-x-[1.125rem]' : 'translate-x-0.5')} />
-            </button>
-            Mute this thread
-          </label>
+          <MuteSwitch muted={isMuted(selectedId)} onChange={(v) => setMutedFor(selectedId, v)} />
         )} />
     </>
   ) : null;
