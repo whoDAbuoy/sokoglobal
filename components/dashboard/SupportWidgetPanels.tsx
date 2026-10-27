@@ -26,7 +26,7 @@ import type { OrderView } from '@/lib/types';
 const FAQ_ITEMS: { q: string; a: ReactNode }[] = [
   {
     q: 'How does escrow protect my Trial Batch?',
-    a: <>Your payment goes to a licensed escrow account, <strong>not to the supplier</strong>. It stays there while the goods are
+    a: <>SokoGlobal holds your payment in escrow for your order, <strong>not the supplier</strong>. It stays there while the goods are
       made, flown and cleared. The supplier is paid only after <em>you</em> confirm the goods are right at your door. If they aren&apos;t,
       open a dispute and the funds stay frozen until it&apos;s resolved — including a full refund where the supplier is at fault.</>,
   },
