@@ -95,7 +95,8 @@ export default function PrivacyPage() {
       </Section>
 
       <Section id="rights" n={9} title="Your choices and rights">
-        <p>You can view and edit most of your data in Settings. You can also ask us to provide a copy, correct, delete or restrict use of your personal data, or object
+        <p>You can view and edit most of your data in Settings, download a copy of it (Settings → Security → Download my data), and close your account there
+          (Settings → Security → Close account). You can also ask us to provide a copy, correct, delete or restrict use of your personal data, or object
           to processing, by writing to {LEGAL_EMAIL} from your account email. We may need to verify your identity, and we will keep data we are legally required to
           keep. We answer within 30 days (45 days where U.S. state law allows). We will not discriminate against you for exercising a right. Depending on where you
           live (for example California or another U.S. state with a privacy law, the EU or the UK), you may have additional rights, including to appeal our decision

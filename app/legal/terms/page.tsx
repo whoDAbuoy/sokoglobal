@@ -146,7 +146,7 @@ export default function TermsPage() {
       </Section>
 
       <Section id="termination" n={15} title="Suspension and closing accounts">
-        <p>You may ask us to close your account at any time ({LEGAL_EMAIL}). We may suspend or close an account for breach of these Terms, suspected fraud, a legal
+        <p>You may close your account at any time in Settings → Security, or by writing to {LEGAL_EMAIL}. We may suspend or close an account for breach of these Terms, suspected fraud, a legal
           requirement, or inactivity. Open orders are completed or refunded under the Escrow Agreement first. Records we must keep by law (orders, payments, payouts,
           verification) are retained as the Privacy Policy describes.</p>
       </Section>

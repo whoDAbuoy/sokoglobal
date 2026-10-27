@@ -39,6 +39,8 @@ export interface Profile {
   kyc_status?: 'unsubmitted' | 'pending' | 'approved' | 'rejected';
   /** Migration 031: public bio (20–500 characters). null = not written yet; absent before the migration runs. */
   bio?: string | null;
+  /** Migration 040: legal documents version accepted (lib/legal.ts LEGAL_VERSION). null = never; absent before the migration. */
+  terms_version?: string | null;
 }
 
 export interface ProductMedia {

@@ -7,12 +7,14 @@ import { AlertCircle, Eye, EyeOff, KeyRound, Loader2 } from 'lucide-react';
 import { passwordStrength, validatePasswordChange, type PasswordChangeErrors } from '@/lib/password';
 import { changePassword } from '@/app/dashboard/settings/actions';
 import TwoFactorCard, { type TwoFactorStatus } from './TwoFactorCard';
+import AccountDataCard from './AccountDataCard';
 
 export default function SecurityPanel({ email, twoFactor }: { email: string; twoFactor: TwoFactorStatus }) {
   return (
     <div className="space-y-8">
       <TwoFactorCard status={twoFactor} email={email} />
       <PasswordForm />
+      <AccountDataCard />
     </div>
   );
 }
