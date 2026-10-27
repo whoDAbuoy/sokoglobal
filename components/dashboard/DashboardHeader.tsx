@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import {
-  BadgeCheck, Bell, ClipboardCheck, Compass, FileCheck2, Headphones, Heart, LayoutDashboard, LogOut, MessageSquare, Package,
+  BadgeCheck, ClipboardCheck, Compass, FileCheck2, Headphones, Heart, LayoutDashboard, LogOut, MessageSquare, Package,
   PackagePlus, ShieldCheck, ShieldHalf, ShoppingBag, Store, Truck, Undo2, UserCog, Users, Gauge, LayoutGrid, FileQuestion, Landmark, FilePen, Boxes, RotateCcw, UserCheck, UserPen, type LucideIcon,
 } from 'lucide-react';
 import { usePathname } from 'next/navigation';
@@ -15,6 +15,7 @@ import { ADMIN_LEVEL_LABEL, adminLevel, formatTimeLeft, homePathFor, roleAdminLe
 import { isSellsyRoute } from '@/lib/theme';
 import CurrencySwitcher from '@/components/currency/CurrencySwitcher';
 import MobileNav from '@/components/navigation/MobileNav';
+import NotificationBell from '@/components/notifications/NotificationBell';
 
 const ADMIN_NAV: [string, string][] = [['Overview', '/admin'], ['Review queue', '/admin/review'], ['Catalogue', '/admin/products'], ['Shipments', '/admin/orders'], ['Supplier KYC', '/admin/kyc'], ['Users', '/admin/users'], ['Support', '/admin/support']];
 const NAV: Record<Profile['role'], [string, string][]> = {
@@ -132,9 +133,7 @@ export default function DashboardHeader({ profile }: { profile: Profile }) {
               {cart.items.length > 0 && <span className={`${badge} bg-blue-600`}>{cart.items.length}</span>}
             </button>
           )}
-          <button type="button" aria-label="Notifications" className={`${iconBtn} hidden sm:grid`}>
-            <Bell className="h-5 w-5" strokeWidth={1.75} />
-          </button>
+          <div className="hidden sm:block"><NotificationBell userId={profile.id} className={iconBtn} /></div>
           <span aria-hidden className="hidden h-6 w-px shrink-0 bg-black/[0.08] dark:bg-snow/10 sm:block" />
           <Link href="/dashboard/settings" aria-label="Profile & settings" title="Profile & settings"
             className="press flex shrink-0 items-center gap-3 rounded-full p-1 hover:bg-neutral-900/[0.04] sm:pl-3 dark:hover:bg-snow/[0.06]">

@@ -1,6 +1,6 @@
 /**
- * Notification copy (pure). template_key + payload come from notification_queue,
- * written by the triggers in supabase/migrations/020_enterprise_upgrades.sql.
+ * Notification copy (pure). template_key + payload come from notification_queue (email / SMS) and
+ * user_notifications (the header bell, migration 037), both written by enqueue_notification().
  */
 export type Channel = 'email' | 'sms' | 'whatsapp';
 export interface Rendered { subject: string; text: string; html: string; sms: string }
@@ -92,6 +92,14 @@ function copyFor(key: string, p: Payload): Copy {
 }
 
 const escapeHtml = (s: string) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
+
+export interface InAppNotification { title: string; body: string; href: string | null }
+
+/** The header bell's copy for an event: the email subject, its first line and its button's page (site-relative). */
+export function inAppNotification(key: string, payload: Payload): InAppNotification {
+  const c = copyFor(key, payload ?? {});
+  return { title: c.subject, body: c.lines[0] ?? '', href: c.cta?.path ?? null };
+}
 
 /** SMS stays within two GSM segments (≤ 306 chars). */
 export const SMS_MAX = 306;
