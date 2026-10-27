@@ -81,8 +81,22 @@ export async function middleware(request: NextRequest) {
     },
   );
 
-  const { data: { user } } = await supabase.auth.getUser();
+  // getClaims() refreshes an expired session (writing the new cookies) and verifies the access token's
+  // signature: locally against the project's cached JWKS when it uses asymmetric signing keys, otherwise by
+  // asking Supabase Auth (getUser), exactly as before. Pages still call getUser() for the authoritative check.
+  const { data: claimsData } = await supabase.auth.getClaims();
+  const user = typeof claimsData?.claims?.sub === 'string' ? { id: claimsData.claims.sub } : null;
   const path = request.nextUrl.pathname;
+  const isProtectedPage = PROTECTED.some((p) => path.startsWith(p));
+  // Independent reads, started together once the session is settled (a refresh above must finish first,
+  // so these never race it): the maintenance flag (cached per instance) and the caller's ban / 2FA / KYC state.
+  const maintenanceRead = !maintenanceCache || Date.now() - maintenanceCache.at > MAINTENANCE_TTL_MS
+    // Capped at 1.5 s with no retries (supabase-js would otherwise retry 3× with 1/2/4 s backoff): a slow database must
+    // not hold every page. An unanswered read counts as "off", like a missing table, and is re-read after 15 s.
+    ? supabase.from('platform_settings').select('maintenance_mode').abortSignal(AbortSignal.timeout(1500)).retry(false).maybeSingle<{ maintenance_mode: boolean }>()
+        .then(({ data, error }) => { maintenanceCache = { on: !error && data?.maintenance_mode === true, at: Date.now() }; })   // table missing (pre-014) → off
+    : null;
+  const securityRead = user && (isProtectedPage || path.startsWith('/api/')) ? loadSecurityState(supabase, user.id) : null;
 
   // ── Rate limits on state-changing API routes and server actions (lib/security/rate-limit-core.ts) ──
   const limitName = limitFor(request.method, path, request.headers.has('next-action'));
@@ -96,11 +110,8 @@ export async function middleware(request: NextRequest) {
   }
 
   // ── Maintenance mode (kill switch in /admin/control). Admins pass; everyone else sees /maintenance. ──
-  if (!maintenanceCache || Date.now() - maintenanceCache.at > MAINTENANCE_TTL_MS) {
-    const { data, error } = await supabase.from('platform_settings').select('maintenance_mode').maybeSingle<{ maintenance_mode: boolean }>();
-    maintenanceCache = { on: !error && data?.maintenance_mode === true, at: Date.now() };   // table missing (pre-014) → off
-  }
-  if (maintenanceCache.on) {
+  await maintenanceRead;
+  if (maintenanceCache?.on) {
     let isAdminUser = false;
     if (user) {
       const { data: access, error } = await supabase.rpc('my_admin_access');
@@ -121,7 +132,7 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  if (!user && PROTECTED.some((p) => path.startsWith(p))) {
+  if (!user && isProtectedPage) {
     const url = request.nextUrl.clone();
     url.pathname = '/login';
     url.search = '';   // keep the page's own query inside redirectTo, not on /login
@@ -133,9 +144,8 @@ export async function middleware(request: NextRequest) {
   // Supabase Auth also refuses their sign-in and token refresh; this catches sessions issued before the ban.
   // Two-factor (migration 016): a session that has not passed the code is sent to /auth/2fa (pages)
   // or refused (API / server actions). Postgres enforces the same for audited admin actions.
-  const isProtectedPage = PROTECTED.some((p) => path.startsWith(p));
-  if (user && (isProtectedPage || path.startsWith('/api/'))) {
-    const security = await loadSecurityState(supabase, user.id);
+  if (user && securityRead) {
+    const security = await securityRead;
     if (security.is_banned && isProtectedPage) {
       await supabase.auth.signOut({ scope: 'local' }).catch(() => undefined);
       const url = request.nextUrl.clone();
@@ -194,11 +204,12 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  // Pages only: skip static assets, webhooks, cron and the CSP collector itself.
+  // Pages only: skip static assets (build output, images, fonts, media, source maps), webhooks, cron, the
+  // n8n bridge (all authenticated by signature or cron secret, never by session) and the CSP collector.
   // Prefetches are skipped too (they'd mint nonces for documents never rendered).
   matcher: [
     {
-      source: '/((?!_next/static|_next/image|favicon.ico|api/webhooks|api/payments/paypal/webhook|api/cron|api/csp-report|monitoring|.*\\.(?:svg|png|jpg|jpeg|webp|ico|txt|xml)$).*)',
+      source: '/((?!_next/static|_next/image|favicon.ico|api/webhooks|api/v1/webhooks|api/payments/paypal/webhook|api/cron|api/csp-report|monitoring|.*\\.(?:svg|png|jpg|jpeg|gif|webp|avif|ico|txt|xml|woff2?|ttf|otf|webmanifest|mp4|webm|map)$).*)',
       missing: [
         { type: 'header', key: 'next-router-prefetch' },
         { type: 'header', key: 'purpose', value: 'prefetch' },

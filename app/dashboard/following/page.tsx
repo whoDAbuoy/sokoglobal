@@ -29,29 +29,24 @@ export default async function FollowingPage() {
 
   let suppliers: FollowedSupplier[] = [];
   if (ids.length) {
-    const [profilesRes, productsRes, myRatingsRes, gold] = await Promise.all([
+    const [profilesRes, productsRes, myRatingsRes, gold, overviewRes] = await Promise.all([
       supabase.from('profiles').select('id, company_name, full_name, country_code, kyc_verified, avatar_url, created_at').in('id', ids),
       supabase.from('products').select(CATALOG_PRODUCT_SELECT).in('supplier_id', ids).eq('status', 'live').is('deleted_at', null)
         .order('created_at', { ascending: false }).limit(300),
       supabase.from('supplier_ratings').select('supplier_id, stars').in('supplier_id', ids),
       goldSupplierIds(supabase, ids),
+      // Bio, counts, rating and can-rate for every card in one call (migration 035).
+      supabase.rpc('followed_suppliers_overview', { p_ids: ids }),
     ]);
     const rows = new Map(((profilesRes.data ?? []) as ProfileRow[]).map((p) => [p.id, p]));
     const listings = ((productsRes.data ?? []) as unknown as CatalogProductRow[]).map((r) => toTrialProductView(r, null, gold));
     const ratingsReady = !myRatingsRes.error;
     const myStars = new Map((myRatingsRes.data ?? []).map((r) => [r.supplier_id as string, r.stars as number]));
 
-    const perSupplier = await Promise.all(ids.filter((id) => rows.has(id)).map(async (id) => {
-      const [pub, agg, can, followerCount] = await Promise.all([
-        supabase.rpc('public_profile', { p_id: id }),
-        ratingsReady ? supabase.rpc('supplier_rating', { p_supplier_id: id }) : Promise.resolve(null),
-        ratingsReady ? supabase.rpc('can_rate_supplier', { p_supplier_id: id }) : Promise.resolve(null),
-        supabase.rpc('supplier_follower_count', { p_supplier_id: id }),
-      ]);
-      const p = (Array.isArray(pub.data) ? pub.data[0] : pub.data) as { bio: string | null; follower_count: number; following_count: number; live_listings: number } | undefined;
-      const a = (agg && !agg.error ? (Array.isArray(agg.data) ? agg.data[0] : agg.data) : null) as { average: Num | string; ratings: number } | null;
-      return { id, p: pub.error ? null : p ?? null, a, can: can && !can.error ? !!can.data : false, followers: typeof followerCount.data === 'number' ? followerCount.data : null };
-    }));
+    const shownIds = ids.filter((id) => rows.has(id));
+    const perSupplier = overviewRes.error
+      ? await perSupplierCalls(supabase, shownIds, ratingsReady)   // before migration 035: the per-supplier functions
+      : fromOverview(shownIds, overviewRes.data as OverviewRow[] | null, ratingsReady);
 
     suppliers = perSupplier.map(({ id, p, a, can, followers }) => {
       const row = rows.get(id)!;
@@ -101,4 +96,40 @@ export default async function FollowingPage() {
       </main>
     </>
   );
+}
+
+type Supabase = Awaited<ReturnType<typeof getSessionProfile>>['supabase'];
+type PublicStats = { bio: string | null; follower_count: number; following_count: number; live_listings: number };
+type CardStats = { id: string; p: PublicStats | null; a: { average: Num | string; ratings: number } | null; can: boolean; followers: number | null };
+type OverviewRow = { id: string; bio: string | null; follower_count: number; following_count: number; live_listings: number;
+  rating_average: Num | string | null; rating_count: number; can_rate: boolean };
+
+/** followed_suppliers_overview() rows → the same shape the per-supplier calls produce (a supplier it hides gets no stats). */
+function fromOverview(ids: string[], data: OverviewRow[] | null, ratingsReady: boolean): CardStats[] {
+  const byId = new Map((data ?? []).map((r) => [r.id, r]));
+  return ids.map((id) => {
+    const r = byId.get(id);
+    return {
+      id,
+      p: r ? { bio: r.bio, follower_count: r.follower_count, following_count: r.following_count, live_listings: r.live_listings } : null,
+      a: r && ratingsReady ? { average: r.rating_average as Num | string, ratings: r.rating_count } : null,
+      can: ratingsReady && !!r?.can_rate,
+      followers: r?.follower_count ?? null,
+    };
+  });
+}
+
+/** Four calls per supplier: public_profile (031), supplier_rating / can_rate_supplier (032), supplier_follower_count (030). */
+async function perSupplierCalls(supabase: Supabase, ids: string[], ratingsReady: boolean): Promise<CardStats[]> {
+  return Promise.all(ids.map(async (id) => {
+    const [pub, agg, can, followerCount] = await Promise.all([
+      supabase.rpc('public_profile', { p_id: id }),
+      ratingsReady ? supabase.rpc('supplier_rating', { p_supplier_id: id }) : Promise.resolve(null),
+      ratingsReady ? supabase.rpc('can_rate_supplier', { p_supplier_id: id }) : Promise.resolve(null),
+      supabase.rpc('supplier_follower_count', { p_supplier_id: id }),
+    ]);
+    const p = (Array.isArray(pub.data) ? pub.data[0] : pub.data) as PublicStats | undefined;
+    const a = (agg && !agg.error ? (Array.isArray(agg.data) ? agg.data[0] : agg.data) : null) as { average: Num | string; ratings: number } | null;
+    return { id, p: pub.error ? null : p ?? null, a, can: can && !can.error ? !!can.data : false, followers: typeof followerCount.data === 'number' ? followerCount.data : null };
+  }));
 }

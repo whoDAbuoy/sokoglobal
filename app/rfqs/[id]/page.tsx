@@ -3,6 +3,7 @@ import { notFound, redirect } from 'next/navigation';
 import clsx from 'clsx';
 import { ArrowLeft, CalendarClock, MapPin, Package, Tag } from 'lucide-react';
 import { getSessionProfile } from '@/lib/supabase/server';
+import { getCategories } from '@/lib/categories-server';
 import { RFQ_STATUS_LABEL, categoryWithin, rfqDeleteBlock, showsRfqDelete, effectiveRfqStatus, parseTiers, type QuoteStatus, type RfqStatus } from '@/lib/rfq';
 import { UUID_RE } from '@/lib/uploads';
 import { isSuperAdmin } from '@/lib/auth/admin-access';
@@ -30,9 +31,22 @@ export default async function RfqDetailPage({ params }: { params: Promise<{ id: 
   if (!user || !profile) redirect(`/login?redirectTo=/rfqs/${encodeURIComponent(id)}`);
   if (!UUID_RE.test(id)) notFound();
 
-  const { data: rfq } = await supabase.from('rfqs')
-    .select('id, buyer_id, title, description, quantity, unit_of_measure, target_price_kes, delivery_location, status, order_id, category_id, created_at, expires_at, category:categories ( name )')
-    .eq('id', id).maybeSingle();
+  // A supplier's own quote, live listings and the category tree don't depend on the request row,
+  // so they load alongside it (a supplier never owns an RFQ: only importers can post one).
+  const supplierView = profile.role === 'supplier';
+  const [{ data: rfq }, supplierData] = await Promise.all([
+    supabase.from('rfqs')
+      .select('id, buyer_id, title, description, quantity, unit_of_measure, target_price_kes, delivery_location, status, order_id, category_id, created_at, expires_at, category:categories ( name )')
+      .eq('id', id).maybeSingle(),
+    supplierView
+      ? Promise.all([
+          supabase.from('rfq_quotes').select('id, product_id, unit_price_kes, price_tiers, moq, lead_time_days, terms_note, allowed_payment_structures, status')
+            .eq('rfq_id', id).eq('supplier_id', user.id).maybeSingle(),
+          supabase.from('products').select('id, title, category_id').eq('supplier_id', user.id).eq('status', 'live').order('title'),
+          getCategories(),
+        ])
+      : null,
+  ]);
   if (!rfq) notFound();
 
   const status = effectiveRfqStatus(rfq as { status: RfqStatus; expires_at: string });
@@ -44,14 +58,9 @@ export default async function RfqDetailPage({ params }: { params: Promise<{ id: 
 
   // Supplier view: their own quote, and which of their live listings may quote (same rule as submit_rfq_quote).
   let quoteBlock: React.ReactNode = null;
-  if (profile.role === 'supplier' && !isOwner) {
-    const [{ data: myQuote }, { data: products }, { data: cats }] = await Promise.all([
-      supabase.from('rfq_quotes').select('id, product_id, unit_price_kes, price_tiers, moq, lead_time_days, terms_note, allowed_payment_structures, status')
-        .eq('rfq_id', id).eq('supplier_id', user.id).maybeSingle(),
-      supabase.from('products').select('id, title, category_id').eq('supplier_id', user.id).eq('status', 'live').order('title'),
-      supabase.from('categories').select('id, parent_id'),
-    ]);
-    const parentOf = new Map((cats ?? []).map((c) => [c.id as string, (c.parent_id as string | null) ?? null]));
+  if (supplierData && !isOwner) {
+    const [{ data: myQuote }, { data: products }, cats] = supplierData;
+    const parentOf = new Map((cats ?? []).map((c) => [c.id, c.parent_id ?? null]));
     const eligible = (products ?? []).filter((p) => categoryWithin(p.category_id as string | null, rfq.category_id as string | null, parentOf));
     const q = myQuote as { id: string; product_id: string; unit_price_kes: number; price_tiers: unknown; moq: number; lead_time_days: number | null;
       terms_note: string | null; allowed_payment_structures: string[]; status: QuoteStatus } | null;

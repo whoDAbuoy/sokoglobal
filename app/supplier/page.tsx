@@ -25,29 +25,30 @@ export default async function SupplierHome() {
   if (!user || !profile) redirect('/login?redirectTo=/supplier');
   if (profile.role !== 'supplier') redirect('/dashboard');
 
-  const { data: productRows } = await supabase
-    .from('products')
-    .select('id, title, category, status, trial_goods_cents, trial_landed_cost_cents, deleted_at, deletion_reason, product_media ( id, media_type, public_url, sort_order )')
-    .eq('supplier_id', user.id)
-    .order('created_at', { ascending: false });
-  const products = (productRows ?? []) as unknown as SupplierProduct[];
-
-  const productIds = products.map((p) => p.id);
   // Only paid orders reach suppliers: RLS hides unpaid ones (migration 018). Before 018 the
-  // fulfillment_status column is missing, so fall back and drop unpaid orders here.
+  // fulfillment_status column is missing, so fall back and drop unpaid orders here. Orders are scoped by
+  // an inner join on the listing's supplier (not by RLS alone: a supplier holding a delegated admin grant
+  // can read every order), so they load in parallel with the listings instead of after them.
   const orderQuery = async () => {
-    if (!productIds.length) return { data: [] as Record<string, unknown>[] };
     const cols = 'id, product_id, escrow_status, total_cents, goods_cents, created_at, batches, current_status, eta_timestamp';
-    const withStatus = await supabase.from('orders').select(`${cols}, fulfillment_status`).in('product_id', productIds).order('created_at', { ascending: false });
+    const mine = (select: string) => supabase.from('orders').select(`${select}, product:products!inner ( supplier_id )`)
+      .eq('product.supplier_id', user.id).order('created_at', { ascending: false });
+    const withStatus = await mine(`${cols}, fulfillment_status`);
     if (!withStatus.error) return withStatus;
-    const legacy = await supabase.from('orders').select(cols).in('product_id', productIds).order('created_at', { ascending: false });
-    return { data: (legacy.data ?? []).filter((o) => o.escrow_status !== 'pending_payment') };
+    const legacy = await mine(cols);
+    return { data: ((legacy.data ?? []) as unknown as { escrow_status: string }[]).filter((o) => o.escrow_status !== 'pending_payment') };
   };
-  const [{ data: orderRows }, { data: payoutRows }, { data: goldRow }] = await Promise.all([
+  const [{ data: productRows }, { data: orderRows }, { data: payoutRows }, { data: goldRow }] = await Promise.all([
+    supabase
+      .from('products')
+      .select('id, title, category, status, trial_goods_cents, trial_landed_cost_cents, deleted_at, deletion_reason, product_media ( id, media_type, public_url, sort_order )')
+      .eq('supplier_id', user.id)
+      .order('created_at', { ascending: false }),
     orderQuery(),
     supabase.from('payouts').select('id, status, amount_cents, currency, reference, completed_at').eq('supplier_id', user.id).order('created_at', { ascending: false }),
     supabase.from('subscriptions').select('status, current_period_end').eq('user_id', user.id).eq('plan_type', 'gold_supplier').maybeSingle(),
   ]);
+  const products = (productRows ?? []) as unknown as SupplierProduct[];
   const gold = goldState(goldRow as { status: string; current_period_end: string | null } | null);
   const orders = (orderRows ?? []) as unknown as {
     id: string; product_id: string; escrow_status: EscrowStatus; total_cents: number; goods_cents: number; created_at: string;

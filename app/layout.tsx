@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from 'next';
+import { Suspense } from 'react';
 import { headers } from 'next/headers';
 import { Inter } from 'next/font/google';
 import { AuthProvider } from '@/context/AuthContext';
@@ -45,7 +46,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body className={`${inter.variable} min-h-screen font-sans`}>
         <ThemeSync />
         <AmbientBackdrop />
-        <PlatformBanner />
+        {/* Streams in on its own: the pause notice is rare, so no page waits for its settings read. */}
+        <Suspense fallback={null}><PlatformBanner /></Suspense>
         <CurrencyProvider initialCurrency={money.currency} pinned={money.pinned} rates={money.rates} ratesUpdatedAt={money.ratesUpdatedAt}>
           <AuthProvider>
             <CurrencyCountrySync />

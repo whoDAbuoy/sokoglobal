@@ -21,19 +21,19 @@ export default async function SupplierProductsPage() {
   if (!user || !profile) redirect('/login?redirectTo=/supplier/products');
   if (profile.role !== 'supplier') redirect('/dashboard');
 
-  const { data: productRows } = await supabase
-    .from('products')
-    .select('id, title, category, status, trial_goods_cents, trial_landed_cost_cents, deleted_at, deletion_reason, product_media ( id, media_type, public_url, sort_order )')
-    .eq('supplier_id', user.id)
-    .order('created_at', { ascending: false });
+  // Listings and their orders load together: orders are scoped by an inner join on the listing's supplier
+  // (not by RLS alone, which lets a supplier with a delegated admin grant read every order).
+  const [{ data: productRows }, { data: orderRows }] = await Promise.all([
+    supabase
+      .from('products')
+      .select('id, title, category, status, trial_goods_cents, trial_landed_cost_cents, deleted_at, deletion_reason, product_media ( id, media_type, public_url, sort_order )')
+      .eq('supplier_id', user.id)
+      .order('created_at', { ascending: false }),
+    supabase.from('orders').select('product_id, escrow_status, total_cents, product:products!inner ( supplier_id )').eq('product.supplier_id', user.id),
+  ]);
   const products = (productRows ?? []) as unknown as SupplierProduct[];
-
-  const ids = products.map((p) => p.id);
-  const { data: orderRows } = ids.length
-    ? await supabase.from('orders').select('product_id, escrow_status, total_cents').in('product_id', ids)
-    : { data: [] };
   const byProduct = new Map<string, OrderCounts>();
-  for (const o of (orderRows ?? []) as { product_id: string; escrow_status: EscrowStatus; total_cents: number }[]) {
+  for (const o of (orderRows ?? []) as unknown as { product_id: string; escrow_status: EscrowStatus; total_cents: number }[]) {
     if (o.escrow_status === 'pending_payment') continue; // unpaid orders never reach suppliers
     let c = byProduct.get(o.product_id);
     if (!c) byProduct.set(o.product_id, (c = emptyCounts()));

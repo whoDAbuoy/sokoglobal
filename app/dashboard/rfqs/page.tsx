@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { FileQuestion } from 'lucide-react';
 import { getSessionProfile } from '@/lib/supabase/server';
+import { getCategories } from '@/lib/categories-server';
 import { categoryOptions, effectiveRfqStatus, parseTiers, type QuoteStatus, type RfqStatus } from '@/lib/rfq';
 import type { PaymentStructure } from '@/lib/milestone';
 import { UUID_RE } from '@/lib/uploads';
@@ -34,12 +35,11 @@ const one = <T,>(v: T | T[] | null | undefined): T | null => (Array.isArray(v) ?
  * matching suppliers send, accept one (→ a locked escrow order) or decline.
  */
 export default async function BuyerRfqsPage({ searchParams }: { searchParams: Promise<{ product?: string; quantity?: string; status?: string }> }) {
-  const { product: productParam, quantity: quantityParam, status: returnStatus } = await searchParams;
-  const { supabase, user, profile } = await getSessionProfile();
+  const [{ product: productParam, quantity: quantityParam, status: returnStatus }, { supabase, user, profile }] = await Promise.all([searchParams, getSessionProfile()]);
   if (!user || !profile) redirect('/login?redirectTo=/dashboard/rfqs');
   if (profile.role === 'supplier') redirect('/supplier/rfqs');
 
-  const [{ data: rfqData, error }, { data: cats }, prefillProduct, pricing] = await Promise.all([
+  const [{ data: rfqData, error }, allCats, prefillProduct, pricing] = await Promise.all([
     supabase.from('rfqs')
       .select(`id, buyer_id, title, description, quantity, unit_of_measure, target_price_kes, delivery_location, status, order_id, created_at, expires_at,
                is_featured, needs_white_glove, category:categories ( name ),
@@ -47,7 +47,7 @@ export default async function BuyerRfqsPage({ searchParams }: { searchParams: Pr
                                    product:products ( title, unit_of_measure ),
                                    supplier:profiles!rfq_quotes_supplier_id_fkey ( company_name, country_code, kyc_verified ) )`)
       .eq('buyer_id', user.id).order('created_at', { ascending: false }).limit(100),
-    supabase.from('categories').select('id, parent_id, name, sort_order').eq('is_active', true),
+    getCategories(),
     productParam && UUID_RE.test(productParam)
       ? supabase.from('products').select('id, title, category_id, unit_of_measure').eq('id', productParam).eq('status', 'live').maybeSingle()
       : Promise.resolve({ data: null }),
@@ -91,7 +91,7 @@ export default async function BuyerRfqsPage({ searchParams }: { searchParams: Pr
             </p>
           </div>
           {/* The request form stays hidden until "New RFQ" opens it (straight away when arriving with a product to quote). */}
-          <NewRfqButton categories={categoryOptions((cats ?? []) as { id: string; parent_id: string | null; name: string; sort_order: number }[])} prefill={prefill}
+          <NewRfqButton categories={categoryOptions((allCats ?? []).filter((c) => c.is_active))} prefill={prefill}
             addonPrices={addonPrices} buyerName={profile.full_name} startOpen={!!p}
             disabledReason={profile.role !== 'importer' ? 'Requests for quote are for importer accounts.'
               : !kycApproved ? 'Verify your business (KYC) to request quotes.' : null}

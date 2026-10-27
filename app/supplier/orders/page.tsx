@@ -31,7 +31,14 @@ export default async function SupplierOrdersPage() {
   if (profile.role !== 'supplier') redirect('/dashboard');
 
   let groups: ListingGroup[];
-  const { data, error } = await supabase.rpc('get_supplier_grouped_catalog');
+  // Shipments (migration 021; RLS: own orders only) don't depend on the grouped catalogue: load both at once.
+  const [{ data, error }, { data: shipmentRows }] = await Promise.all([
+    supabase.rpc('get_supplier_grouped_catalog'),
+    supabase.from('shipments')
+      .select(`order_id, status, carrier_name, tracking_number, tracking_url, estimated_delivery, dispatched_at,
+               order:orders ( quantity, escrow_status, payment_structure, product:products ( title ) )`)
+      .neq('status', 'delivered').order('dispatched_at', { ascending: true, nullsFirst: true }).limit(200),
+  ]);
   if (!error) groups = parseGroupedCatalog(data);
   else {
     // Before migration 018: group the visible orders here with the same rules.
@@ -50,11 +57,7 @@ export default async function SupplierOrdersPage() {
     groups = groupPaidOrders((orders ?? []) as RawOrder[], meta);
   }
 
-  // Shipments (migration 021; RLS: own orders only). Saved waybills prefill the dialog; parcels on the way can be moved forward.
-  const { data: shipmentRows } = await supabase.from('shipments')
-    .select(`order_id, status, carrier_name, tracking_number, tracking_url, estimated_delivery, dispatched_at,
-             order:orders ( quantity, escrow_status, payment_structure, product:products ( title ) )`)
-    .neq('status', 'delivered').order('dispatched_at', { ascending: true, nullsFirst: true }).limit(200);
+  // Saved waybills prefill the dialog; parcels on the way can be moved forward.
   const shipments = (shipmentRows ?? []) as unknown as ShipmentRow[];
   const saved = Object.fromEntries(shipments.filter((r) => r.status === 'label_created').map((r) => [r.order_id, r]));
   const onTheWay = shipments.filter((r) => r.status !== 'label_created');
