@@ -1,0 +1,67 @@
+name: E2E journeys (staging)
+
+# Checkout, profile approval and supplier messaging, signed in as real test accounts. They create orders and
+# messages, so they run ONLY against staging: Vercel Preview deployments wired to the staging Supabase project
+# (docs/DEPLOYMENT.md, "Staging"), never production.
+on:
+  deployment_status:          # Vercel reports each finished preview deployment
+  schedule:
+    - cron: '17 6 * * *'      # nightly against E2E_BASE_URL
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: 'Deployment to test (defaults to the E2E_BASE_URL secret)'
+        required: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: e2e-staging        # the journeys share test accounts
+  cancel-in-progress: false
+
+jobs:
+  journeys:
+    if: >-
+      github.event_name != 'deployment_status' ||
+      (github.event.deployment_status.state == 'success' && !contains(github.event.deployment.environment, 'Production'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: staging
+    env:
+      CI: 'true'
+      E2E_BASE_URL: ${{ github.event.deployment_status.target_url || inputs.base_url || secrets.E2E_BASE_URL }}
+      VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+      E2E_IMPORTER_EMAIL: ${{ secrets.E2E_IMPORTER_EMAIL }}
+      E2E_IMPORTER_PASSWORD: ${{ secrets.E2E_IMPORTER_PASSWORD }}
+      E2E_SUPPLIER_EMAIL: ${{ secrets.E2E_SUPPLIER_EMAIL }}
+      E2E_SUPPLIER_PASSWORD: ${{ secrets.E2E_SUPPLIER_PASSWORD }}
+      E2E_ADMIN_EMAIL: ${{ secrets.E2E_ADMIN_EMAIL }}
+      E2E_ADMIN_PASSWORD: ${{ secrets.E2E_ADMIN_PASSWORD }}
+    steps:
+      - name: Staging configured?
+        id: staging
+        run: |
+          if [ -z "$E2E_BASE_URL" ] || [ -z "$E2E_IMPORTER_EMAIL" ]; then
+            echo "::notice title=Staging E2E skipped::Create the 'staging' environment with E2E_BASE_URL and the E2E_* account secrets (docs/DEPLOYMENT.md, Staging)."
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          fi
+      - if: steps.staging.outputs.run == 'true'
+        uses: actions/checkout@v4
+      - if: steps.staging.outputs.run == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - if: steps.staging.outputs.run == 'true'
+        run: npm ci && npx playwright install --with-deps chromium
+      - if: steps.staging.outputs.run == 'true'
+        run: npx playwright test
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-staging-report
+          path: playwright-report
+          retention-days: 7

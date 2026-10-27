@@ -24,9 +24,11 @@ export const ALL_PAYMENT_METHODS: readonly PaymentMethod[] = ORDER;
 export const WIRE_SUGGESTED_CENTS = 500_000;
 
 export interface PaymentSwitches {
+  /** Card (Paystack) and M-Pesa switches arrive with migration 039; before it both count as on. */
+  enable_card: boolean; enable_mpesa: boolean;
   enable_dpo_pay: boolean; enable_airtel_money: boolean; enable_paypal: boolean; enable_swift_wire: boolean; enable_crypto: boolean;
 }
-export const DEFAULT_SWITCHES: PaymentSwitches = { enable_dpo_pay: true, enable_airtel_money: true, enable_paypal: true, enable_swift_wire: true, enable_crypto: false };
+export const DEFAULT_SWITCHES: PaymentSwitches = { enable_card: true, enable_mpesa: true, enable_dpo_pay: true, enable_airtel_money: true, enable_paypal: true, enable_swift_wire: true, enable_crypto: false };
 
 export interface SwiftDetails { bank_name: string; swift_code: string; account_number: string; account_name: string; routing_number: string; bank_address?: string }
 export const SWIFT_FIELDS = ['bank_name', 'swift_code', 'account_number', 'account_name', 'routing_number', 'bank_address'] as const;
@@ -43,11 +45,12 @@ const str = (v: unknown) => (typeof v === 'string' ? v.trim() : '');
 /** platform_settings row → settings; missing pieces (before migration 028) fall back to "off / empty". */
 export function parsePaymentSettings(raw: unknown): PaymentSettings {
   const r = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
-  const flag = (k: keyof PaymentSwitches) => (typeof r[k] === 'boolean' ? (r[k] as boolean) : false);
+  const flag = (k: keyof PaymentSwitches, fallback = false) => (typeof r[k] === 'boolean' ? (r[k] as boolean) : fallback);
   const b = (r.swift_bank_details && typeof r.swift_bank_details === 'object' ? r.swift_bank_details : {}) as Record<string, unknown>;
   const w = (r.crypto_deposit_wallets && typeof r.crypto_deposit_wallets === 'object' ? r.crypto_deposit_wallets : {}) as Record<string, unknown>;
   const markup = Number(r.crypto_markup_percent);
   return {
+    enable_card: flag('enable_card', true), enable_mpesa: flag('enable_mpesa', true),
     enable_dpo_pay: flag('enable_dpo_pay'), enable_airtel_money: flag('enable_airtel_money'), enable_paypal: flag('enable_paypal'),
     enable_swift_wire: flag('enable_swift_wire'), enable_crypto: flag('enable_crypto'),
     swift_bank_details: { bank_name: str(b.bank_name), swift_code: str(b.swift_code), account_number: str(b.account_number),
@@ -126,9 +129,9 @@ export interface AvailabilityInput {
 export function availableMethods(i: AvailabilityInput): PaymentMethod[] {
   const s = i.settings;
   const on: Record<PaymentMethod, boolean> = {
-    mpesa: i.configured.mpesa && !i.mpesaOverLimit,
+    mpesa: s.enable_mpesa && i.configured.mpesa && !i.mpesaOverLimit,
     airtel_money: s.enable_airtel_money && i.configured.airtel_money && !i.airtelOverLimit,
-    card: i.configured.card,
+    card: s.enable_card && i.configured.card,
     dpo_pay: s.enable_dpo_pay && i.configured.dpo_pay,
     paypal: s.enable_paypal && i.configured.paypal,
     swift_wire: !i.cart && s.enable_swift_wire && swiftComplete(s.swift_bank_details),

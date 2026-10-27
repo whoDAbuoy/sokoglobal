@@ -15,6 +15,7 @@ import Globe from '@/components/motion/Globe';
 import WaveBackground from '@/components/motion/WaveBackground';
 import { homePathFor } from '@/lib/auth/admin-access';
 import { BIO_MAX, BIO_MIN, normalizeBio } from '@/lib/settings';
+import { LEGAL_VERSION } from '@/lib/legal';
 
 type Mode = 'login' | 'signup';
 type SignupRole = Exclude<UserRole, 'admin' | 'super_admin'>;
@@ -144,7 +145,11 @@ export default function Auth({ mode }: { mode: Mode }) {
         password,
         options: {
           emailRedirectTo: `${window.location.origin}/auth/callback`,
-          data: { role, full_name: fullName.trim(), company_name: company.trim(), country_code: country, bio: bioCheck.ok ? bioCheck.value : '' },
+          data: {
+            role, full_name: fullName.trim(), company_name: company.trim(), country_code: country, bio: bioCheck.ok ? bioCheck.value : '',
+            // Evidence of which Terms / Escrow Agreement / Privacy Policy this account accepted, and when (lib/legal.ts).
+            terms_version: LEGAL_VERSION, terms_accepted_at: new Date().toISOString(),
+          },
         },
       });
       if (error) throw error;
@@ -190,7 +195,7 @@ export default function Auth({ mode }: { mode: Mode }) {
           </ul>
 
           <div className="mt-auto flex flex-wrap items-center justify-between gap-3 pt-10 text-xs text-neutral-600">
-            <p>Bank-grade encryption · Licensed escrow partner · 24/7 support</p>
+            <p>Encrypted connections · Escrow on every order · Verified suppliers</p>
             <p className="flex items-center gap-1.5"><Globe2 className="h-3.5 w-3.5" aria-hidden /> Drag the globe to explore</p>
           </div>
         </aside>
@@ -331,8 +336,10 @@ export default function Auth({ mode }: { mode: Mode }) {
                   <label className="flex items-start gap-2.5 text-sm text-neutral-600">
                     <input type="checkbox" checked={acceptTerms} onChange={(e) => setAcceptTerms(e.target.checked)}
                       className="mt-0.5 h-4 w-4 rounded border-neutral-300 accent-[#5a9895] focus:ring-[#5a9895]" />
-                    <span>I agree to the <a href="#" className="font-medium text-neutral-900 underline underline-offset-4 hover:text-neutral-600">Terms of Trade</a> and{' '}
-                      <a href="#" className="font-medium text-neutral-900 underline underline-offset-4 hover:text-neutral-600">Escrow Agreement</a>.</span>
+                    <span>I agree to the{' '}
+                      <a href="/legal/terms" target="_blank" rel="noopener" className="font-medium text-neutral-900 underline underline-offset-4 hover:text-neutral-600">Terms of Trade</a> and{' '}
+                      <a href="/legal/escrow" target="_blank" rel="noopener" className="font-medium text-neutral-900 underline underline-offset-4 hover:text-neutral-600">Escrow Agreement</a>, and I have read the{' '}
+                      <a href="/legal/privacy" target="_blank" rel="noopener" className="font-medium text-neutral-900 underline underline-offset-4 hover:text-neutral-600">Privacy Policy</a>.</span>
                   </label>
                 )}
 

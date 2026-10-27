@@ -9,7 +9,10 @@ import { savePaymentSettings, type PaymentSettingsInput } from '@/app/admin/fina
 import { SWIFT_FIELDS, WALLET_KEYS, swiftComplete, swiftFieldError, validWallet, type PaymentSettings } from '@/lib/payment-methods';
 
 type Flag = keyof PaymentSettingsInput['flags'];
-const FLAGS: { key: Flag; label: string; note: string; needs?: 'dpo' | 'paypal' | 'airtel' }[] = [
+type Needs = 'paystack' | 'mpesa' | 'dpo' | 'paypal' | 'airtel';
+const FLAGS: { key: Flag; label: string; note: string; needs?: Needs; since039?: boolean }[] = [
+  { key: 'enable_card', label: 'Card (Paystack)', note: 'Card checkout for orders, carts and group-buy pledges. Subscriptions and RFQ add-ons always use card.', needs: 'paystack', since039: true },
+  { key: 'enable_mpesa', label: 'M-Pesa', note: 'STK push to the buyer’s Safaricom phone (orders and carts).', needs: 'mpesa', since039: true },
   { key: 'enable_airtel_money', label: 'Airtel Money', note: 'PIN prompt on the buyer’s phone (orders and carts).', needs: 'airtel' },
   { key: 'enable_dpo_pay', label: 'DPO Pay', note: 'Hosted card and mobile-money page (orders and carts).', needs: 'dpo' },
   { key: 'enable_paypal', label: 'PayPal', note: 'PayPal balance or linked card, captured in USD (orders and carts).', needs: 'paypal' },
@@ -33,11 +36,12 @@ function Switch({ id, on, onChange, disabled }: { id: string; on: boolean; onCha
 }
 
 /** Payment channels (migration 028): switches, SWIFT escrow account and crypto wallets. Postgres validates and audits. */
-export default function PaymentSettingsForm({ settings, configured, updatedAt }: {
-  settings: PaymentSettings; configured: { dpo: boolean; paypal: boolean; airtel: boolean }; updatedAt: string | null;
+export default function PaymentSettingsForm({ settings, configured, cardSwitches, updatedAt }: {
+  settings: PaymentSettings; configured: Record<Needs, boolean>; cardSwitches: boolean; updatedAt: string | null;
 }) {
   const router = useRouter();
   const [flags, setFlags] = useState<PaymentSettingsInput['flags']>({
+    ...(cardSwitches ? { enable_card: settings.enable_card, enable_mpesa: settings.enable_mpesa } : {}),
     enable_dpo_pay: settings.enable_dpo_pay, enable_airtel_money: settings.enable_airtel_money, enable_paypal: settings.enable_paypal,
     enable_swift_wire: settings.enable_swift_wire, enable_crypto: settings.enable_crypto,
   });
@@ -59,9 +63,12 @@ export default function PaymentSettingsForm({ settings, configured, updatedAt }:
       <fieldset disabled={pending} className="glass-card p-5 sm:p-6">
         <legend className="sr-only">Payment channels</legend>
         <h3 className="font-semibold text-neutral-900">Payment channels</h3>
-        <p className="mt-1 text-sm text-neutral-600">Card and M-Pesa are always on when configured. A channel shows to buyers only when it is switched on <em>and</em> set up.</p>
+        <p className="mt-1 text-sm text-neutral-600">
+          A channel shows to buyers only when it is switched on <em>and</em> set up. Launch with the channels you have tested with real money and leave the rest off.
+          Payments already started still complete after a switch-off.
+        </p>
         <ul className="glass-inset mt-4 divide-y divide-black/[0.06] px-4 dark:divide-snow/[0.08]">
-          {FLAGS.map((f) => {
+          {FLAGS.filter((f) => cardSwitches || !f.since039).map((f) => {
             const keysMissing = f.needs && !configured[f.needs];
             const detailsMissing = (f.key === 'enable_swift_wire' && !wireReady) || (f.key === 'enable_crypto' && !WALLET_KEYS.some((k) => wallets[k].trim()));
             return (
@@ -73,7 +80,7 @@ export default function PaymentSettingsForm({ settings, configured, updatedAt }:
                   </p>
                   <p className="mt-0.5 text-xs text-neutral-600">{f.note}</p>
                 </div>
-                <Switch id={`pay-${f.key}`} on={flags[f.key]} onChange={(v) => setFlags((s) => ({ ...s, [f.key]: v }))} disabled={pending} />
+                <Switch id={`pay-${f.key}`} on={flags[f.key] ?? true} onChange={(v) => setFlags((s) => ({ ...s, [f.key]: v }))} disabled={pending} />
               </li>
             );
           })}

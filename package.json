@@ -12,6 +12,10 @@
     "mpesa:check": "tsx --conditions=react-server --env-file=.env.local scripts/mpesa-check.mts",
     "dev:importer": "tsx --env-file=.env.local scripts/dev-importer.mts",
     "test:db": "node scripts/db-test.mjs",
+    "db:status": "node scripts/db-migrate.mjs status",
+    "db:migrate": "node scripts/db-migrate.mjs up",
+    "db:baseline": "node scripts/db-migrate.mjs baseline",
+    "db:check": "node scripts/db-migrate.mjs check",
     "e2e": "playwright test",
     "e2e:install": "playwright install --with-deps chromium",
     "sentry:setup": "node scripts/sentry-setup.mjs"
@@ -53,6 +57,7 @@
     "autoprefixer": "^10.4.20",
     "eslint": "^9.39.5",
     "eslint-config-next": "^15.5.27",
+    "pg": "^8.23.1",
     "postcss": "^8.4.49",
     "tailwindcss": "^3.4.17",
     "tsx": "^4.23.15",

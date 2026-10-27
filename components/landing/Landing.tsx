@@ -104,7 +104,7 @@ export default function Landing({ minTrialCents = 50_000 }: { minTrialCents?: nu
               <span className="grid h-11 w-11 place-items-center rounded-full bg-[#5a9895]/20 text-[#8fd3cc]"><Lock className="h-5 w-5" aria-hidden /></span>
               <h3 className="mt-6 text-2xl font-semibold tracking-tight">Escrow on every order</h3>
               <p className="mt-2 max-w-lg text-sm leading-relaxed text-neutral-600">
-                Your payment waits with a licensed escrow partner and is released only after you verify the goods.
+                Your payment is held in escrow for your order and released to the supplier only after you confirm the goods arrived as described.
               </p>
               <div className="mt-6 flex flex-wrap gap-2">
                 {['Held, not sent', 'Released on verification', 'Disputes handled'].map((t) => (
@@ -183,7 +183,10 @@ export default function Landing({ minTrialCents = 50_000 }: { minTrialCents?: nu
           <nav aria-label="Footer" className="flex flex-wrap items-center gap-x-4 gap-y-1">
             <Link href="/products" className="hover:text-neutral-900">Browse Trial Batches</Link>
             <Link href="/signup" className="hover:text-neutral-900">Open a trade account</Link>
-            <span>Funds held by a licensed escrow partner · 24/7 trade support</span>
+            <Link href="/legal/terms" className="hover:text-neutral-900">Terms of Trade</Link>
+            <Link href="/legal/escrow" className="hover:text-neutral-900">Escrow Agreement</Link>
+            <Link href="/legal/privacy" className="hover:text-neutral-900">Privacy</Link>
+            <span>© {new Date().getFullYear()} SokoGlobal LLC</span>
           </nav>
         </div>
       </footer>

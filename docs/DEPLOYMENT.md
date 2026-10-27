@@ -3,13 +3,18 @@
 ## 1. Supabase
 
 1. Create the production project (pick the region closest to your Vercel function region).
-2. In the SQL editor, run in order:
-   `supabase/schema.sql` → `migrations/002_ops_payments_perf.sql` → `003_payouts_refunds_kyc_support.sql` → `004_tracking_and_vault.sql` → `005_admin_ops_reads.sql` → `006_admin_moderation.sql` → `007_mpesa_payments.sql` → `008_cart_checkout.sql` → `009_realtime_chat.sql` → `010_cart_quantities.sql` → `011_paystack_cards.sql`, then every later file in `supabase/migrations/` in number order (through `021_enterprise_features.sql`).
-   - Apply each migration **before** deploying the code that needs it (021: RFQs, shipments, milestone escrow, exchange rates). `npm run test:db` (Docker) replays the whole chain on a throwaway Postgres first.
+2. Apply the database with the migration runner (it records every file it runs, so you can always see what production has):
+   - `DATABASE_URL` = Supabase → **Connect** → *Session pooler* connection string (with the database password). Keep it out of the repo.
+   - New project: `DATABASE_URL=… npm run db:migrate` runs `supabase/schema.sql`, then every file in `supabase/migrations/` in number order.
+   - **Existing project where migrations were pasted into the SQL editor by hand:** once, record what is already there without re-running it:
+     `DATABASE_URL=… npm run db:baseline -- --through 038` (038 = the last file you ran by hand), then `npm run db:migrate` for the rest.
+   - `npm run db:status` lists applied / pending files, and flags any applied file that has been edited since.
+   - Or from GitHub: add `DATABASE_URL` as a secret of a `production` environment (Settings → Environments), then Actions → **Database migrations** → Run workflow (dry run first).
+   - Apply each migration **before** deploying the code that needs it. CI replays the whole chain on a throwaway Postgres (`npm run test:db`) on every PR.
    - After 021, set real rates in **Control room → Display exchange rates** (the seeded ones are placeholders).
    - 004 needs the **Vault** extension (enabled by default on Supabase; the migration also runs `create extension if not exists supabase_vault`).
    - 004 moves every existing payout account number into Vault and **drops the plaintext column**. Take a backup first (Database → Backups).
-3. Auth → URL configuration: Site URL `https://<your-domain>`, redirect `https://<your-domain>/auth/callback`.
+3. Auth → URL configuration: Site URL `https://<your-domain>`, redirect URL `https://<your-domain>/**` (the password-reset link carries a `?next=` query, which an exact `/auth/callback` entry does not match).
 4. Promote your ops staff: `update public.profiles set role = 'admin' where id = '<uuid>';`
 5. Database → Replication: confirm `support_messages` is in the `supabase_realtime` publication (004/003 add it).
 
@@ -51,7 +56,7 @@ Set in Vercel → Settings → Environment Variables. **Production** values must
 | `SLACK_WEBHOOK_URL` | Prod (+ a test channel for Preview) | **yes** | `https://hooks.slack.com/services/…` (Slack app → Incoming Webhooks) |
 | `NEXT_PUBLIC_MAP_TILE_URL` | Prod, Preview | no | Production tile provider URL (MapTiler/Stadia/Mapbox raster) |
 | `NEXT_PUBLIC_MAP_TILE_ATTRIBUTION` | Prod, Preview | no | Attribution HTML required by your tile provider |
-| `CSP_MODE` | Prod, Preview | no | `report-only` (default) → `enforce` after the soak period; `off` = kill-switch |
+| `CSP_MODE` | Prod, Preview | no | `enforce` (default); `report-only` to roll back; `off` = kill-switch |
 | `CSP_REPORT_URI` | Prod | no | Optional: Sentry "Security Header" endpoint; default `/api/csp-report` |
 
 CLI equivalent (prompts for each value):
@@ -152,22 +157,40 @@ like an online payment. Unpaid orders with a transfer in progress get 14 days in
 transfers from the USD balance, so sweep M-Pesa collections into that balance regularly. Keep `MPESA_KES_PER_USD`
 current: it is the rate buyers pay at.
 
-## 5. Content-Security-Policy rollout
+## 5. Content-Security-Policy
 
-The CSP is emitted by `middleware.ts` (per-request nonce; policy in `lib/security/csp.ts`).
+The CSP is emitted by `middleware.ts` (per-request nonce; policy in `lib/security/csp.ts`) and is **enforced by
+default**: browsers block any script, frame or connection outside the policy.
 
-1. **Week 0:** deploy with `CSP_MODE=report-only`. Browsers report violations but nothing is blocked.
-2. **Watch the reports.** By default they go to `/api/csp-report`, which logs one
-   `[csp-violation] {…}` line per unique violation in Vercel Runtime Logs. Add a Log Drain (Datadog, Axiom,
-   Better Stack) and alert on that prefix. Or set `CSP_REPORT_URI` to your Sentry project's Security
-   Header endpoint (Sentry → Settings → Security Headers) to group them in Sentry.
-3. Exercise every flow: sign-up/login, product upload (photos and swatch video), checkout redirect to
-   Flutterwave, the order page map, support chat (Realtime websocket), the admin tracking form and KYC
-   document viewing.
-4. For each legitimate violation, add the source to `buildCsp()` and redeploy. Ignore
-   browser-extension noise (the collector already drops most of it).
-5. **After 1–2 clean weeks:** set `CSP_MODE=enforce` and redeploy. Keep reporting on. If anything
-   breaks, set `CSP_MODE=report-only` (or `off`) and redeploy to roll back.
+- CI (`e2e/smoke.spec.ts`) loads the public pages under the enforced policy and fails on any violation.
+- Reports still flow: by default to `/api/csp-report`, which logs one `[csp-violation] {…}` line per unique
+  violation in Vercel Runtime Logs (add a Log Drain and alert on that prefix), or to `CSP_REPORT_URI`
+  (e.g. Sentry → Settings → Security Headers).
+- **Adding a third party** (a new payment SDK, analytics, embeds): add its hosts to `buildCsp()` in the same PR.
+- **Rollback:** set `CSP_MODE=report-only` in Vercel and redeploy (`off` is the emergency kill-switch).
+
+## 5b. Staging and end-to-end tests
+
+Production must never be the place where a change is tried first, and the browser journeys (checkout, profile
+approval, supplier messaging) create real orders and messages. Set up a staging copy once:
+
+1. **Staging database:** create a second Supabase project (e.g. `sokoglobal-staging`) and run
+   `DATABASE_URL=<staging connection string> npm run db:migrate`. Auth → URL configuration: allow
+   `https://*-<your-vercel-team>.vercel.app/**`.
+2. **Point previews at it:** in Vercel → Settings → Environment Variables, give the **Preview** environment the
+   staging `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` and `SUPABASE_SERVICE_ROLE_KEY`, and only
+   sandbox/test payment keys (Paystack test key, `MPESA_ENV=sandbox`, `PAYPAL_ENV=sandbox`). Every PR then gets a
+   preview running against staging.
+3. **Test accounts:** on the staging site, sign up one importer, one supplier (approve its KYC and publish one
+   live Trial Batch listing) and one admin (`update public.profiles set role = 'admin' …` in staging only).
+4. **GitHub:** Settings → Environments → New environment `staging`, with secrets `E2E_BASE_URL` (a stable
+   staging URL, used nightly), `E2E_IMPORTER_EMAIL` / `_PASSWORD`, `E2E_SUPPLIER_EMAIL` / `_PASSWORD`,
+   `E2E_ADMIN_EMAIL` / `_PASSWORD`, and `VERCEL_AUTOMATION_BYPASS_SECRET` if Deployment Protection is on
+   (Vercel → Settings → Deployment Protection → Protection Bypass for Automation).
+
+The **E2E journeys (staging)** workflow then runs on every successful preview deployment, nightly, and on demand.
+Until the secrets exist it reports itself as skipped. The smoke tests (public pages, guards, headers, enforced CSP)
+need none of this and run in CI on every PR.
 
 ## 6. Go-live checklist
 
@@ -179,4 +202,4 @@ The CSP is emitted by `middleware.ts` (per-request nonce; policy in `lib/securit
 - [ ] Map tiles load from the production provider; attribution visible
 - [ ] Legal sign-off on FAQ policy text in `components/dashboard/SupportWidget.tsx`
 - [ ] `curl -sI https://<domain>/login | grep -i content-security-policy` shows the Report-Only header with a nonce
-- [ ] CSP reports are arriving (Vercel logs `[csp-violation]` or Sentry), then switch `CSP_MODE=enforce` after the soak period
+- [ ] `CSP_MODE` is unset or `enforce` in Vercel, and CSP reports are arriving (Vercel logs `[csp-violation]` or Sentry)

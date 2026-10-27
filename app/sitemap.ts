@@ -1,6 +1,7 @@
 import type { MetadataRoute } from 'next';
 import { getSitemapEntries } from '@/lib/public-catalog';
 import { productPath, siteUrl, supplierPath } from '@/lib/seo';
+import { LEGAL_DOCS } from '@/lib/legal';
 
 /**
  * /sitemap.xml: the landing page, every public listing and every supplier with one (migration 036's
@@ -19,6 +20,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const urls: MetadataRoute.Sitemap = [
     { url: `${origin}/`, changeFrequency: 'daily', priority: 1 },
     { url: `${origin}/products`, changeFrequency: 'daily', priority: 0.9 },
+    ...LEGAL_DOCS.map((d) => ({ url: `${origin}${d.href}`, changeFrequency: 'yearly' as const, priority: 0.2 })),
   ];
   for (const e of entries) {
     if (urls.length >= MAX_URLS) break;

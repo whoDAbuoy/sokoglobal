@@ -6,11 +6,10 @@ MVP built with Next.js 15 (App Router) + Tailwind + Supabase (Postgres, Auth, St
 
 ## Quick start
 
-1. Create a Supabase project. In **SQL Editor**, run `supabase/schema.sql`, then
-   `supabase/migrations/002_ops_payments_perf.sql`, `003_payouts_refunds_kyc_support.sql` and
-   `004_tracking_and_vault.sql` and `005_admin_ops_reads.sql`.
+1. Create a Supabase project and run `DATABASE_URL=<session pooler connection string> npm run db:migrate`
+   (applies `supabase/schema.sql` and every migration, and records them; see docs/DEPLOYMENT.md §1).
 2. `cp .env.example .env.local` and fill in the Supabase URL + anon key.
-3. Supabase → Auth → URL Configuration: add `http://localhost:3000/auth/callback` as a redirect URL.
+3. Supabase → Auth → URL Configuration: add `http://localhost:3000/**` as a redirect URL.
 4. `npm install && npm run dev` → open http://localhost:3000/signup.
 5. (Optional) Sign up one **Western Supplier**, then run `supabase/seed.sql` to load demo products & Trend Pools.
    Until then the buyer dashboard shows clearly labelled sample data.

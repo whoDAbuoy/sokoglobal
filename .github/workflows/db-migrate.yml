@@ -1,0 +1,38 @@
+name: Database migrations
+
+# Manual "Run workflow" button: applies pending supabase/migrations to the database in the
+# DATABASE_URL secret of the "production" environment, and records each one (scripts/db-migrate.mjs).
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Only list what would run'
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: db-migrate
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: production
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run db:status
+      - if: ${{ inputs.dry_run }}
+        run: npm run db:migrate -- --dry-run
+      - if: ${{ !inputs.dry_run }}
+        run: npm run db:migrate

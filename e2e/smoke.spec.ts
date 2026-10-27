@@ -98,6 +98,24 @@ test.describe('guards and hardening', () => {
     expect((await request.get('/api/cron/retry-webhooks')).status()).toBe(401);
   });
 
+  test('public pages load under the enforced CSP without violations', async ({ page, request }) => {
+    test.setTimeout(120_000);
+    const enforced = (await request.get('/login')).headers()['content-security-policy'];
+    test.skip(!enforced, 'CSP_MODE is not enforce on this deployment');
+    const violations: string[] = [];
+    await page.exposeFunction('reportCspViolation', (v: string) => { violations.push(v); });
+    await page.addInitScript(() => {
+      document.addEventListener('securitypolicyviolation', (e) => {
+        (window as unknown as { reportCspViolation: (v: string) => void }).reportCspViolation(`${e.violatedDirective} ${e.blockedURI} on ${location.pathname}`);
+      });
+    });
+    for (const path of ['/', '/login', '/signup', '/products', '/legal/terms', '/legal/escrow', '/legal/privacy', '/no-such-page']) {
+      await page.goto(path, { waitUntil: 'load' });
+      await page.waitForTimeout(500);   // late scripts, frames and fetches
+    }
+    expect(violations).toEqual([]);
+  });
+
   test('security headers and CSP are present', async ({ request }) => {
     const res = await request.get('/login');
     const h = res.headers();
