@@ -90,3 +90,14 @@ test('methodOptions: all seven channels always listed; unavailable ones disabled
   assert.deepEqual(order.filter((o) => o.enabled).map((o) => o.method), ['paypal', 'swift_wire', 'crypto']);
   assert.ok(order.filter((o) => o.enabled).every((o) => o.reason === null));
 });
+
+test('card and M-Pesa switches (migration 039): on before the migration, honoured after it', () => {
+  const before = parsePaymentSettings({ enable_paypal: true });
+  assert.equal(before.enable_card, true);
+  assert.equal(before.enable_mpesa, true);
+  const off = settings({ enable_card: false, enable_mpesa: false });
+  const methods = availableMethods({ settings: off, configured: ALL_CONFIGURED, cart: false });
+  assert.ok(!methods.includes('card') && !methods.includes('mpesa'));
+  assert.ok(methods.includes('paypal'));
+  assert.ok(!availableMethods({ settings: settings(), configured: { ...ALL_CONFIGURED, card: false }, cart: false }).includes('card'), 'card needs Paystack keys');
+});

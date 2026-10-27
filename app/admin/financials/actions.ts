@@ -45,7 +45,9 @@ export async function savePricing(input: PricingInput): Promise<PricingResult> {
 }
 
 export type PaymentSettingsInput = {
-  flags: Record<'enable_dpo_pay' | 'enable_airtel_money' | 'enable_paypal' | 'enable_swift_wire' | 'enable_crypto', boolean>;
+  flags: Record<'enable_dpo_pay' | 'enable_airtel_money' | 'enable_paypal' | 'enable_swift_wire' | 'enable_crypto', boolean>
+    /** Migration 039; left out before it (the 028 function rejects unknown keys). */
+    & Partial<Record<'enable_card' | 'enable_mpesa', boolean>>;
   swift_bank_details: Record<(typeof SWIFT_FIELDS)[number], string>;
   crypto_deposit_wallets: Record<CryptoWalletKey, string>;
   /** Percentage, e.g. "1" or "0.5". */
@@ -69,7 +71,7 @@ export async function savePaymentSettings(input: PaymentSettingsInput): Promise<
   const fp = requestFingerprint(await headers());
   const { error } = await ctx.supabase.rpc('super_set_payment_settings', {
     p: {
-      ...input.flags,
+      ...Object.fromEntries(Object.entries(input.flags).filter(([, v]) => typeof v === 'boolean')),
       swift_bank_details: Object.fromEntries(SWIFT_FIELDS.map((k) => [k, (input.swift_bank_details[k] ?? '').trim()])),
       crypto_deposit_wallets: Object.fromEntries(WALLET_KEYS.map((k) => [k, (input.crypto_deposit_wallets[k] ?? '').trim()])),
       crypto_markup_percent: Math.round(Number(markup) * 100) / 10_000,

@@ -2,25 +2,35 @@ import 'server-only';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { availableMethods, parsePaymentSettings, type PaymentMethod, type PaymentSettings } from '@/lib/payment-methods';
 import { isDpoConfigured } from '@/lib/payments/dpo';
+import { isPaystackConfigured } from '@/lib/payments/paystack';
 import { isPaypalConfigured } from '@/lib/payments/paypal';
 import { airtelConfig, isAirtelConfigured } from '@/lib/payments/airtel';
 import { exceedsMpesaLimit } from '@/lib/payments/mpesa';
 
-const COLUMNS = 'enable_dpo_pay, enable_airtel_money, enable_paypal, enable_swift_wire, enable_crypto, swift_bank_details, crypto_deposit_wallets, crypto_markup_percent, fx_spread_percent, payments_updated_at';
+const COLUMNS_028 = 'enable_dpo_pay, enable_airtel_money, enable_paypal, enable_swift_wire, enable_crypto, swift_bank_details, crypto_deposit_wallets, crypto_markup_percent, fx_spread_percent, payments_updated_at';
 
-/** Payment switches, bank details and wallets (migration 028). Before the migration: only card and M-Pesa. */
-export async function getPaymentSettings(supabase: SupabaseClient): Promise<{ available: boolean; settings: PaymentSettings; fxSpread: number; updatedAt: string | null }> {
-  const { data, error } = await supabase.from('platform_settings').select(COLUMNS).maybeSingle();
-  if (error || !data) return { available: false, settings: parsePaymentSettings(null), fxSpread: 0, updatedAt: null };
+const COLUMNS_039 = `enable_card, enable_mpesa, ${COLUMNS_028}`;
+
+/**
+ * Payment switches, bank details and wallets (migration 028; card and M-Pesa switches from 039).
+ * Before 028: only card and M-Pesa. `cardSwitches` says whether 039's switches exist yet.
+ */
+export async function getPaymentSettings(supabase: SupabaseClient): Promise<{ available: boolean; cardSwitches: boolean; settings: PaymentSettings; fxSpread: number; updatedAt: string | null }> {
+  let cardSwitches = true;
+  let { data, error } = await supabase.from('platform_settings').select(COLUMNS_039).maybeSingle();
+  if (error && /column|does not exist/i.test(error.message)) {
+    cardSwitches = false;
+    ({ data, error } = await supabase.from('platform_settings').select(COLUMNS_028).maybeSingle());
+  }
+  if (error || !data) return { available: false, cardSwitches: false, settings: parsePaymentSettings(null), fxSpread: 0, updatedAt: null };
   const row = data as unknown as Record<string, unknown>;
-  return { available: true, settings: parsePaymentSettings(row), fxSpread: Number(row.fx_spread_percent) || 0, updatedAt: (row.payments_updated_at as string | null) ?? null };
+  return { available: true, cardSwitches, settings: parsePaymentSettings(row), fxSpread: Number(row.fx_spread_percent) || 0, updatedAt: (row.payments_updated_at as string | null) ?? null };
 }
 
 /** Which gateways have their API keys set on this deployment. */
 export function gatewaysConfigured() {
   return {
-    // Card stays offered as before migration 028 (the route explains if Paystack is not configured).
-    card: true, mpesa: process.env.NEXT_PUBLIC_MPESA_ENABLED === 'true',
+    card: isPaystackConfigured(), mpesa: process.env.NEXT_PUBLIC_MPESA_ENABLED === 'true',
     airtel_money: isAirtelConfigured(), dpo_pay: isDpoConfigured(), paypal: isPaypalConfigured(),
   };
 }
