@@ -42,11 +42,12 @@ test('init script: stored choice wins, system follows the OS, blocked storage st
   assert.deepEqual(run('throws', true), { dark: true, scheme: 'dark', kept: true });   // used to abort the whole script
 });
 
-test('isSellsyRoute: supplier portal, buyer side and admin; not the landing or auth pages (they draw their own)', () => {
-  for (const p of ['/supplier', '/supplier/orders', '/dashboard', '/dashboard/discover', '/dashboard/checkout/x', '/dashboard/settings', '/rfqs/x', '/admin', '/admin/orders']) {
+test('isSellsyRoute: supplier portal, buyer side, admin and public listing pages; not the landing or auth pages (they draw their own)', () => {
+  for (const p of ['/supplier', '/supplier/orders', '/dashboard', '/dashboard/discover', '/dashboard/checkout/x', '/dashboard/settings', '/rfqs/x', '/admin', '/admin/orders',
+    '/products/x', '/suppliers/x']) {
     assert.equal(isSellsyRoute(p), true, p);
   }
-  for (const p of ['/', '/login', '/signup', '/supplierx', '/dashboardx', '/adminx', '/maintenance', null, undefined]) {
+  for (const p of ['/', '/login', '/signup', '/supplierx', '/dashboardx', '/adminx', '/productsx', '/maintenance', null, undefined]) {
     assert.equal(isSellsyRoute(p), false, String(p));
   }
 });

@@ -32,6 +32,11 @@ const MAINTENANCE_TTL_MS = 15_000;
 let maintenanceCache: { on: boolean; at: number } | null = null;
 
 const PROTECTED = ['/dashboard', '/supplier', '/admin', '/rfqs'];
+
+/** `root` itself or anything below it, matched on whole path segments: "/supplier" covers "/supplier/orders", never "/suppliers/x". */
+const under = (path: string, root: string) => path === root || path.startsWith(`${root}/`);
+/** Pages that need a signed-in session (the public /products and /suppliers pages are not among them). */
+export const isProtectedPath = (path: string) => PROTECTED.some((root) => under(path, root));
 const AUTH_PAGES = ['/login', '/signup'];
 
 /**
@@ -87,7 +92,7 @@ export async function middleware(request: NextRequest) {
   const { data: claimsData } = await supabase.auth.getClaims();
   const user = typeof claimsData?.claims?.sub === 'string' ? { id: claimsData.claims.sub } : null;
   const path = request.nextUrl.pathname;
-  const isProtectedPage = PROTECTED.some((p) => path.startsWith(p));
+  const isProtectedPage = isProtectedPath(path);
   // Independent reads, started together once the session is settled (a refresh above must finish first,
   // so these never race it): the maintenance flag (cached per instance) and the caller's ban / 2FA / KYC state.
   const maintenanceRead = !maintenanceCache || Date.now() - maintenanceCache.at > MAINTENANCE_TTL_MS
@@ -175,7 +180,7 @@ export async function middleware(request: NextRequest) {
     // KYC (migration 017): new listings and new escrow orders need an approved verification.
     const kyc = kycGate({
       path, method: request.method, isServerAction: request.headers.has('next-action'),
-      role: path.startsWith('/supplier') ? 'supplier' : null, status: security.kyc_status, required: security.kyc_required,
+      role: under(path, '/supplier') ? 'supplier' : null, status: security.kyc_status, required: security.kyc_required,
     });
     if (kyc.kind === 'forbid') return NextResponse.json({ error: kyc.error, kyc: true }, { status: 403 });
     if (kyc.kind === 'redirect') {

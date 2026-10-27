@@ -1,7 +1,7 @@
 // Run: npx tsx --conditions=react-server --test tests/middleware-matcher.test.mts
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { config } from '../middleware.ts';
+import { config, isProtectedPath } from '../middleware.ts';
 
 // The matcher source is a path regex (Next.js anchors it to the whole pathname).
 const source = (config.matcher[0] as { source: string }).source;
@@ -32,4 +32,13 @@ test('middleware skips endpoints authenticated by signature or secret, not by se
 test('prefetches are skipped', () => {
   const missing = (config.matcher[0] as { missing: { key: string }[] }).missing.map((m) => m.key);
   assert.deepEqual(missing.sort(), ['next-router-prefetch', 'purpose']);
+});
+
+test('protected pages are matched on whole path segments: the public /suppliers and /products pages stay open', () => {
+  for (const p of ['/dashboard', '/dashboard/orders', '/supplier', '/supplier/orders', '/admin', '/admin/kyc', '/rfqs/abc']) {
+    assert.equal(isProtectedPath(p), true, p);
+  }
+  for (const p of ['/', '/login', '/suppliers/abc', '/suppliers', '/products/abc', '/administrator', '/dashboards', '/rfqsx']) {
+    assert.equal(isProtectedPath(p), false, p);
+  }
 });
