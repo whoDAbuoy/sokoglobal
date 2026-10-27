@@ -17,8 +17,39 @@ export function siteUrl(env: Record<string, string | undefined> = process.env): 
   }
 }
 
-export const productPath = (id: string) => `/products/${id}`;
-export const supplierPath = (id: string) => `/suppliers/${id}`;
+/**
+ * URL words for a name: lower-case ASCII, accents dropped, anything else becomes "-", at most 60
+ * characters on a word boundary. "Crème Brûlée Kettle (1.7 L)" → "creme-brulee-kettle-1-7-l".
+ */
+export function slugify(name: string | null | undefined): string {
+  const words = (name ?? '').normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+    .replace(/&/g, ' and ').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  if (words.length <= 60) return words;
+  const cut = words.slice(0, 61);
+  return (cut.lastIndexOf('-') > 20 ? cut.slice(0, cut.lastIndexOf('-')) : cut.slice(0, 60)).replace(/-+$/, '');
+}
+
+/** "<slug>-<id>" (or just the id when the name has no usable words): readable, and still keyed by the id. */
+export const pageSegment = (id: string, name?: string | null) => (slugify(name) ? `${slugify(name)}-${id}` : id);
+export const productPath = (id: string, title?: string | null) => `/products/${pageSegment(id, title)}`;
+export const supplierPath = (id: string, name?: string | null) => `/suppliers/${pageSegment(id, name)}`;
+
+function safeDecode(segment: string): string {
+  try { return decodeURIComponent(segment); } catch { return segment; }
+}
+
+/** Whether a requested segment is already the current readable one (anything else redirects to it). */
+export const isCanonicalSegment = (segment: string, id: string, name?: string | null) => safeDecode(segment) === pageSegment(id, name);
+
+const TRAILING_UUID = /([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i;
+/** The id at the end of a page segment ("steel-kettle-<id>" or a bare "<id>"), or null. */
+export function idFromSegment(segment: string): string | null {
+  const decoded = safeDecode(segment);
+  const m = TRAILING_UUID.exec(decoded);
+  if (!m) return null;
+  const rest = decoded.slice(0, decoded.length - m[1].length);
+  return rest === '' || rest.endsWith('-') ? m[1].toLowerCase() : null;
+}
 
 /** Plain text for meta descriptions: no line breaks or repeated spaces, cut on a word boundary. */
 export function metaDescription(text: string | null | undefined, max = 160): string {
@@ -49,9 +80,9 @@ function aggregateRating(average: number | null, count: number): JsonLd | undefi
 export function organizationJsonLd(s: SupplierForSeo, origin: string): JsonLd {
   return {
     '@type': 'Organization',
-    '@id': `${origin}${supplierPath(s.id)}#organization`,
+    '@id': `${origin}${supplierPath(s.id, s.company_name)}#organization`,
     name: s.company_name,
-    url: `${origin}${supplierPath(s.id)}`,
+    url: `${origin}${supplierPath(s.id, s.company_name)}`,
     ...(s.avatar_url ? { logo: s.avatar_url } : {}),
     ...(s.bio ? { description: s.bio } : {}),
     address: { '@type': 'PostalAddress', addressCountry: s.country_code },
@@ -64,7 +95,7 @@ export function organizationJsonLd(s: SupplierForSeo, origin: string): JsonLd {
  * across several offers). The rating is the supplier's, so it sits on the seller, not on the product.
  */
 export function productJsonLd(l: ListingForSeo, origin: string): JsonLd {
-  const url = `${origin}${productPath(l.id)}`;
+  const url = `${origin}${productPath(l.id, l.title)}`;
   const seller = organizationJsonLd({ id: l.supplier_id, company_name: l.supplier_company, country_code: l.supplier_country, avatar_url: null, bio: null }, origin);
   const rating = aggregateRating(l.rating_average, l.rating_count);
   return {
@@ -97,7 +128,7 @@ export function supplierJsonLd(s: SupplierForSeo, origin: string, listings: { id
     ...organizationJsonLd(s, origin),
     ...(listings.length ? {
       makesOffer: listings.slice(0, 20).map((l) => ({
-        '@type': 'Offer', itemOffered: { '@type': 'Product', name: l.title, url: `${origin}${productPath(l.id)}` },
+        '@type': 'Offer', itemOffered: { '@type': 'Product', name: l.title, url: `${origin}${productPath(l.id, l.title)}` },
       })),
     } : {}),
   };

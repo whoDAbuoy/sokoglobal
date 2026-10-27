@@ -19,7 +19,7 @@ export function PublicHeader() {
           <span className="text-base font-semibold tracking-tight text-neutral-900">SokoGlobal</span>
         </Link>
         <nav aria-label="Account" className="flex items-center gap-1 sm:gap-2">
-          <Link href="/dashboard/discover" className="press hidden rounded-full px-3 py-2 text-sm text-neutral-600 hover:text-neutral-900 sm:inline">Full catalogue</Link>
+          <Link href="/products" className="press hidden rounded-full px-3 py-2 text-sm text-neutral-600 hover:text-neutral-900 sm:inline">Browse Trial Batches</Link>
           <Link href="/login" className="press rounded-full px-3 py-2 text-sm font-medium text-neutral-700 hover:text-neutral-900">Sign in</Link>
           <Link href="/signup" className="btn-primary px-4 py-2">Get started</Link>
         </nav>
@@ -31,10 +31,10 @@ export function PublicHeader() {
 export function ListingCard({ listing, showSupplier = true }: { listing: PublicListingCard; showSupplier?: boolean }) {
   return (
     <li className="glass-card overflow-hidden">
-      <Link href={productPath(listing.id)} className="group block focus:outline-none focus-visible:ring-2 focus-visible:ring-[#5a9895]">
+      <Link href={productPath(listing.id, listing.title)} className="group block focus:outline-none focus-visible:ring-2 focus-visible:ring-[#5a9895]">
         <div className="relative aspect-[4/3] bg-neutral-900/[0.04] dark:bg-snow/[0.04]">
           {listing.image_url
-            ? <Image src={listing.image_url} alt="" fill sizes="(min-width: 1280px) 25vw, (min-width: 640px) 50vw, 100vw" className="object-cover transition-transform duration-300 group-hover:scale-[1.03]" />
+            ? <Image src={listing.image_url} alt={listing.title} fill sizes="(min-width: 1280px) 25vw, (min-width: 640px) 50vw, 100vw" className="object-cover transition-transform duration-300 group-hover:scale-[1.03]" />
             : <ImageOff className="absolute inset-0 m-auto h-6 w-6 text-neutral-400" aria-hidden />}
         </div>
         <div className="p-4">
@@ -86,5 +86,5 @@ export function ListingGridSkeleton({ count = 4, label = 'Loading listings' }: {
 }
 
 export function SupplierLink({ id, name }: { id: string; name: string }) {
-  return <Link href={supplierPath(id)} className="font-medium text-neutral-900 underline-offset-2 hover:underline">{name}</Link>;
+  return <Link href={supplierPath(id, name)} className="font-medium text-neutral-900 underline-offset-2 hover:underline">{name}</Link>;
 }

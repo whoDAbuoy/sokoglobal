@@ -41,6 +41,7 @@ export default function Landing({ minTrialCents = 50_000 }: { minTrialCents?: nu
             <span className="text-base font-semibold tracking-tight">SokoGlobal</span>
           </Link>
           <nav aria-label="Main" className="flex items-center gap-1 sm:gap-2">
+            <Link href="/products" className="press hidden rounded-full px-3 py-2 text-sm text-neutral-600 transition-colors hover:text-neutral-900 md:inline">Browse Trial Batches</Link>
             <a href="#how" className="press hidden rounded-full px-3 py-2 text-sm text-neutral-600 transition-colors hover:text-neutral-900 sm:inline">How it works</a>
             <Link href="/login" className="press rounded-full px-3 py-2 text-sm font-medium text-neutral-700 transition-colors hover:text-neutral-900">Sign in</Link>
             <Link href="/signup" className="btn-primary px-4 py-2">Get started</Link>
@@ -179,7 +180,11 @@ export default function Landing({ minTrialCents = 50_000 }: { minTrialCents?: nu
       <footer className="border-t border-snow/[0.06]">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-6 text-xs text-neutral-500 sm:px-6 lg:px-8">
           <p className="flex items-center gap-1.5"><ShieldCheck className="h-3.5 w-3.5 text-[#8fd3cc]" aria-hidden /> SokoGlobal · Escrow-protected B2B trade</p>
-          <p>Funds held by a licensed escrow partner · 24/7 trade support</p>
+          <nav aria-label="Footer" className="flex flex-wrap items-center gap-x-4 gap-y-1">
+            <Link href="/products" className="hover:text-neutral-900">Browse Trial Batches</Link>
+            <Link href="/signup" className="hover:text-neutral-900">Open a trade account</Link>
+            <span>Funds held by a licensed escrow partner · 24/7 trade support</span>
+          </nav>
         </div>
       </footer>
     </div>

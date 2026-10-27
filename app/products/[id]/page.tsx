@@ -2,11 +2,11 @@ import { Suspense } from 'react';
 import type { Metadata } from 'next';
 import Image from 'next/image';
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
+import { notFound, permanentRedirect } from 'next/navigation';
 import { ArrowRight, BadgeCheck, Clock, FileQuestion, Lock, Package, Plane, Star } from 'lucide-react';
 import { getPublicListing, getPublicListings } from '@/lib/public-catalog';
 import { countryName, flag, formatUSD } from '@/lib/format';
-import { metaDescription, productJsonLd, productPath, siteUrl, SITE_NAME } from '@/lib/seo';
+import { idFromSegment, isCanonicalSegment, metaDescription, productJsonLd, productPath, siteUrl, SITE_NAME } from '@/lib/seo';
 import JsonLd from '@/components/seo/JsonLd';
 import Price from '@/components/currency/Price';
 import GoldBadge from '@/components/supplier/GoldBadge';
@@ -17,18 +17,19 @@ import { ListingGrid, ListingGridSkeleton, PublicHeader, SupplierLink } from '@/
  * a live listing, its landed price and its supplier. Ordering and quoting go through sign-in (the
  * buttons point at the signed-in catalogue / RFQ form; middleware sends visitors to /login first).
  * The listing read is cached per request, so the metadata and the page share one database call; the
- * related listings stream in behind their own Suspense boundary.
+ * related listings stream in behind their own Suspense boundary. URLs read /products/<title-slug>-<id>;
+ * the id is the key, so any other slug (an old title, a bare id) redirects permanently to the current one.
  */
 type Props = { params: Promise<{ id: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { id } = await params;
-  const listing = await getPublicListing(id);
+  const { id: segment } = await params;
+  const listing = await getPublicListing(idFromSegment(segment) ?? '');
   if (!listing) return { title: `Listing not found · ${SITE_NAME}`, robots: { index: false } };
   const title = `${listing.title} · Trial Batch from ${listing.supplier_company}`;
   const description = metaDescription(listing.description)
     || `${listing.trial_units.toLocaleString('en-US')} units from ${countryName(listing.origin_country)}, ${formatUSD(listing.landed_cost_cents)} landed with freight and customs, escrow-protected.`;
-  const url = `${siteUrl()}${productPath(listing.id)}`;
+  const url = `${siteUrl()}${productPath(listing.id, listing.title)}`;
   return {
     title: `${title} · ${SITE_NAME}`,
     description,
@@ -39,9 +40,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function PublicProductPage({ params }: Props) {
-  const { id } = await params;
-  const listing = await getPublicListing(id);
+  const { id: segment } = await params;
+  const listing = await getPublicListing(idFromSegment(segment) ?? '');
   if (!listing) notFound();
+  if (!isCanonicalSegment(segment, listing.id, listing.title)) permanentRedirect(productPath(listing.id, listing.title));
 
   const [cover, ...rest] = listing.images;
   const specs = Object.entries(listing.attributes)

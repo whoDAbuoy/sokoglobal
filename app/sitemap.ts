@@ -16,12 +16,15 @@ const MAX_URLS = 50_000;
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const origin = siteUrl();
   const entries = await getSitemapEntries();
-  const urls: MetadataRoute.Sitemap = [{ url: `${origin}/`, changeFrequency: 'daily', priority: 1 }];
+  const urls: MetadataRoute.Sitemap = [
+    { url: `${origin}/`, changeFrequency: 'daily', priority: 1 },
+    { url: `${origin}/products`, changeFrequency: 'daily', priority: 0.9 },
+  ];
   for (const e of entries) {
     if (urls.length >= MAX_URLS) break;
     urls.push(e.kind === 'product'
-      ? { url: `${origin}${productPath(e.id)}`, lastModified: new Date(e.last_modified), changeFrequency: 'weekly', priority: 0.8 }
-      : { url: `${origin}${supplierPath(e.id)}`, lastModified: new Date(e.last_modified), changeFrequency: 'weekly', priority: 0.6 });
+      ? { url: `${origin}${productPath(e.id, e.name)}`, lastModified: new Date(e.last_modified), changeFrequency: 'weekly', priority: 0.8 }
+      : { url: `${origin}${supplierPath(e.id, e.name)}`, lastModified: new Date(e.last_modified), changeFrequency: 'weekly', priority: 0.6 });
   }
   return urls;
 }
