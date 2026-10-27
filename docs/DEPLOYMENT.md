@@ -3,13 +3,18 @@
 ## 1. Supabase
 
 1. Create the production project (pick the region closest to your Vercel function region).
-2. In the SQL editor, run in order:
-   `supabase/schema.sql` → `migrations/002_ops_payments_perf.sql` → `003_payouts_refunds_kyc_support.sql` → `004_tracking_and_vault.sql` → `005_admin_ops_reads.sql` → `006_admin_moderation.sql` → `007_mpesa_payments.sql` → `008_cart_checkout.sql` → `009_realtime_chat.sql` → `010_cart_quantities.sql` → `011_paystack_cards.sql`, then every later file in `supabase/migrations/` in number order (through `021_enterprise_features.sql`).
-   - Apply each migration **before** deploying the code that needs it (021: RFQs, shipments, milestone escrow, exchange rates). `npm run test:db` (Docker) replays the whole chain on a throwaway Postgres first.
+2. Apply the database with the migration runner (it records every file it runs, so you can always see what production has):
+   - `DATABASE_URL` = Supabase → **Connect** → *Session pooler* connection string (with the database password). Keep it out of the repo.
+   - New project: `DATABASE_URL=… npm run db:migrate` runs `supabase/schema.sql`, then every file in `supabase/migrations/` in number order.
+   - **Existing project where migrations were pasted into the SQL editor by hand:** once, record what is already there without re-running it:
+     `DATABASE_URL=… npm run db:baseline -- --through 038` (038 = the last file you ran by hand), then `npm run db:migrate` for the rest.
+   - `npm run db:status` lists applied / pending files, and flags any applied file that has been edited since.
+   - Or from GitHub: add `DATABASE_URL` as a secret of a `production` environment (Settings → Environments), then Actions → **Database migrations** → Run workflow (dry run first).
+   - Apply each migration **before** deploying the code that needs it. CI replays the whole chain on a throwaway Postgres (`npm run test:db`) on every PR.
    - After 021, set real rates in **Control room → Display exchange rates** (the seeded ones are placeholders).
    - 004 needs the **Vault** extension (enabled by default on Supabase; the migration also runs `create extension if not exists supabase_vault`).
    - 004 moves every existing payout account number into Vault and **drops the plaintext column**. Take a backup first (Database → Backups).
-3. Auth → URL configuration: Site URL `https://<your-domain>`, redirect `https://<your-domain>/auth/callback`.
+3. Auth → URL configuration: Site URL `https://<your-domain>`, redirect URL `https://<your-domain>/**` (the password-reset link carries a `?next=` query, which an exact `/auth/callback` entry does not match).
 4. Promote your ops staff: `update public.profiles set role = 'admin' where id = '<uuid>';`
 5. Database → Replication: confirm `support_messages` is in the `supabase_realtime` publication (004/003 add it).
 
