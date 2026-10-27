@@ -14,13 +14,13 @@ const LISTING: ListingForSeo = {
   landed_cost_cents: 57000, trial_units: 100, supplier_id: 'e3711111-1111-4111-8111-111111111111',
   supplier_company: 'Kettle Works Ltd', supplier_country: 'CN', rating_average: 4.5, rating_count: 2,
 };
-const ORIGIN = 'https://sokoglobal.com';
+const ORIGIN = 'https://sokoglobal.shop';
 
 test('siteUrl: origin only, trailing path and slash dropped, bad values fall back', () => {
   assert.equal(siteUrl({ NEXT_PUBLIC_SITE_URL: 'https://shop.example.com/some/path/' }), 'https://shop.example.com');
   assert.equal(siteUrl({ NEXT_PUBLIC_SITE_URL: 'http://localhost:3000' }), 'http://localhost:3000');
-  assert.equal(siteUrl({ NEXT_PUBLIC_SITE_URL: 'not a url' }), 'https://sokoglobal.com');
-  assert.equal(siteUrl({}), 'https://sokoglobal.com');
+  assert.equal(siteUrl({ NEXT_PUBLIC_SITE_URL: 'not a url' }), 'https://sokoglobal.shop');
+  assert.equal(siteUrl({}), 'https://sokoglobal.shop');
 });
 
 test('metaDescription: one line, cut on a word with an ellipsis', () => {
@@ -72,7 +72,7 @@ test('serializeJsonLd: listing text cannot close the script tag', () => {
 });
 
 test('robots: public pages open, private areas closed, the portal block does not hide /suppliers/', () => {
-  process.env.NEXT_PUBLIC_SITE_URL = 'https://sokoglobal.com';
+  process.env.NEXT_PUBLIC_SITE_URL = 'https://sokoglobal.shop';
   const r = robots();
   const rule = Array.isArray(r.rules) ? r.rules[0] : r.rules;
   const disallow = ([] as string[]).concat(rule.disallow ?? []);
@@ -84,5 +84,5 @@ test('robots: public pages open, private areas closed, the portal block does not
   assert.ok(!disallow.some((d) => blocks(d, '/suppliers/abc')), 'public supplier pages stay crawlable');
   assert.ok(!disallow.some((d) => blocks(d, '/products/abc')), 'public product pages stay crawlable');
   assert.ok(disallow.some((d) => blocks(d, '/supplier')) && disallow.some((d) => blocks(d, '/supplier/orders')), 'the supplier portal is blocked');
-  assert.equal(r.sitemap, 'https://sokoglobal.com/sitemap.xml');
+  assert.equal(r.sitemap, 'https://sokoglobal.shop/sitemap.xml');
 });

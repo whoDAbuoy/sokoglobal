@@ -8,12 +8,12 @@ export const SITE_NAME = 'SokoGlobal';
 
 /** Absolute site origin without a trailing slash (NEXT_PUBLIC_SITE_URL; production default otherwise). */
 export function siteUrl(env: Record<string, string | undefined> = process.env): string {
-  const raw = env.NEXT_PUBLIC_SITE_URL?.trim() || 'https://sokoglobal.com';
+  const raw = env.NEXT_PUBLIC_SITE_URL?.trim() || 'https://sokoglobal.shop';
   try {
     const u = new URL(raw);
     return `${u.protocol}//${u.host}`;
   } catch {
-    return 'https://sokoglobal.com';
+    return 'https://sokoglobal.shop';
   }
 }
 

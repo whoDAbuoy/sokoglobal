@@ -20,6 +20,8 @@ const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 export const metadata: Metadata = {
   title: 'SokoGlobal — Escrow-protected B2B imports to Africa',
   description: 'Source beauty and apparel from verified Western suppliers with guaranteed landed cost and escrow protection.',
+  // Google Search Console ownership of https://sokoglobal.shop (also public/google68175376fc092f5f.html). Keep both.
+  verification: { google: 'hX4cYkiOS-NKcQFPbyaGW_EMY7uNkvozJkDB775TDGM' },
 };
 
 // Android Chrome: the on-screen keyboard resizes the layout viewport, so sticky chat composers stay visible.
