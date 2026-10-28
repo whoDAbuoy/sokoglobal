@@ -1,4 +1,5 @@
 import type { UserRole } from './types';
+import { sameSitePath } from './safe-path';
 
 /**
  * Who may start a checkout. Only importer accounts can buy; the API routes and
@@ -28,7 +29,7 @@ export function gateFromStatus(status: number, role: UserRole | null | undefined
 
 /** Login URL that brings the buyer back to where they were. Only same-site paths are allowed. */
 export function importerLoginUrl(returnTo: string): string {
-  const safe = returnTo.startsWith('/') && !returnTo.startsWith('//') ? returnTo : '/dashboard';
+  const safe = sameSitePath(returnTo) ?? '/dashboard';
   return `/login?redirectTo=${encodeURIComponent(safe)}`;
 }
 

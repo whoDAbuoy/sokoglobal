@@ -8,6 +8,8 @@ import { friendlyError } from '@/lib/format';
 import { UUID_RE } from '@/lib/uploads';
 import { isKycDocumentType, normalizeDocumentNumber, type KycDocumentType } from '@/lib/kyc';
 import { runKycOcr } from '@/lib/kyc-ocr-server';
+import { mimeFromPath } from '@/lib/file-signature';
+import { storedFileMatches } from '@/lib/storage-sniff-server';
 
 export type KycResult = { ok: boolean; message: string };
 const BUCKET = 'kyc-documents';
@@ -31,6 +33,10 @@ export async function submitKycDocument(documentType: KycDocumentType, documentN
   const number = normalizeDocumentNumber(documentNumber);
   if (!number) return { ok: false, message: 'Enter the document number as printed (3–40 letters or digits).' };
   if (!OWN_PATH(user.id).test(path)) return { ok: false, message: 'Upload the document again.' };
+  if (!(await storedFileMatches(BUCKET, path, mimeFromPath(path) ?? ''))) {
+    await removeOwnFile(user.id, path);
+    return { ok: false, message: "That file isn't a readable PDF, JPG or PNG. Scan or photograph the document again and upload it." };
+  }
   const { data, error } = await supabase.rpc('submit_kyc_verification', { p_document_type: documentType, p_document_number: number, p_document_url: path });
   if (error) {
     await removeOwnFile(user.id, path);

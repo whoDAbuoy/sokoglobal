@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { friendlyError } from '@/lib/format';
+import { addKycDocument } from './actions';
 
 type DocType = 'tax_certificate' | 'business_registration' | 'identity';
 type Status = 'not_started' | 'submitted' | 'approved' | 'rejected';
@@ -186,12 +187,11 @@ function DocumentSlot({ userId, spec, files, editable, onAdded, onRemoved }: {
     const path = `${userId}/${spec.type}/${crypto.randomUUID()}.${ext}`;
     const { error: upErr } = await supabase.storage.from(BUCKET).upload(path, file, { contentType: file.type, upsert: false });
     if (upErr) { setBusy(false); return setError('Upload failed — please try again'); }
-    const { data, error: rowErr } = await supabase.from('kyc_documents')
-      .insert({ supplier_id: userId, doc_type: spec.type, storage_path: path, file_name: file.name.slice(0, 255), mime_type: file.type, bytes: file.size })
-      .select('id, doc_type, file_name, storage_path, uploaded_at').single();
+    // The server checks the file's real contents before recording it (it removes the file when it refuses).
+    const r = await addKycDocument(spec.type, path, file.name);
     setBusy(false);
-    if (rowErr || !data) { await supabase.storage.from(BUCKET).remove([path]); return setError(friendlyError(rowErr?.message)); }
-    onAdded(data as KycState['documents'][number]);
+    if (!r.ok) return setError(r.message);
+    onAdded(r.document as KycState['documents'][number]);
   }
 
   async function remove(doc: KycState['documents'][number]) {

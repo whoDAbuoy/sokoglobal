@@ -6,8 +6,8 @@ export const MEDIA_BUCKET = 'product-media';
 export const UPLOAD_RULES: Record<MediaType, { mimes: Record<string, string>; maxBytes: number; label: string }> = {
   image: {
     mimes: { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' },
-    maxBytes: 500 * 1024 * 1024, // 500 MB (matches the product-media bucket limit)
-    label: 'JPG, PNG or WebP up to 500 MB',
+    maxBytes: 25 * 1024 * 1024, // 25 MB; the bucket's 500 MB limit is for swatch videos
+    label: 'JPG, PNG or WebP up to 25 MB',
   },
   swatch_video: {
     mimes: { 'video/mp4': 'mp4', 'video/quicktime': 'mov', 'video/webm': 'webm' },

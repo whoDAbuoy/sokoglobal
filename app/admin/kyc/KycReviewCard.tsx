@@ -17,7 +17,8 @@ export interface KycCase {
   submittedAt: string | null;
   reviewNotes: string | null;
   supplier: { company_name: string; full_name: string; country_code: string; created_at: string } | null;
-  documents: { id: string; docType: string; fileName: string; mimeType: string; bytes: number; uploadedAt: string; url: string | null }[];
+  /** mismatch: the file's bytes are not the type it claims (no link is given). */
+  documents: { id: string; docType: string; fileName: string; mimeType: string; bytes: number; uploadedAt: string; url: string | null; mismatch: boolean }[];
   account: {
     method: string; country_code: string; currency: string; bank_code: string; bank_name: string | null;
     account_last4: string | null; beneficiary_name: string; international: Record<string, string>; verified: boolean; updated_at: string;
@@ -59,6 +60,7 @@ export default function KycReviewCard({ kyc }: { kyc: KycCase }) {
   const busy = approving || rejecting;
 
   const missing = Object.keys(DOC_META).filter((t) => !kyc.documents.some((d) => d.docType === t));
+  const mismatched = kyc.documents.filter((d) => d.mismatch);
   const reverify = kyc.reviewNotes?.includes('Payout account changed');
   const nameMismatch = kyc.account && kyc.legalName
     && !kyc.account.beneficiary_name.toLowerCase().includes(kyc.legalName.toLowerCase().split(/\s+/)[0] ?? '');
@@ -120,6 +122,7 @@ export default function KycReviewCard({ kyc }: { kyc: KycCase }) {
                     <span className="min-w-0 flex-1">
                       <span className="block font-medium text-slate-900">{meta.label}</span>
                       <span className="block truncate text-xs text-slate-500">{d.fileName} · {kb(d.bytes)}</span>
+                      {d.mismatch && <span className="block text-xs font-medium text-red-600">Not a real {d.mimeType === 'application/pdf' ? 'PDF' : 'image'}: ask for a re-upload</span>}
                     </span>
                     <span className="text-xs font-medium text-brand-700">View</span>
                   </a>
@@ -127,6 +130,9 @@ export default function KycReviewCard({ kyc }: { kyc: KycCase }) {
               );
             })}
           </ul>
+          {mismatched.length > 0 && (
+            <p className="mt-2 flex items-center gap-1.5 text-xs text-red-600"><AlertTriangle className="h-3.5 w-3.5" />Files that are not what they claim to be can&apos;t be opened or approved. Send this back for a re-upload.</p>
+          )}
           {missing.length > 0 && (
             <p className="mt-2 flex items-center gap-1.5 text-xs text-red-600"><AlertTriangle className="h-3.5 w-3.5" />Missing: {missing.map((m) => DOC_META[m].label).join(', ')}</p>
           )}
@@ -201,7 +207,7 @@ export default function KycReviewCard({ kyc }: { kyc: KycCase }) {
           <button formAction={rejectAction} disabled={busy} className="btn-secondary">
             {rejecting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Undo2 className="h-4 w-4" />} Reject with notes
           </button>
-          <button formAction={approveAction} disabled={busy || !allChecked || missing.length > 0 || !kyc.account} className="btn-primary"
+          <button formAction={approveAction} disabled={busy || !allChecked || missing.length > 0 || mismatched.length > 0 || !kyc.account} className="btn-primary"
             title={!allChecked ? 'Complete the checklist first' : undefined}>
             {approving ? <Loader2 className="h-4 w-4 animate-spin" /> : <BadgeCheck className="h-4 w-4" />} Approve KYC
           </button>

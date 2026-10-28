@@ -2,6 +2,8 @@
  * Where a signed-in user whose session has not passed 2FA may go (pure, Edge-safe:
  * used by middleware). Contract: my_security_state() in migration 016.
  */
+import { sameSitePath } from '../safe-path';
+
 export type TwoFactorGate = 'allow' | 'challenge' | 'api';
 
 const PROTECTED = ['/dashboard', '/supplier', '/admin'];
@@ -17,7 +19,8 @@ export function twoFactorGate(input: { path: string; isServerAction?: boolean; e
 
 /** Same-site path to return to after the 2FA challenge (never the challenge itself). */
 export function safeReturnPath(v: string | null | undefined, fallback = '/'): string {
-  return v && v.startsWith('/') && !v.startsWith('//') && !v.startsWith('/\\') && !v.startsWith('/auth/2fa') ? v : fallback;
+  const path = sameSitePath(v);
+  return path && !path.startsWith('/auth/2fa') ? path : fallback;
 }
 
 /**

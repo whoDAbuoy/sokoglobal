@@ -86,7 +86,8 @@ select pg_temp.ok(true, 'once the session passes the code, everything is allowed
 select pg_temp.request('e4133333-3333-4333-8333-333333333333', 'c4100000-0000-4000-8000-000000000003', 'GET', '/orders');
 select pg_temp.fails($q$select public.check_request()$q$, 'Verify your two-factor code');
 select pg_temp.request('', '', '', '');
-select pg_temp.ok((select count(*) = 4 from pg_policies where policyname = 'two-factor: verified sessions only' and permissive = 'RESTRICTIVE'),
+select pg_temp.ok((select count(*) = 4 from pg_policies where policyname = 'two-factor: verified sessions only' and permissive = 'RESTRICTIVE'
+                     and (schemaname, tablename) in (('storage', 'objects'), ('public', 'chat_messages'), ('public', 'support_messages'), ('public', 'user_notifications'))),
   'storage.objects and the three realtime tables carry the restrictive 2FA policy');
 
 -- ── Lockout ──

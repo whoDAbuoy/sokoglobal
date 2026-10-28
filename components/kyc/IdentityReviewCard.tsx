@@ -11,6 +11,8 @@ import OcrPrecheck, { type OcrResult } from './OcrPrecheck';
 
 export interface IdentityCase {
   id: string; documentType: KycDocumentType; documentNumber: string; submittedAt: string; fileUrl: string | null; fileIsPdf: boolean;
+  /** The file's bytes are not the PDF / JPG / PNG it claims (no link is given). */
+  fileMismatch: boolean;
   user: { full_name: string; company_name: string; country_code: string; role: string; kyc_status: string; created_at: string } | null;
   /** null before migration 020. */
   ocr: OcrResult | null;
@@ -36,7 +38,7 @@ export default function IdentityReviewCard({ item }: { item: IdentityCase }) {
         {item.fileUrl && !item.fileIsPdf
           // eslint-disable-next-line @next/next/no-img-element -- short-lived signed URL from the private bucket
           ? <img src={item.fileUrl} alt={`${KYC_LABEL[item.documentType]} submitted by ${item.user?.full_name ?? 'the user'}`} className="h-56 w-full object-contain" />
-          : <div className="grid h-56 place-items-center text-sm text-neutral-600">{item.fileUrl ? 'PDF document' : 'File unavailable'}</div>}
+          : <div className="grid h-56 place-items-center text-sm text-neutral-600">{item.fileUrl ? 'PDF document' : item.fileMismatch ? 'Not a real PDF, JPG or PNG: reject and ask for a re-upload' : 'File unavailable'}</div>}
         {item.fileUrl && (
           <a href={item.fileUrl} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-1.5 border-t border-neutral-200 py-2 text-xs font-medium text-blue-700 hover:underline dark:text-cyan-300">
             <ExternalLink className="h-3.5 w-3.5" aria-hidden /> Open full size
@@ -60,7 +62,7 @@ export default function IdentityReviewCard({ item }: { item: IdentityCase }) {
           <button type="button" onClick={() => decide(false)} disabled={pending || note.trim().length < 5} className="btn-secondary px-4 py-2">
             {pending ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <Undo2 className="h-4 w-4" aria-hidden />} Reject
           </button>
-          <button type="button" onClick={() => decide(true)} disabled={pending} className="btn-primary px-4 py-2">
+          <button type="button" onClick={() => decide(true)} disabled={pending || !item.fileUrl} className="btn-primary px-4 py-2">
             {pending ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <CheckCircle2 className="h-4 w-4" aria-hidden />} Accept document
           </button>
         </div>
