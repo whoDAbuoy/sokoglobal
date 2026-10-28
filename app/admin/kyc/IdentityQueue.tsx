@@ -8,6 +8,8 @@ import { KYC_LABEL, KYC_STATUS_META, type KycDocumentType, type KycStatus } from
 import DashboardHeader from '@/components/dashboard/DashboardHeader';
 import IdentityReviewCard, { type IdentityCase } from '@/components/kyc/IdentityReviewCard';
 import type { OcrResult } from '@/components/kyc/OcrPrecheck';
+import { vetSignedLinks } from '@/lib/storage-sniff-server';
+import { mimeFromPath } from '@/lib/file-signature';
 
 const one = <T,>(v: T | T[] | null | undefined): T | null => (Array.isArray(v) ? v[0] ?? null : v ?? null);
 
@@ -48,10 +50,10 @@ export default async function IdentityQueue({ profile, supabase }: { profile: Pr
   const signed = pending.length
     ? (await supabase.storage.from('kyc-documents').createSignedUrls(pending.map((p) => p.document_url as string), 300)).data ?? []
     : [];
-  const urlFor = new Map(signed.map((s) => [s.path, s.signedUrl]));
+  const urlFor = await vetSignedLinks(pending.map((p) => ({ path: p.document_url as string, url: signed.find((s) => s.path === p.document_url)?.signedUrl, mime: mimeFromPath(String(p.document_url)) })));
   const cases: IdentityCase[] = pending.map((p) => ({
     id: p.id as string, documentType: p.document_type as KycDocumentType, documentNumber: p.document_number as string,
-    submittedAt: p.created_at as string, fileUrl: urlFor.get(p.document_url as string) ?? null,
+    submittedAt: p.created_at as string, fileUrl: urlFor.get(p.document_url as string)?.url ?? null, fileMismatch: urlFor.get(p.document_url as string)?.mismatch ?? false,
     fileIsPdf: String(p.document_url).endsWith('.pdf'),
     user: one(p.user as unknown as IdentityCase['user']),
     ocr: typeof p.ocr_status === 'string'

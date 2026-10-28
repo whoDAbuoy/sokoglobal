@@ -1,13 +1,14 @@
 import { NextResponse } from 'next/server';
 import { getSessionProfile } from '@/lib/supabase/server';
 import { MEDIA_BUCKET, UPLOAD_RULES, UUID_RE } from '@/lib/uploads';
+import { urlContentMatches } from '@/lib/storage-sniff-server';
 import type { MediaType } from '@/lib/types';
 
 /**
  * POST /api/uploads/complete
  * Body: { productId, path, mediaType, width?, height?, capturedAt? }
  * Verifies the object really exists in storage (size/mime read from storage,
- * not trusted from the client) and records it in product_media.
+ * not trusted from the client), that its bytes really are that type, and records it in product_media.
  */
 export async function POST(request: Request) {
   const { supabase, user, profile } = await getSessionProfile();
@@ -41,6 +42,10 @@ export async function POST(request: Request) {
   }
 
   const { data: { publicUrl } } = supabase.storage.from(MEDIA_BUCKET).getPublicUrl(body.path);
+  if (!(await urlContentMatches(publicUrl, mime))) {
+    await supabase.storage.from(MEDIA_BUCKET).remove([body.path]);
+    return NextResponse.json({ error: `This file isn't a real ${UPLOAD_RULES[body.mediaType].label.split(' up to')[0]} file. Export it again and re-upload.` }, { status: 415 });
+  }
 
   const { count } = await supabase
     .from('product_media').select('id', { count: 'exact', head: true }).eq('product_id', body.productId);

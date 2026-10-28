@@ -6,6 +6,9 @@ import { friendlyError } from '@/lib/format';
 import { UUID_RE } from '@/lib/uploads';
 import { checkCanTransact } from '@/lib/platform-server';
 import type { CryptoNetwork, ManualPaymentView } from '@/lib/payment-methods';
+import { mimeFromPath } from '@/lib/file-signature';
+import { storedFileMatches } from '@/lib/storage-sniff-server';
+import { createAdminClient } from '@/lib/supabase/admin';
 
 export type ManualResult = { ok: true; payment: ManualPaymentView } | { ok: false; message: string };
 
@@ -40,6 +43,14 @@ export async function submitManualPayment(paymentId: string, txHash: string | nu
   if (!UUID_RE.test(paymentId)) return { ok: false, message: 'Invalid request.' };
   const ctx = await buyer();
   if (!ctx) return { ok: false, message: 'Sign in with your importer account.' };
+  if (proofPath) {
+    // Receipts live under the buyer's own folder; the bytes must really be the PDF / JPG / PNG the name says.
+    if (!proofPath.startsWith(`${ctx.user!.id}/`)) return { ok: false, message: 'Upload the receipt again.' };
+    if (!(await storedFileMatches('payment-proofs', proofPath, mimeFromPath(proofPath) ?? ''))) {
+      await createAdminClient().storage.from('payment-proofs').remove([proofPath]).catch(() => undefined);
+      return { ok: false, message: "That receipt isn't a readable PDF, JPG or PNG. Save or photograph it again and upload it." };
+    }
+  }
   const { data, error } = await ctx.supabase.rpc('submit_manual_payment', {
     p_id: paymentId, p_tx_hash: txHash?.trim() || null, p_proof_path: proofPath || null,
   });

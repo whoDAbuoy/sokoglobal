@@ -19,6 +19,8 @@ import { isAirtelConfigured } from '@/lib/payments/airtel';
 import { isPaystackConfigured } from '@/lib/payments/paystack';
 import { financialOverrideBlock } from '@/lib/security/two-factor-gate';
 import { twoFactorState } from '@/lib/security/two-factor-server';
+import { vetSignedLinks } from '@/lib/storage-sniff-server';
+import { mimeFromPath } from '@/lib/file-signature';
 
 export const metadata = { title: 'Financials · SokoGlobal Ops', robots: { index: false, follow: false } };
 export const dynamic = 'force-dynamic';
@@ -71,15 +73,16 @@ export default async function FinancialsPage() {
   const targetName = new Map((people ?? []).map((a) => [a.id, a.company_name]));
   const moneyBlocked = financialOverrideBlock(twoFactor);
   // Proofs live in the private payment-proofs bucket: short-lived signed links for the reviewer.
-  const queue = (queueRes.data ?? []) as unknown as (Omit<QueueRow, 'product_title' | 'buyer' | 'proof_url'> & { proof_path: string | null; order: unknown; buyer: unknown })[];
+  const queue = (queueRes.data ?? []) as unknown as (Omit<QueueRow, 'product_title' | 'buyer' | 'proof_url' | 'proof_mismatch'> & { proof_path: string | null; order: unknown; buyer: unknown })[];
   const proofPaths = queue.map((q) => q.proof_path).filter((p): p is string => !!p);
   const signed = proofPaths.length ? (await supabase.storage.from('payment-proofs').createSignedUrls(proofPaths, 600)).data ?? [] : [];
-  const signedBy = new Map(signed.map((s) => [s.path, s.signedUrl]));
+  const signedBy = await vetSignedLinks(proofPaths.map((p) => ({ path: p, url: signed.find((s) => s.path === p)?.signedUrl, mime: mimeFromPath(p) })));
   const one = <T,>(v: T | T[] | null | undefined): T | null => (Array.isArray(v) ? v[0] ?? null : v ?? null);
   const queueRows: QueueRow[] = queue.map((q) => {
     const buyer = one(q.buyer as { company_name: string; full_name: string } | null);
     return { ...q, product_title: one(one(q.order as { product: unknown } | null)?.product as { title: string } | null)?.title ?? null,
-      buyer: buyer ? `${buyer.company_name} (${buyer.full_name})` : 'Buyer', proof_url: q.proof_path ? signedBy.get(q.proof_path) ?? null : null };
+      buyer: buyer ? `${buyer.company_name} (${buyer.full_name})` : 'Buyer', proof_url: q.proof_path ? signedBy.get(q.proof_path)?.url ?? null : null,
+      proof_mismatch: q.proof_path ? signedBy.get(q.proof_path)?.mismatch ?? false : false };
   });
   const migrationMissing = !pricing.available || !!allTime.error;
   const all: RevenueSummary = parseRevenue(allTime.data);

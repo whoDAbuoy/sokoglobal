@@ -13,6 +13,8 @@ export interface QueueRow {
   id: string; method: 'swift_wire' | 'crypto_usdt' | 'crypto_usdc'; network: CryptoNetwork | null; leg: string | null;
   usd_cents: number; fee_cents: number; charge_cents: number; reference: string; tx_hash: string | null;
   submitted_at: string | null; order_id: string; product_title: string | null; buyer: string; proof_url: string | null;
+  /** The receipt's bytes are not the PDF / JPG / PNG it claims (no link is given). */
+  proof_mismatch: boolean;
 }
 
 function Row({ r }: { r: QueueRow }) {
@@ -72,6 +74,7 @@ function Row({ r }: { r: QueueRow }) {
           <dd>
             {r.proof_url
               ? <a href={r.proof_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 font-medium text-blue-700 hover:underline dark:text-cyan-300"><FileText className="h-3.5 w-3.5" aria-hidden /> View (link valid 10 min)</a>
+              : r.proof_mismatch ? <span className="font-medium text-red-600">Not a real PDF or image: ask the buyer to re-upload</span>
               : <span className="text-neutral-500">Not attached</span>}
           </dd>
         </div>

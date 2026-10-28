@@ -16,6 +16,8 @@ import WaveBackground from '@/components/motion/WaveBackground';
 import { homePathFor } from '@/lib/auth/admin-access';
 import { BIO_MAX, BIO_MIN, normalizeBio } from '@/lib/settings';
 import { LEGAL_VERSION } from '@/lib/legal';
+import { sameSitePath } from '@/lib/safe-path';
+import { newPasswordError, passwordStrength } from '@/lib/password';
 
 type Mode = 'login' | 'signup';
 type SignupRole = Exclude<UserRole, 'admin' | 'super_admin'>;
@@ -36,14 +38,6 @@ const TRUST_POINTS = [
   { icon: PackageCheck, title: 'Guaranteed Landed Cost', body: 'Product, consolidated air freight and customs clearance in one fixed price.' },
   { icon: BadgeCheck, title: 'Verified suppliers & real photos', body: 'KYC-checked sellers with live product photos and standardized swatch videos.' },
 ];
-
-function passwordStrength(pw: string): { score: 0 | 1 | 2 | 3; label: string } {
-  let score = 0;
-  if (pw.length >= 10) score++;
-  if (/[A-Z]/.test(pw) && /[a-z]/.test(pw)) score++;
-  if (/\d/.test(pw) && /[^A-Za-z0-9]/.test(pw)) score++;
-  return { score: score as 0 | 1 | 2 | 3, label: ['Too short', 'Weak', 'Good', 'Strong'][score] };
-}
 
 function mapAuthError(message: string): string {
   if (/invalid login credentials/i.test(message)) return 'Incorrect email or password.';
@@ -79,10 +73,7 @@ export default function Auth({ mode }: { mode: Mode }) {
 
   const strength = passwordStrength(password);
   const countries = role === 'supplier' ? SUPPLIER_COUNTRIES : IMPORTER_COUNTRIES;
-  const redirectTo = (() => {
-    const r = searchParams.get('redirectTo');
-    return r && r.startsWith('/') && !r.startsWith('//') ? r : null;
-  })();
+  const redirectTo = sameSitePath(searchParams.get('redirectTo'));
 
   // Restore / remember the email draft (read after mount so server and client render the same markup).
   useEffect(() => {
@@ -124,7 +115,8 @@ export default function Auth({ mode }: { mode: Mode }) {
     const bioCheck = normalizeBio(bio);
 
     if (mode === 'signup') {
-      if (strength.score < 2) return setError('Use at least 10 characters with upper & lower case letters.');
+      const passwordProblem = newPasswordError(password);
+      if (passwordProblem) return setError(passwordProblem);
       if (!country) return setError('Please select your country.');
       if (!bioCheck.ok) return setError(bioCheck.error);
       if (!acceptTerms) return setError('Please accept the Terms and Escrow Agreement to continue.');

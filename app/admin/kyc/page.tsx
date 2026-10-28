@@ -6,6 +6,7 @@ import KycReviewCard, { type KycCase } from './KycReviewCard';
 import { isAdmin } from '@/lib/auth/admin-access';
 import IdentityQueue, { KycTabs } from './IdentityQueue';
 import { stringFields } from '@/lib/kyc';
+import { vetSignedLinks } from '@/lib/storage-sniff-server';
 
 export const metadata = { title: 'Supplier KYC · SokoGlobal Ops', robots: { index: false, follow: false } };
 export const dynamic = 'force-dynamic';
@@ -54,7 +55,8 @@ export default async function KycAdminPage({ searchParams }: { searchParams: Pro
   const signed = docs.length
     ? (await supabase.storage.from('kyc-documents').createSignedUrls(docs.map((d) => d.storage_path), SIGNED_URL_TTL)).data ?? []
     : [];
-  const urlFor = new Map(signed.map((s) => [s.path, s.signedUrl]));
+  // Each file's bytes must be the type it claims, however it was uploaded (lib/storage-sniff-server.ts).
+  const urlFor = await vetSignedLinks(docs.map((d) => ({ path: d.storage_path, url: signed.find((s) => s.path === d.storage_path)?.signedUrl, mime: d.mime_type })));
 
   const account = (supplierId: string) => {
     const a = (acctRes.data ?? []).find((r) => r.supplier_id === supplierId);
@@ -69,7 +71,7 @@ export default async function KycAdminPage({ searchParams }: { searchParams: Pro
       supplier: one(k.supplier as unknown as KycCase['supplier']),
       documents: docs.filter((d) => d.supplier_id === k.supplier_id).map((d) => ({
         id: d.id, docType: d.doc_type, fileName: d.file_name, mimeType: d.mime_type, bytes: d.bytes,
-        uploadedAt: d.uploaded_at, url: urlFor.get(d.storage_path) ?? null,
+        uploadedAt: d.uploaded_at, url: urlFor.get(d.storage_path)?.url ?? null, mismatch: urlFor.get(d.storage_path)?.mismatch ?? false,
       })),
       account: account(k.supplier_id),
       heldPayouts: { count: held.length, cents: held.reduce((s, h) => s + h.amount_cents, 0) },

@@ -1,13 +1,20 @@
 // Run: npx tsx --test lib/password.test.mts
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { isRecentRecovery, passwordStrength, validatePasswordChange, validatePasswordReset } from './password.ts';
+import { isRecentRecovery, newPasswordError, passwordStrength, validatePasswordChange, validatePasswordReset } from './password.ts';
 
 test('strength matches sign-up scoring', () => {
   assert.equal(passwordStrength('short').label, 'Too short');
   assert.equal(passwordStrength('alllowercase').label, 'Weak');
   assert.equal(passwordStrength('MixedCaseOnly').label, 'Good');
   assert.equal(passwordStrength('Mixed-Case-99').label, 'Strong');
+  assert.equal(passwordStrength('Ab1!xy').label, 'Too short', 'mixed but short is still too short');
+});
+
+test('sign-up uses the same rule: 10 characters minimum', () => {
+  assert.equal(newPasswordError('Ab1!xy'), 'Use at least 10 characters.');
+  assert.equal(newPasswordError('alllowercase'), 'Add upper & lower case letters, or a number and a symbol.');
+  assert.equal(newPasswordError('MixedCaseOnly'), null);
 });
 
 test('valid change has no errors', () => {

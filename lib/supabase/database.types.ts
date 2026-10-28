@@ -4852,6 +4852,7 @@ export type Database = {
       mark_notifications_read: { Args: { p_ids?: string[] | null }; Returns: number }
       mark_ops_alerts_sent: { Args: { p_keys: string[] | null }; Returns: undefined }
       max_batches_per_line: { Args: never; Returns: number }
+      may_upload_listing_media: { Args: { p_name: string | null }; Returns: boolean }
       milestone_deposit_cents: { Args: { p_total: number | null }; Returns: number }
       milestone_eligible: {
         Args: { p: Database["public"]["Tables"]["orders"]["Row"] | null }
