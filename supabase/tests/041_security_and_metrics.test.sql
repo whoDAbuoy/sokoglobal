@@ -71,6 +71,12 @@ select pg_temp.request('e4133333-3333-4333-8333-333333333333', 'c4100000-0000-40
 select public.check_request();
 select pg_temp.request('e4133333-3333-4333-8333-333333333333', 'c4100000-0000-4000-8000-000000000002', 'POST', '/rpc/my_security_state');
 select public.check_request();
+select pg_temp.request('e4133333-3333-4333-8333-333333333333', 'c4100000-0000-4000-8000-000000000002', 'POST', '/rest/v1/rpc/my_security_state');
+select public.check_request();
+select pg_temp.request('e4133333-3333-4333-8333-333333333333', 'c4100000-0000-4000-8000-000000000002', 'GET', '/rest/v1/profiles/');
+select public.check_request();
+select pg_temp.request('e4133333-3333-4333-8333-333333333333', 'c4100000-0000-4000-8000-000000000002', 'GET', '/rest/v1/user_profiles');
+select pg_temp.fails($q$select public.check_request()$q$, 'Verify your two-factor code');
 select pg_temp.ok(true, 'a session waiting for its code may read its profile and security state only');
 insert into public.two_factor_sessions (session_id, user_id, method, expires_at)
 values ('c4100000-0000-4000-8000-000000000002', 'e4133333-3333-4333-8333-333333333333', 'totp', now() + interval '12 hours');

@@ -48,8 +48,9 @@ begin
   if auth.uid() is null or public.two_factor_satisfied() then return; end if;
   -- What a session waiting for its code still needs: the ban / 2FA / admin state (middleware, /auth/2fa),
   -- its own profile (RLS limits it to the owner and admins) and the maintenance banner and display currency.
-  if v_path in ('/rpc/my_security_state', '/rpc/my_admin_access', '/rpc/two_factor_satisfied') then return; end if;
-  if v_method in ('GET', 'HEAD') and v_path in ('/profiles', '/platform_settings', '/exchange_rates', '/system_configs') then return; end if;
+  -- Matched on the end of the path, so a gateway prefix (/rest/v1/...) or a trailing slash doesn't lock anyone out.
+  if v_path ~ '/rpc/(my_security_state|my_admin_access|two_factor_satisfied)/?$' then return; end if;
+  if v_method in ('GET', 'HEAD') and v_path ~ '/(profiles|platform_settings|exchange_rates|system_configs)/?$' then return; end if;
   raise exception 'Verify your two-factor code to continue' using errcode = '42501', hint = 'two_factor_required';
 end $$;
 revoke all on function public.check_request() from public;
