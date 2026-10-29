@@ -13,6 +13,11 @@ import { join } from 'node:path';
 import { startDb } from './db-docker.mjs';
 
 const SUPABASE_CLI = 'supabase@2.54.11';
+// The image `supabase gen types` runs (it follows the CLI version above). The CLI pulls it from public.ecr.aws,
+// which refuses anonymous pulls from busy CI runners ("toomanyrequests: Data limit exceeded"). Supabase publishes
+// the same image on Docker Hub, so fetch it from there and tag it with the name the CLI looks for: the CLI then
+// finds it locally and never pulls.
+const PG_META = 'supabase/postgres-meta:v0.93.1';
 const out = join(import.meta.dirname, '..', 'lib', 'supabase', 'database.types.ts');
 const check = process.argv.includes('--check');
 const port = Number(process.env.DB_TYPES_PORT || 54330);
@@ -48,9 +53,18 @@ function nullableArgs(text) {
   return lines.join('\n');
 }
 
+function prefetchPgMeta() {
+  const docker = (args) => spawnSync('docker', args, { encoding: 'utf8' });
+  const ecr = `public.ecr.aws/${PG_META}`;
+  if (docker(['image', 'inspect', ecr]).status === 0) return;
+  if (docker(['pull', '-q', PG_META]).status === 0) docker(['tag', PG_META, ecr]);
+  // Otherwise the CLI tries public.ecr.aws itself, as before.
+}
+
 let exit = 0;
 let db;
 try {
+  prefetchPgMeta();
   db = startDb(`sokoglobal-dbtypes-${process.pid}`, { port });
   db.applySchema();
   const gen = spawnSync('npx', ['-y', SUPABASE_CLI, 'gen', 'types', 'typescript', '--schema', 'public',
