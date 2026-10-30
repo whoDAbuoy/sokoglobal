@@ -22,6 +22,7 @@ import BuyerOverview, { type Notice, type RfqAlert } from '@/components/dashboar
 import { freightShareByOrigin } from '@/lib/landed-estimate';
 import { goldSupplierIds } from '@/lib/pricing-server';
 import { CATALOG_PRODUCT_SELECT, toTrialProductView, type CatalogProductRow } from '@/lib/product-view';
+import { POOL_SELECT, toPoolView } from '@/lib/pool-view';
 
 export const metadata = { title: 'Buyer dashboard · SokoGlobal' };
 
@@ -78,9 +79,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const [poolsRes, productsRes, ordersRes, myPoolsRes, followedIds, feedRows, rfqRes, configs, kycDocsRes, gold, { category }] = await Promise.all([
     supabase
       .from('trend_pools')
-      .select(`id, title, description, destination_country, target_cents, pledged_cents, min_contribution_cents,
-               freight_total_cents, member_count, max_members, deadline, status,
-               product:products ( category, origin_country, product_media ( public_url, media_type, sort_order ) )`)
+      .select(POOL_SELECT)
       .in('status', ['open', 'funded'])
       .order('deadline', { ascending: true })
       .limit(6),
@@ -118,18 +117,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const minTrialCents = minimumCents(configs.trial);
   const myPools = new Map((myPoolsRes.data ?? []).map((m) => [m.pool_id as string, m as { contribution_cents: number; payment_status: EscrowStatus }]));
 
-  const pools: TrendPoolView[] = (poolsRes.data ?? []).map((p) => {
-    const product = one(p.product as unknown as { category: ProductCategory; origin_country: string; product_media: MediaRow[] });
-    return {
-      id: p.id, title: p.title, description: p.description, destination_country: p.destination_country,
-      target_cents: p.target_cents, pledged_cents: p.pledged_cents, min_contribution_cents: p.min_contribution_cents,
-      freight_total_cents: p.freight_total_cents, member_count: p.member_count, max_members: p.max_members,
-      deadline: p.deadline, status: p.status,
-      category: product?.category ?? 'beauty', origin_country: product?.origin_country ?? 'US',
-      image_url: firstImage(product?.product_media), my_contribution_cents: myPools.get(p.id)?.contribution_cents ?? 0,
-      my_payment_status: myPools.get(p.id)?.payment_status ?? null,
-    };
-  });
+  const pools: TrendPoolView[] = (poolsRes.data ?? []).map((p) => toPoolView(p as Parameters<typeof toPoolView>[0], myPools.get(p.id as string)));
 
   const feed = feedRows.map((r) => toTrialProductView(r, null, gold));
   const products: TrialProductView[] = (productsRes.data ?? []).map((p) => {
@@ -177,7 +165,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   if (viewPools.length) {
     categoryTiles.push({
       key: 'pools', label: 'Trend Pools', category: viewPools[0].category, image: viewPools.find((p) => p.image_url)?.image_url ?? null,
-      caption: `${viewPools.length} open · split freight with other boutiques`, href: '/dashboard#pools',
+      caption: `${viewPools.length} open · split freight with other boutiques`, href: '/dashboard/pools',
     });
   }
 
@@ -212,7 +200,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
       id: 'pools', category: viewPools[0].category, image: viewPools.find((p) => p.image_url)?.image_url ?? imageOf(viewPools[0].category),
       eyebrow: 'Trend Pools', title: 'Buy in bulk with other boutiques',
       body: `${viewPools.length} pool${viewPools.length === 1 ? '' : 's'} open now: pledge your share and split volumetric air freight.`,
-      href: '/dashboard#pools', cta: 'See Trend Pools',
+      href: '/dashboard/pools', cta: 'See Trend Pools',
     }] : []),
   ];
 
@@ -312,6 +300,11 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
             icon={Users}
             title="Trend Pools"
             subtitle="Team up with other boutiques to buy in bulk and split volumetric shipping costs."
+            aside={
+              <Link href="/dashboard/pools" className="pill border-neutral-300 text-neutral-800 hover:border-neutral-900">
+                Trending pools and products <ArrowRight className="h-3.5 w-3.5" aria-hidden />
+              </Link>
+            }
           />
           <OneRowGrid className="mt-8">
             {viewPools.map((p) => <TrendPoolCard key={p.id} pool={p} />)}

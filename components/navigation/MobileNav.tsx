@@ -8,7 +8,7 @@ import { useChat } from '@/context/ChatContext';
 import type { Profile } from '@/lib/types';
 import { roleAdminLevel } from '@/lib/auth/admin-access';
 
-type Item = { label: string; href: string; icon: LucideIcon; badge?: boolean };
+type Item = { label: string; href: string; icon: LucideIcon; badge?: boolean; /** Other sections that also light this item up. */ also?: string[] };
 
 /** Thumb-reach destinations per role: Home, Explore, Messages, Orders, Profile. */
 function itemsFor(profile: Profile): Item[] {
@@ -33,7 +33,7 @@ function itemsFor(profile: Profile): Item[] {
   }
   return [
     { label: 'Home', href: '/dashboard', icon: House },
-    { label: 'Explore', href: '/dashboard/discover', icon: Compass },
+    { label: 'Explore', href: '/dashboard/discover', icon: Compass, also: ['/dashboard/pools'] },
     { label: 'Messages', href: '/dashboard/messages', icon: MessageSquare, badge: true },
     { label: 'Orders', href: '/dashboard/orders', icon: Package },
     profileItem,
@@ -42,8 +42,11 @@ function itemsFor(profile: Profile): Item[] {
 
 /** The item for the current page: the longest href the path sits under (so /dashboard/orders marks Orders, not Home). */
 function activeHref(items: Item[], pathname: string): string | null {
-  const hits = items.filter((i) => pathname === i.href || pathname.startsWith(`${i.href}/`));
-  return hits.sort((a, b) => b.href.length - a.href.length)[0]?.href ?? null;
+  const under = (root: string) => pathname === root || pathname.startsWith(`${root}/`);
+  // Each item is ranked by its longest matching path, so /dashboard/pools (Explore's `also`) beats /dashboard (Home).
+  const best = items.map((i) => ({ href: i.href, len: Math.max(...[i.href, ...(i.also ?? [])].map((r) => (under(r) ? r.length : -1))) }))
+    .filter((h) => h.len >= 0).sort((a, b) => b.len - a.len)[0];
+  return best?.href ?? null;
 }
 
 /**

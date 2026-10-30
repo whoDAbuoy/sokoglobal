@@ -1979,6 +1979,52 @@ export type Database = {
           },
         ]
       }
+      product_interactions: {
+        Row: {
+          created_at: string
+          day: string
+          kind: string
+          product_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          day?: string
+          kind: string
+          product_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          day?: string
+          kind?: string
+          product_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_interactions_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_interactions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_interactions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       product_media: {
         Row: {
           bytes: number
@@ -4985,6 +5031,7 @@ export type Database = {
         Args: { s: Database["public"]["Tables"]["platform_settings"]["Row"] | null }
         Returns: Json
       }
+      prune_product_interactions: { Args: never; Returns: number }
       public_browse_listings: {
         Args: { p_limit?: number | null; p_offset?: number | null }
         Returns: {
@@ -6277,6 +6324,32 @@ export type Database = {
       supported_payout_currencies: { Args: never; Returns: string[] }
       swift_details_complete: { Args: { p: Json | null }; Returns: boolean }
       system_config: { Args: { p_key: string | null }; Returns: Json }
+      track_product_interaction: {
+        Args: { p_kind: string | null; p_product_id: string | null }
+        Returns: boolean
+      }
+      trend_decay: { Args: { p_at: string | null; p_weight: number | null }; Returns: number }
+      trending_pools: {
+        Args: { p_limit?: number | null }
+        Returns: {
+          pool_id: string
+          recent_pledges: number
+          score: number
+        }[]
+      }
+      trending_products: {
+        Args: { p_days?: number | null; p_limit?: number | null }
+        Returns: {
+          buyers: number
+          inquiries: number
+          orders: number
+          pledges: number
+          product_id: string
+          saves: number
+          score: number
+          views: number
+        }[]
+      }
       trial_batch_min_cents: { Args: never; Returns: number }
       trial_batches_enabled: { Args: never; Returns: boolean }
       two_factor_locked_until: { Args: { p_user: string | null }; Returns: string }

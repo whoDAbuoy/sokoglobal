@@ -19,7 +19,7 @@ import NotificationBell from '@/components/notifications/NotificationBell';
 
 const ADMIN_NAV: [string, string][] = [['Overview', '/admin'], ['Review queue', '/admin/review'], ['Catalogue', '/admin/products'], ['Shipments', '/admin/orders'], ['Supplier KYC', '/admin/kyc'], ['Users', '/admin/users'], ['Support', '/admin/support']];
 const NAV: Record<Profile['role'], [string, string][]> = {
-  importer: [['Discover', '/dashboard'], ['Catalog', '/dashboard/discover'], ['RFQs', '/dashboard/rfqs'], ['Trend Pools', '/dashboard#pools'], ['Following', '/dashboard/following'], ['Messages', '/dashboard/messages']],
+  importer: [['Discover', '/dashboard'], ['Catalog', '/dashboard/discover'], ['RFQs', '/dashboard/rfqs'], ['Trend Pools', '/dashboard/pools'], ['Following', '/dashboard/following'], ['Messages', '/dashboard/messages']],
   // Sellsy-style supplier tabs: Overview (the dashboard, with its sales and analytics sections), then the portal's working pages.
   supplier: [['Overview', '/supplier'], ['Products', '/supplier/products'],
     ['Inventory', '/supplier/inventory'], ['Orders', '/supplier/orders'], ['Returns', '/supplier/returns'], ['Drafts', '/supplier/drafts'],

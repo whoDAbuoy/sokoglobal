@@ -42,8 +42,10 @@ export function LayoutSwitcher({ layout, onChange, className }: { layout: CardLa
 }
 
 /** The product list with its own switcher on top (supplier pages). The catalogue places the switcher in its toolbar. */
-export default function ProductResults({ products, className, toolbar }: {
+export default function ProductResults({ products, className, toolbar, highlights }: {
   products: TrialProductView[]; className?: string;
+  /** Per-listing note on the card (e.g. why it is trending), keyed by product id. */
+  highlights?: Record<string, string>;
   /** Rendered left of the switcher (e.g. the result count). */
   toolbar?: React.ReactNode;
 }) {
@@ -55,7 +57,7 @@ export default function ProductResults({ products, className, toolbar }: {
         <LayoutSwitcher layout={layout} onChange={setLayout} />
       </div>
       <div className={clsx('mt-4', LAYOUT_CONTAINER[layout])}>
-        {products.map((p) => <TrialBatchCard key={p.id} product={p} layout={layout} />)}
+        {products.map((p) => <TrialBatchCard key={p.id} product={p} layout={layout} highlight={highlights?.[p.id]} />)}
       </div>
     </div>
   );
