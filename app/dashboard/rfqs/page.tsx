@@ -91,11 +91,11 @@ export default async function BuyerRfqsPage({ searchParams }: { searchParams: Pr
             </p>
           </div>
           {/* The request form stays hidden until "New RFQ" opens it (straight away when arriving with a product to quote). */}
-          <NewRfqButton categories={categoryOptions((allCats ?? []).filter((c) => c.is_active))} prefill={prefill}
+          <div data-tour="new-rfq"><NewRfqButton categories={categoryOptions((allCats ?? []).filter((c) => c.is_active))} prefill={prefill}
             addonPrices={addonPrices} buyerName={profile.full_name} startOpen={!!p}
             disabledReason={profile.role !== 'importer' ? 'Requests for quote are for importer accounts.'
               : !kycApproved ? 'Verify your business (KYC) to request quotes.' : null}
-            kycHref={!kycApproved && profile.role === 'importer' ? '/dashboard/kyc' : null} />
+            kycHref={!kycApproved && profile.role === 'importer' ? '/dashboard/kyc' : null} /></div>
         </div>
         {returnStatus === 'processing' && (
           <p role="status" className="mt-6 rounded-xl border px-4 py-3 text-sm tone-active">
@@ -104,7 +104,7 @@ export default async function BuyerRfqsPage({ searchParams }: { searchParams: Pr
         )}
 
         <div className="mt-8">
-          <section aria-labelledby="my-rfqs" className="min-w-0">
+          <section aria-labelledby="my-rfqs" data-tour="rfq-list" className="min-w-0">
             <h2 id="my-rfqs" className="sr-only">Your requests</h2>
             {rfqs.length === 0 ? (
               <div className="card px-6 py-14 text-center">

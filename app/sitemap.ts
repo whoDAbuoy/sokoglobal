@@ -20,6 +20,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const urls: MetadataRoute.Sitemap = [
     { url: `${origin}/`, changeFrequency: 'daily', priority: 1 },
     { url: `${origin}/products`, changeFrequency: 'daily', priority: 0.9 },
+    { url: `${origin}/help`, changeFrequency: 'monthly', priority: 0.4 },
     ...LEGAL_DOCS.map((d) => ({ url: `${origin}${d.href}`, changeFrequency: 'yearly' as const, priority: 0.2 })),
   ];
   for (const e of entries) {

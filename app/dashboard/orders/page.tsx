@@ -91,7 +91,7 @@ export default async function OrdersPage() {
             <h1 className="mt-2 text-3xl font-semibold text-neutral-900">My orders</h1>
             <p className="mt-1 text-sm text-neutral-500">Every order is held in escrow until you verify the goods at your door.</p>
           </div>
-          <nav aria-label="Order groups" className="flex flex-wrap gap-2">
+          <nav aria-label="Order groups" data-tour="order-groups" className="flex flex-wrap gap-2">
             {GROUPS.map((g) => {
               const n = byGroup(g.key).length;
               return n ? (
@@ -106,7 +106,7 @@ export default async function OrdersPage() {
         <QuickReorder sources={reorderSources} quoted={quoted} />
 
         {orders.length === 0 ? (
-          <div className="mt-8"><EscrowTracker orders={[]} /></div>
+          <div className="mt-8" data-tour="escrow-tracker"><EscrowTracker orders={[]} /></div>
         ) : (
           GROUPS.map((g) => {
             const list = byGroup(g.key);
@@ -116,7 +116,7 @@ export default async function OrdersPage() {
                 <h2 id={`${g.key}-title`} className="flex items-center gap-2 text-sm font-semibold text-neutral-900">
                   {g.title} <span className="font-normal tabular-nums text-neutral-500">{list.length}</span>
                 </h2>
-                <div className="mt-4">
+                <div className="mt-4" data-tour="escrow-tracker">
                   {list.length ? <EscrowTracker orders={list} /> : <p className="text-sm text-neutral-500">{g.empty}</p>}
                 </div>
               </section>

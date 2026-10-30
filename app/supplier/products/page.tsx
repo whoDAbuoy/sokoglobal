@@ -49,7 +49,7 @@ export default async function SupplierProductsPage() {
           actions={<>
             {drafts > 0 && <Link href="/supplier/drafts" className="btn-secondary"><FilePen className="h-4 w-4" aria-hidden /> Drafts ({drafts})</Link>}
             <Link href="/supplier/products/import" className="btn-secondary"><Upload className="h-4 w-4" aria-hidden /> Bulk import</Link>
-            <Link href="/supplier/products/new" className="btn-primary"><Plus className="h-4 w-4" aria-hidden /> New product</Link>
+            <Link href="/supplier/products/new" data-tour="new-product" className="btn-primary"><Plus className="h-4 w-4" aria-hidden /> New product</Link>
           </>}>
           Trial Batch listings with their order mix. Products go live after logistics quoting and photo review.
         </PageHead>
@@ -60,7 +60,7 @@ export default async function SupplierProductsPage() {
             <Link href="/supplier/products/new" className="btn-secondary mt-4 inline-flex"><Plus className="h-4 w-4" aria-hidden /> New product</Link>
           </Panel>
         ) : (
-          <SupplierProductGrid products={products} orders={Object.fromEntries(byProduct)} />
+          <div data-tour="product-list"><SupplierProductGrid products={products} orders={Object.fromEntries(byProduct)} /></div>
         )}
       </main>
     </>

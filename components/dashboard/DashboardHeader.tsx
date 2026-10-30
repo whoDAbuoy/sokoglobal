@@ -1,5 +1,6 @@
 'use client';
 
+import { Suspense } from 'react';
 import Link from 'next/link';
 import {
   BadgeCheck, ClipboardCheck, Compass, FileCheck2, Headphones, Heart, LayoutDashboard, LogOut, MessageSquare, Package,
@@ -16,6 +17,7 @@ import { isSellsyRoute } from '@/lib/theme';
 import CurrencySwitcher from '@/components/currency/CurrencySwitcher';
 import MobileNav from '@/components/navigation/MobileNav';
 import NotificationBell from '@/components/notifications/NotificationBell';
+import TourRunner from '@/components/tour/TourRunner';
 
 const ADMIN_NAV: [string, string][] = [['Overview', '/admin'], ['Review queue', '/admin/review'], ['Catalogue', '/admin/products'], ['Shipments', '/admin/orders'], ['Supplier KYC', '/admin/kyc'], ['Users', '/admin/users'], ['Support', '/admin/support']];
 const NAV: Record<Profile['role'], [string, string][]> = {
@@ -117,7 +119,7 @@ export default function DashboardHeader({ profile }: { profile: Profile }) {
           )}
           <CurrencySwitcher />
           {profile.role === 'importer' && (
-            <Link href="/dashboard/orders" aria-label="My orders and escrow tracking" className="nav-chip px-2.5 sm:px-3">
+            <Link href="/dashboard/orders" aria-label="My orders and escrow tracking" data-tour="orders-chip" className="nav-chip px-2.5 sm:px-3">
               <Package className="h-4 w-4" strokeWidth={1.75} /> <span className="hidden sm:inline">My Orders</span>
             </Link>
           )}
@@ -166,11 +168,19 @@ export default function DashboardHeader({ profile }: { profile: Profile }) {
       {/* App-style layout at every width: the section links always get their own scrollable pill row, so the
           account controls above never share space with them (no overlap, whatever the role or link count). */}
       <div className="border-t border-black/[0.06] dark:border-snow/[0.08]">
-        <nav aria-label="Sections" className={pills
+        <nav aria-label="Sections" data-tour="section-nav" className={pills
           // Supplier pills sit centred (w-max + mx-auto) and still scroll sideways when they don't fit.
           ? 'no-scrollbar mx-auto max-w-[1920px] overflow-x-auto px-2.5 py-2.5 sm:px-6 lg:px-10'
           : 'no-scrollbar mx-auto flex max-w-[1920px] gap-1 overflow-x-auto px-2.5 py-1.5 sm:px-6 lg:px-10'}>
-          {pills ? <div className="mx-auto flex w-max gap-1.5">{links}</div> : links}
+          {pills ? (
+            <div className="mx-auto flex w-max gap-1.5">
+              {links}
+              {/* Guided tour for this page + Help Center (buyers and suppliers; lib/tours.ts). */}
+              {(profile.role === 'importer' || profile.role === 'supplier') && (
+                <Suspense fallback={null}><TourRunner role={profile.role} /></Suspense>
+              )}
+            </div>
+          ) : links}
         </nav>
       </div>
     </header>

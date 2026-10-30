@@ -81,7 +81,7 @@ export default function NewListingForm({ categories, supplierId, defaultOrigin, 
 
   return (
     <form onSubmit={submit} noValidate className="mt-6 space-y-6">
-      <section className="card space-y-4 p-6">
+      <section className="card space-y-4 p-6" data-tour="listing-category">
         <h2 className="font-semibold text-neutral-900">Category</h2>
         <div className="grid gap-3 sm:grid-cols-3">
           {levels.map((options, depth) => (
@@ -109,7 +109,7 @@ export default function NewListingForm({ categories, supplierId, defaultOrigin, 
         )}
       </section>
 
-      <section className="card space-y-4 p-6">
+      <section className="card space-y-4 p-6" data-tour="listing-product">
         <h2 className="font-semibold text-neutral-900">Product</h2>
         <div>
           <label className="label" htmlFor="title">Product title</label>
@@ -157,7 +157,7 @@ export default function NewListingForm({ categories, supplierId, defaultOrigin, 
         </section>
       )}
 
-      <section className="card space-y-4 p-6">
+      <section className="card space-y-4 p-6" data-tour="listing-pricing">
         <h2 className="font-semibold text-neutral-900">Pricing &amp; supply</h2>
         <div className="grid gap-4 sm:grid-cols-3">
           <div><label className="label" htmlFor="price">Unit price (USD)</label><input id="price" inputMode="decimal" className="input tabular-nums" value={unitPrice} onChange={(e) => setUnitPrice(e.target.value)} />{err('unit_price')}</div>

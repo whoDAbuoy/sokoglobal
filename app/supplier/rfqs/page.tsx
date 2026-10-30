@@ -133,7 +133,7 @@ export default async function SupplierRfqsPage() {
             </p>
           </div>
         ) : (
-          <ul className="mt-8 space-y-5">{open.map(card)}</ul>
+          <ul className="mt-8 space-y-5" data-tour="rfq-list">{open.map(card)}</ul>
         )}
 
         {closed.length > 0 && (
