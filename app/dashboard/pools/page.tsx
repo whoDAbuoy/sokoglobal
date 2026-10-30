@@ -76,7 +76,7 @@ export default async function PoolsPage({ searchParams }: { searchParams: Promis
             Team up with other boutiques to buy in bulk and split volumetric air freight, and see the listings getting the most orders,
             pledges and inquiries right now.
           </p>
-          <dl className="mt-5 flex flex-wrap gap-2 text-sm">
+          <dl className="mt-5 flex flex-wrap gap-2 text-sm" data-tour="pool-stats">
             <Stat label="Open pools" value={openCount.toLocaleString('en-US')} />
             <Stat label="Pledged so far" value={formatUSD(pledged)} />
             <Stat label="Boutiques pooling" value={boutiques.toLocaleString('en-US')} />
@@ -95,7 +95,7 @@ export default async function PoolsPage({ searchParams }: { searchParams: Promis
         <section aria-labelledby="open-pools">
           <div className="flex flex-wrap items-end justify-between gap-3 border-b border-neutral-200 pb-3">
             <h2 id="open-pools" className="flex items-center gap-2 text-xl font-semibold text-neutral-900"><Plane className="h-5 w-5 text-neutral-500" aria-hidden /> Open pools</h2>
-            <nav aria-label="Sort pools" className="flex flex-wrap gap-1.5">
+            <nav aria-label="Sort pools" data-tour="pool-sort" className="flex flex-wrap gap-1.5">
               {POOL_SORTS.map(([s, label]) => (
                 <Link key={s} href={s === 'trending' ? '/dashboard/pools' : `/dashboard/pools?sort=${s}`} scroll={false} aria-current={sort === s ? 'true' : undefined}
                   className={clsx('rounded-full border px-3 py-1 text-xs font-medium',
@@ -128,7 +128,7 @@ export default async function PoolsPage({ searchParams }: { searchParams: Promis
           )}
         </section>
 
-        <section aria-labelledby="trending-products">
+        <section aria-labelledby="trending-products" data-tour="trending-products">
           <div className="border-b border-neutral-200 pb-3">
             <h2 id="trending-products" className="flex items-center gap-2 text-xl font-semibold text-neutral-900">
               <Flame className="h-5 w-5 text-orange-400" aria-hidden /> {trending.length ? 'Trending products' : 'New this week'}

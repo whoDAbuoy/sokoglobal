@@ -67,7 +67,7 @@ export default async function KycPage({ searchParams }: { searchParams: Promise<
           </section>
         ) : (
           <>
-            <section aria-label="Checklist" className="mt-8 grid gap-3 sm:grid-cols-2">
+            <section aria-label="Checklist" data-tour="kyc-checklist" className="mt-8 grid gap-3 sm:grid-cols-2">
               {([['identity', 'Identity document', 'National ID or passport'], ['business', 'Business document', 'Business licence or tax certificate']] as const).map(([k, label, hint]) => {
                 const s = list[k];
                 const Icon = s === 'approved' ? CheckCircle2 : s === 'pending' ? Clock : s === 'rejected' ? XCircle : FileText;

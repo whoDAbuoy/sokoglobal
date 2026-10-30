@@ -112,7 +112,7 @@ test.describe('guards and hardening', () => {
         (window as unknown as { reportCspViolation: (v: string) => void }).reportCspViolation(`${e.violatedDirective} ${e.blockedURI} on ${location.pathname}`);
       });
     });
-    for (const path of ['/', '/login', '/signup', '/products', '/legal/terms', '/legal/escrow', '/legal/privacy', '/no-such-page']) {
+    for (const path of ['/', '/login', '/signup', '/products', '/legal/terms', '/legal/escrow', '/legal/privacy', '/help', '/no-such-page']) {
       await page.goto(path, { waitUntil: 'load' });
       await page.waitForTimeout(500);   // late scripts, frames and fetches
     }
