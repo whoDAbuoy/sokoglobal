@@ -32,6 +32,8 @@ export default function PrivacyPage() {
           <li><strong className="text-neutral-900">Communications:</strong> messages, attachments and voice notes in order chats and support, disputes, and ratings.</li>
           <li><strong className="text-neutral-900">Technical:</strong> IP address, browser and device information, and security logs (sign-ins, rate limits,
             admin actions with IP and browser).</li>
+          <li><strong className="text-neutral-900">Activity on listings:</strong> which listings you open or save (at most one record per listing per day),
+            used only to rank trending products. Other users only ever see totals, never who.</li>
         </List>
       </Section>
 
@@ -84,7 +86,7 @@ export default function PrivacyPage() {
           <li>Account and profile data: while the account is open, then deleted or anonymised within 90 days of closure, except as below.</li>
           <li>Orders, payments, payouts, invoices and related messages: 7 years after the order, for tax, accounting and anti-fraud obligations.</li>
           <li>Verification documents and data: 5 years after the account closes or the business relationship ends.</li>
-          <li>Security and audit logs: up to 2 years; integration delivery logs: 30 days.</li>
+          <li>Security and audit logs: up to 2 years; listing views and saves: 90 days; integration delivery logs: 30 days.</li>
         </List>
       </Section>
 

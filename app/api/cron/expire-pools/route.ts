@@ -40,6 +40,10 @@ async function run(request: Request) {
     return NextResponse.json({ error: 'Expiry step failed' }, { status: 500 });
   }
 
+  // Trending signals (migration 043): view / save records older than 90 days. Best effort, never blocks refunds.
+  const { error: pruneError } = await db.rpc('prune_product_interactions');
+  if (pruneError) console.warn('[cron:expire-pools] prune_product_interactions failed', pruneError.message);
+
   const results = { refunded: 0, retrying: 0, failed: 0 };
   let processed = 0;
 

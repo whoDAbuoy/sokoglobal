@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import clsx from 'clsx';
-import { AlertCircle, BadgeCheck, Check, CheckCircle2, Eye, Film, Heart, Loader2, Lock, LogIn, ShieldCheck, ShoppingBag, Timer } from 'lucide-react';
+import { AlertCircle, BadgeCheck, Check, CheckCircle2, Eye, Film, Flame, Heart, Loader2, Lock, LogIn, ShieldCheck, ShoppingBag, Timer } from 'lucide-react';
 import type { TrialProductView } from '@/lib/types';
 import { countryName, flag } from '@/lib/format';
 import { useCurrency } from '@/context/CurrencyContext';
@@ -14,6 +14,7 @@ import { createClient } from '@/lib/supabase/client';
 import { ROLE_LABEL, checkoutGate, gateFromStatus, importerLoginUrl, type CheckoutGate } from '@/lib/checkout-gate';
 import { lineTotals } from '@/lib/cart';
 import { useWishlist } from '@/hooks/useWishlist';
+import { trackInteraction } from '@/lib/interactions-client';
 import QuantityStepper from '@/components/cart/QuantityStepper';
 import MessageSupplierButton from '@/components/chat/MessageSupplierButton';
 import ProductGallery from './ProductGallery';
@@ -32,7 +33,11 @@ export type CardLayout = 'detailed' | 'grid' | 'list';
  * `grid`: a compact tile, two per row on phones. `list`: one row with a thumbnail. The compact layouts open the
  * same Quick View for the breakdown and Place order, so every layout shares one set of cart / order handlers.
  */
-export default function TrialBatchCard({ product, layout = 'detailed' }: { product: TrialProductView; layout?: CardLayout }) {
+export default function TrialBatchCard({ product, layout = 'detailed', highlight }: {
+  product: TrialProductView; layout?: CardLayout;
+  /** Short note shown on the photo, e.g. why the listing is trending ("3 orders · 5 buyers interested"). */
+  highlight?: string;
+}) {
   const { formatUsd } = useCurrency();
   const router = useRouter();
   const pathname = usePathname();
@@ -41,6 +46,10 @@ export default function TrialBatchCard({ product, layout = 'detailed' }: { produ
   const [state, setState] = useState<'idle' | 'loading' | 'done' | 'error'>('idle');
   const [error, setError] = useState<string | null>(null);
   const [quickView, setQuickView] = useState(false);
+  const openQuickView = () => {
+    setQuickView(true);
+    if (!product.is_demo) trackInteraction(product.id, 'view');
+  };
   const [pickQty, setPickQty] = useState(1);   // quantity chosen before the product is in the cart
   const inCart = cart.has(product.id);
   const wishlist = useWishlist();
@@ -176,6 +185,7 @@ export default function TrialBatchCard({ product, layout = 'detailed' }: { produ
   const toggleSaved = () => {
     const now = wishlist.toggle(product.id);
     if (now) setHeartBurst((n) => n + 1);
+    if (now && !product.is_demo) trackInteraction(product.id, 'save');
     toast(now ? 'Saved to your wishlist' : 'Removed from your wishlist', { description: product.title });
   };
   const perUnitLanded = formatUsd(Math.round(product.landed_cost_cents / Math.max(1, product.trial_units)));
@@ -213,13 +223,19 @@ export default function TrialBatchCard({ product, layout = 'detailed' }: { produ
       {product.is_demo && <span className="pill border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] text-amber-800">Sample</span>}
     </div>
   );
+  const highlightPill = highlight && (
+    <span className="pointer-events-none absolute bottom-2 left-2 right-2 line-clamp-2 rounded-lg bg-[#0a0a0a]/80 px-2.5 py-1 text-[10px] font-medium leading-snug text-[#ffffff] backdrop-blur">
+      <Flame className="mr-1 inline h-3 w-3 text-orange-400" aria-hidden />{highlight}
+    </span>
+  );
 
   if (layout === 'grid') {
     return (
       <article className="glass-card flex flex-col p-2 transition duration-300 ease-out hover:border-snow/15">
-        <div className="relative cursor-pointer overflow-hidden rounded-xl" onClick={() => setQuickView(true)}>
+        <div className="relative cursor-pointer overflow-hidden rounded-xl" onClick={openQuickView}>
           <ProductGallery images={images} media={product.media} alt={product.title} category={product.category} className="aspect-square" arrows="hover" />
           {badges}
+          {highlightPill}
           {product.has_swatch_video && (
             <span className="pointer-events-none absolute right-2 top-2 grid h-6 w-6 place-items-center rounded-full bg-neutral-900/80 text-white" title="Swatch video">
               <Film className="h-3 w-3" aria-label="Has a swatch video" />
@@ -229,12 +245,12 @@ export default function TrialBatchCard({ product, layout = 'detailed' }: { produ
         <div className="flex flex-1 flex-col px-1 pb-1 pt-2.5">
           {supplierLine}
           <h3 className="mt-1 line-clamp-2 text-sm font-medium leading-snug text-neutral-900">
-            <button type="button" onClick={() => setQuickView(true)} className="text-left hover:underline focus:outline-none focus-visible:underline">{product.title}</button>
+            <button type="button" onClick={openQuickView} className="text-left hover:underline focus:outline-none focus-visible:underline">{product.title}</button>
           </h3>
           <p className="mt-1.5 text-base font-semibold tabular-nums tracking-tight text-neutral-900">{formatUsd(product.landed_cost_cents)}</p>
           <p className="text-[11px] tabular-nums text-neutral-500">{perUnitLanded} / unit landed · {product.trial_units} units</p>
           <div className="mt-auto flex items-center gap-1.5 pt-3">
-            <button type="button" onClick={() => setQuickView(true)} className="btn-secondary h-9 flex-1 px-2 text-xs">
+            <button type="button" onClick={openQuickView} className="btn-secondary h-9 flex-1 px-2 text-xs">
               <Eye className="h-4 w-4" /> View
             </button>
             {cartIconButton}
@@ -250,14 +266,15 @@ export default function TrialBatchCard({ product, layout = 'detailed' }: { produ
   if (layout === 'list') {
     return (
       <article className="glass-card flex gap-3 p-2 transition duration-300 ease-out hover:border-snow/15 sm:gap-4 sm:p-3">
-        <div className="relative w-28 shrink-0 cursor-pointer overflow-hidden rounded-xl sm:w-44" onClick={() => setQuickView(true)}>
+        <div className="relative w-28 shrink-0 cursor-pointer overflow-hidden rounded-xl sm:w-44" onClick={openQuickView}>
           <ProductGallery images={images} media={product.media} alt={product.title} category={product.category} className="aspect-square" />
           {badges}
+          {highlightPill}
         </div>
         <div className="flex min-w-0 flex-1 flex-col py-0.5">
           {supplierLine}
           <h3 className="mt-0.5 line-clamp-2 text-sm font-medium leading-snug text-neutral-900 sm:text-base">
-            <button type="button" onClick={() => setQuickView(true)} className="text-left hover:underline focus:outline-none focus-visible:underline">{product.title}</button>
+            <button type="button" onClick={openQuickView} className="text-left hover:underline focus:outline-none focus-visible:underline">{product.title}</button>
           </h3>
           {product.category_name && <p className="mt-0.5 truncate text-xs text-neutral-600">{product.category_name}</p>}
           <div className="mt-1.5 flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
@@ -270,7 +287,7 @@ export default function TrialBatchCard({ product, layout = 'detailed' }: { produ
             <Timer className="h-3 w-3" /> {product.lead_time_days ? `${product.lead_time_days}–${product.lead_time_days + 4} days` : 'Lead time on request'}
           </p>
           <div className="mt-auto flex items-center gap-1.5 pt-2">
-            <button type="button" onClick={() => setQuickView(true)} className="btn-secondary h-9 px-3 text-xs">
+            <button type="button" onClick={openQuickView} className="btn-secondary h-9 px-3 text-xs">
               <Eye className="h-4 w-4" /> View & order
             </button>
             {cartIconButton}
@@ -286,13 +303,16 @@ export default function TrialBatchCard({ product, layout = 'detailed' }: { produ
   return (
     <article className="glass-card group flex flex-col p-3 transition duration-300 ease-out hover:border-snow/15">
       {/* Clicking the photos opens the Quick View; swiping scrolls the gallery (touch swipes don't produce clicks). */}
-      <div className="relative cursor-pointer overflow-hidden rounded-2xl transition duration-300 ease-out group-hover:-translate-y-0.5" onClick={() => setQuickView(true)}>
+      <div className="relative cursor-pointer overflow-hidden rounded-2xl transition duration-300 ease-out group-hover:-translate-y-0.5" onClick={openQuickView}>
         <ProductGallery images={images} media={product.media} alt={product.title} category={product.category} className="aspect-square" arrows="hover"
           dotsClassName="group-hover:-translate-y-12 group-focus-within:-translate-y-12 [@media(hover:none)]:-translate-y-12" />
         <div className="pointer-events-none absolute left-3 top-3 flex flex-wrap gap-1.5">
           <span className="pill border-transparent bg-[#5a9895] text-snow shadow">Trial Batch</span>
           {product.is_featured && <span className="pill border-transparent bg-violet-600 text-snow shadow">Featured</span>}
           {product.is_demo && <span className="pill border-amber-200 bg-amber-50 text-amber-800">Sample</span>}
+          {highlight && (
+            <span className="pill border-transparent bg-[#0a0a0a]/80 text-[#ffffff] shadow"><Flame className="h-3.5 w-3.5 text-orange-400" aria-hidden />{highlight}</span>
+          )}
         </div>
         <div className="pointer-events-none absolute right-3 top-3 flex items-center gap-1.5">
           {product.has_swatch_video && (
@@ -311,7 +331,7 @@ export default function TrialBatchCard({ product, layout = 'detailed' }: { produ
             translate-y-[calc(100%+1rem)] opacity-0 transition duration-300 ease-out
             group-hover:translate-y-0 group-hover:opacity-100 focus-within:translate-y-0 focus-within:opacity-100
             [@media(hover:none)]:translate-y-0 [@media(hover:none)]:opacity-100 motion-reduce:transition-none">
-          <button type="button" onClick={() => setQuickView(true)} aria-label={`Quick view: ${product.title}`} title="Quick view"
+          <button type="button" onClick={openQuickView} aria-label={`Quick view: ${product.title}`} title="Quick view"
             className="flex h-9 flex-1 items-center justify-center gap-1.5 rounded-md text-xs font-medium text-neutral-900 transition hover:bg-neutral-100">
             <Eye className="h-4 w-4" /> <span className="hidden sm:inline">Quick view</span>
           </button>
@@ -330,11 +350,7 @@ export default function TrialBatchCard({ product, layout = 'detailed' }: { produ
             )
           )}
           <button type="button" aria-pressed={saved} aria-label={saved ? 'Remove from wishlist' : 'Save to wishlist'} title={saved ? 'Saved' : 'Save'}
-            onClick={() => {
-              const now = wishlist.toggle(product.id);
-              if (now) setHeartBurst((n) => n + 1);
-              toast(now ? 'Saved to your wishlist' : 'Removed from your wishlist', { description: product.title });
-            }}
+            onClick={toggleSaved}
             className="grid h-9 w-9 shrink-0 place-items-center rounded-md transition hover:bg-neutral-100">
             <Heart key={heartBurst} className={clsx('h-4 w-4 transition-colors', saved ? 'fill-red-500 text-red-500 motion-safe:animate-heart-pop' : 'text-neutral-700')} />
           </button>
@@ -356,7 +372,7 @@ export default function TrialBatchCard({ product, layout = 'detailed' }: { produ
           {product.supplier_id && <FollowButton supplierId={product.supplier_id} supplierName={product.supplier_name} isDemo={product.is_demo} size="sm" />}
         </div>
         <h3 className="mt-1 text-base font-medium leading-snug text-neutral-900">
-          <button type="button" onClick={() => setQuickView(true)} className="text-left underline-offset-4 hover:underline focus:outline-none focus-visible:underline">
+          <button type="button" onClick={openQuickView} className="text-left underline-offset-4 hover:underline focus:outline-none focus-visible:underline">
             {product.title}
           </button>
         </h3>
