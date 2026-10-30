@@ -25,7 +25,14 @@ import Link from 'next/link';
 
 const IS_DEV = process.env.NODE_ENV === 'development';
 
-export default function TrialBatchCard({ product }: { product: TrialProductView }) {
+export type CardLayout = 'detailed' | 'grid' | 'list';
+
+/**
+ * A Trial Batch listing. `detailed` (default): photos, the full landed-cost breakdown and the order buttons.
+ * `grid`: a compact tile, two per row on phones. `list`: one row with a thumbnail. The compact layouts open the
+ * same Quick View for the breakdown and Place order, so every layout shares one set of cart / order handlers.
+ */
+export default function TrialBatchCard({ product, layout = 'detailed' }: { product: TrialProductView; layout?: CardLayout }) {
   const { formatUsd } = useCurrency();
   const router = useRouter();
   const pathname = usePathname();
@@ -165,6 +172,117 @@ export default function TrialBatchCard({ product }: { product: TrialProductView 
     </>
   );
 
+  const quickViewModal = quickView && <ProductQuickView product={product} quantity={quantity} onClose={() => setQuickView(false)} actions={actions} />;
+  const toggleSaved = () => {
+    const now = wishlist.toggle(product.id);
+    if (now) setHeartBurst((n) => n + 1);
+    toast(now ? 'Saved to your wishlist' : 'Removed from your wishlist', { description: product.title });
+  };
+  const perUnitLanded = formatUsd(Math.round(product.landed_cost_cents / Math.max(1, product.trial_units)));
+  const supplierLine = (
+    <p className="flex min-w-0 items-center gap-1 text-[11px] text-neutral-500">
+      <span aria-hidden>{flag(product.origin_country)}</span>
+      <span className="truncate">{product.supplier_name}</span>
+      {product.supplier_verified && <BadgeCheck className="h-3.5 w-3.5 shrink-0 text-emerald-700" aria-label="Verified supplier" />}
+      {product.supplier_gold && <GoldBadge compact />}
+    </p>
+  );
+  const heartButton = (
+    <button type="button" aria-pressed={saved} aria-label={saved ? 'Remove from wishlist' : 'Save to wishlist'} onClick={toggleSaved}
+      className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-neutral-200 transition hover:bg-neutral-100">
+      <Heart key={heartBurst} className={clsx('h-4 w-4', saved ? 'fill-red-500 text-red-500 motion-safe:animate-heart-pop' : 'text-neutral-700')} />
+    </button>
+  );
+  const cartIconButton = canBuy && (
+    inCart ? (
+      <button type="button" onClick={() => cart.setOpen(true)} aria-label="In cart, view cart"
+        className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-emerald-600 text-white transition hover:bg-emerald-700">
+        <Check className="h-4 w-4" />
+      </button>
+    ) : (
+      <button type="button" onClick={addToCart} disabled={state === 'loading' || product.is_demo} aria-label={`Add ${product.title} to cart`}
+        className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#ffffff] text-[#0a0a0a] transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50">
+        <ShoppingBag className="h-4 w-4" />
+      </button>
+    )
+  );
+  const badges = (
+    <div className="pointer-events-none absolute left-2 top-2 flex flex-wrap gap-1">
+      <span className="pill border-transparent bg-[#5a9895] px-2 py-0.5 text-[10px] text-snow shadow">Trial Batch</span>
+      {product.is_featured && <span className="pill border-transparent bg-violet-600 px-2 py-0.5 text-[10px] text-snow shadow">Featured</span>}
+      {product.is_demo && <span className="pill border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] text-amber-800">Sample</span>}
+    </div>
+  );
+
+  if (layout === 'grid') {
+    return (
+      <article className="glass-card flex flex-col p-2 transition duration-300 ease-out hover:border-snow/15">
+        <div className="relative cursor-pointer overflow-hidden rounded-xl" onClick={() => setQuickView(true)}>
+          <ProductGallery images={images} media={product.media} alt={product.title} category={product.category} className="aspect-square" arrows="hover" />
+          {badges}
+          {product.has_swatch_video && (
+            <span className="pointer-events-none absolute right-2 top-2 grid h-6 w-6 place-items-center rounded-full bg-neutral-900/80 text-white" title="Swatch video">
+              <Film className="h-3 w-3" aria-label="Has a swatch video" />
+            </span>
+          )}
+        </div>
+        <div className="flex flex-1 flex-col px-1 pb-1 pt-2.5">
+          {supplierLine}
+          <h3 className="mt-1 line-clamp-2 text-sm font-medium leading-snug text-neutral-900">
+            <button type="button" onClick={() => setQuickView(true)} className="text-left hover:underline focus:outline-none focus-visible:underline">{product.title}</button>
+          </h3>
+          <p className="mt-1.5 text-base font-semibold tabular-nums tracking-tight text-neutral-900">{formatUsd(product.landed_cost_cents)}</p>
+          <p className="text-[11px] tabular-nums text-neutral-500">{perUnitLanded} / unit landed · {product.trial_units} units</p>
+          <div className="mt-auto flex items-center gap-1.5 pt-3">
+            <button type="button" onClick={() => setQuickView(true)} className="btn-secondary h-9 flex-1 px-2 text-xs">
+              <Eye className="h-4 w-4" /> View
+            </button>
+            {cartIconButton}
+            {heartButton}
+          </div>
+          {error && <p className="mt-2 text-[11px] text-red-600">{error}</p>}
+        </div>
+        {quickViewModal}
+      </article>
+    );
+  }
+
+  if (layout === 'list') {
+    return (
+      <article className="glass-card flex gap-3 p-2 transition duration-300 ease-out hover:border-snow/15 sm:gap-4 sm:p-3">
+        <div className="relative w-28 shrink-0 cursor-pointer overflow-hidden rounded-xl sm:w-44" onClick={() => setQuickView(true)}>
+          <ProductGallery images={images} media={product.media} alt={product.title} category={product.category} className="aspect-square" />
+          {badges}
+        </div>
+        <div className="flex min-w-0 flex-1 flex-col py-0.5">
+          {supplierLine}
+          <h3 className="mt-0.5 line-clamp-2 text-sm font-medium leading-snug text-neutral-900 sm:text-base">
+            <button type="button" onClick={() => setQuickView(true)} className="text-left hover:underline focus:outline-none focus-visible:underline">{product.title}</button>
+          </h3>
+          {product.category_name && <p className="mt-0.5 truncate text-xs text-neutral-600">{product.category_name}</p>}
+          <div className="mt-1.5 flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
+            <span className="text-base font-semibold tabular-nums tracking-tight text-neutral-900 sm:text-lg">{formatUsd(product.landed_cost_cents)}</span>
+            <span className="text-[11px] tabular-nums text-neutral-500">{perUnitLanded} / unit landed · {product.trial_units} units</span>
+          </div>
+          <p className="mt-1 hidden items-center gap-1.5 text-xs text-neutral-500 sm:flex">
+            <Lock className="h-3 w-3" /> Guaranteed landed cost
+            <span aria-hidden>·</span>
+            <Timer className="h-3 w-3" /> {product.lead_time_days ? `${product.lead_time_days}–${product.lead_time_days + 4} days` : 'Lead time on request'}
+          </p>
+          <div className="mt-auto flex items-center gap-1.5 pt-2">
+            <button type="button" onClick={() => setQuickView(true)} className="btn-secondary h-9 px-3 text-xs">
+              <Eye className="h-4 w-4" /> View & order
+            </button>
+            {cartIconButton}
+            {heartButton}
+          </div>
+          {error && <p className="mt-1.5 text-[11px] text-red-600">{error}</p>}
+        </div>
+        {quickViewModal}
+      </article>
+    );
+  }
+
   return (
     <article className="glass-card group flex flex-col p-3 transition duration-300 ease-out hover:border-snow/15">
       {/* Clicking the photos opens the Quick View; swiping scrolls the gallery (touch swipes don't produce clicks). */}
@@ -303,7 +421,7 @@ export default function TrialBatchCard({ product }: { product: TrialProductView 
         <div className="mt-auto pt-5">{actions}</div>
       </div>
 
-      {quickView && <ProductQuickView product={product} quantity={quantity} onClose={() => setQuickView(false)} actions={actions} />}
+      {quickViewModal}
     </article>
   );
 }

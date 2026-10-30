@@ -9,7 +9,7 @@ import { initials } from '@/lib/admin-inbox';
 import { CATALOG_PRODUCT_SELECT, toTrialProductView, type CatalogProductRow } from '@/lib/product-view';
 import { goldSupplierIds } from '@/lib/pricing-server';
 import DashboardHeader from '@/components/dashboard/DashboardHeader';
-import TrialBatchCard from '@/components/dashboard/TrialBatchCard';
+import ProductResults from '@/components/dashboard/ProductResults';
 import FollowButton from '@/components/follow/FollowButton';
 import GoldBadge from '@/components/supplier/GoldBadge';
 
@@ -87,9 +87,7 @@ export default async function SupplierProfilePage({ params }: { params: Promise<
               No live listings right now.{followsAvailable ? ' Follow this supplier to see new ones on your dashboard.' : ''}
             </p>
           ) : (
-            <div className="mt-6 grid gap-x-6 gap-y-12 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
-              {products.map((p) => <TrialBatchCard key={p.id} product={p} />)}
-            </div>
+            <ProductResults products={products} className="mt-6" />
           )}
         </section>
       </main>

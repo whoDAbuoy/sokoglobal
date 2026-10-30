@@ -11,7 +11,7 @@ import { CATALOG_PRODUCT_SELECT, toTrialProductView, type CatalogProductRow } fr
 import { goldSupplierIds } from '@/lib/pricing-server';
 import { getCategories } from '@/lib/categories-server';
 import DashboardHeader from '@/components/dashboard/DashboardHeader';
-import TrialBatchCard from '@/components/dashboard/TrialBatchCard';
+import ProductResults from '@/components/dashboard/ProductResults';
 
 export const metadata = { title: 'Catalogue · SokoGlobal' };
 export const dynamic = 'force-dynamic';
@@ -201,9 +201,7 @@ export default async function DiscoverPage({ searchParams }: { searchParams: Pro
                 <p className="mt-1 text-sm text-neutral-600">Try fewer filters, a broader category, or a different search.</p>
               </div>
             ) : (
-              <div className="mt-6 grid gap-x-6 gap-y-12 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
-                {shown.map((p) => <TrialBatchCard key={p.id} product={p} />)}
-              </div>
+              <ProductResults products={shown} className="mt-4" />
             )}
 
             {pages > 1 && (
