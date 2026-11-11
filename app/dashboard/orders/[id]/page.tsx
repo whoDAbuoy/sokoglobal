@@ -115,7 +115,7 @@ export default async function OrderPage({ params, searchParams }: {
           </p>
           <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
             <h1 className="text-3xl font-semibold text-neutral-900">{view.product_title}</h1>
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2" data-tour="order-chat">
               {chatOpen && <OrderChatButton orderId={order.id} title={`Order #${order.id.slice(0, 8).toUpperCase()} · ${view.product_title}`} label="Chat with Supplier" className="btn-primary px-3.5 py-2" />}
               <MessageSupplierButton productId={order.product_id} productTitle={view.product_title} />
             </div>
@@ -124,10 +124,12 @@ export default async function OrderPage({ params, searchParams }: {
 
         <div className="mt-8 grid gap-10 lg:grid-cols-[minmax(0,1fr)_22rem]">
         <div className="min-w-0">
-        <EscrowTracker orders={[view]} actions={false} />
+        <div data-tour="escrow-tracker"><EscrowTracker orders={[view]} actions={false} /></div>
 
+        <div data-tour="order-timeline">
         <OrderTimeline className="mt-6" steps={trackingTimeline({ ...order, escrow_status: view.escrow_status }, shipment)}
           trackingUrl={shipment && shipment.status !== 'label_created' ? trackingLink(shipment) : null} />
+        </div>
 
         {/* Live DHL Express scans once the supplier has dispatched with DHL (renders nothing until DHL tracking is configured). */}
         {shipment && shipment.status !== 'label_created' && isDhlCarrier(shipment.carrier_name) && (
@@ -150,12 +152,12 @@ export default async function OrderPage({ params, searchParams }: {
             <Link href={`/dashboard/checkout/${order.checkout_group_id}`} className="btn-primary">Go to checkout</Link>
           </div>
         ) : (
-          <OrderActions orderId={order.id} status={view.escrow_status} step={step} returnStatus={returnStatus ?? null} payWith={pay ?? null}
+          <div data-tour="order-actions"><OrderActions orderId={order.id} status={view.escrow_status} step={step} returnStatus={returnStatus ?? null} payWith={pay ?? null}
             amountLabel={formatUSD(dueCents, true)} balanceLabel={order.remaining_balance ? formatUSD(order.remaining_balance, true) : undefined}
             buyerName={profile.full_name} methods={methods} gatewayReturn={gatewayReturn}
             manual={{ buyerId: user.id, dueCents, open: openManual, rejectedNote: lastManual?.status === 'rejected' ? lastManual.review_note ?? '' : null,
                       swift: payments.settings.swift_bank_details, cryptoOptions: cryptoOptions(payments.settings.crypto_deposit_wallets),
-                      cryptoMarkup: payments.settings.crypto_markup_percent }} />
+                      cryptoMarkup: payments.settings.crypto_markup_percent }} /></div>
         )}
 
         {order.origin_port_coords && order.destination_coords && (
@@ -195,7 +197,7 @@ export default async function OrderPage({ params, searchParams }: {
 
         {/* Order summary — checkout-style sidebar */}
         <aside className="lg:sticky lg:top-32 lg:self-start">
-          <section className="glass-card p-6">
+          <section className="glass-card p-6" data-tour="order-price">
             <h2 className="eyebrow">{order.rfq_quote_id ? 'Quoted price' : 'Guaranteed Landed Cost'}</h2>
             <dl className="mt-5 space-y-3 text-sm text-neutral-600">
               {(order.rfq_quote_id

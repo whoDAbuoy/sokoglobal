@@ -224,14 +224,14 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         <div className="page-wide py-10 lg:py-12">
           <p className="eyebrow">Overview</p>
           <h1 className="mt-2 text-3xl font-normal tracking-tight text-neutral-900 sm:text-4xl">Welcome back, {profile.full_name.split(' ')[0]}</h1>
-          <div className="mt-6"><EscrowProtectionBanner /></div>
+          <div className="mt-6" data-tour="escrow-banner"><EscrowProtectionBanner /></div>
           {showKycBanner && profile.kyc_status && profile.kyc_status !== 'approved' && (
             <div className="mt-4"><KycBanner status={profile.kyc_status} approved={kycApproved} /></div>
           )}
           {!configs.trial.enabled && (
             <p role="status" className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">New trial batches are paused right now. Trend Pools and orders already placed are not affected.</p>
           )}
-          <div className="mt-8">
+          <div className="mt-8" data-tour="buyer-overview">
             <BuyerOverview profile={profile} orders={orders} feed={feed} following={followedIds === null ? null : followedIds.length}
               rfqs={rfqAlerts} insights={insights} notices={notices} freightShare={freightShare} />
           </div>
@@ -269,7 +269,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         )}
 
         {/* $500 Trial Batch listings — the product grid */}
-        <section id="batches" className="scroll-mt-32">
+        <section id="batches" data-tour="trial-batches" className="scroll-mt-32">
           <SectionHeader
             icon={Plane}
             title={`Test a supplier with a ${formatUSD(minTrialCents)} Trial Batch`}
@@ -295,7 +295,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         </section>
 
         {/* Trend Pools */}
-        <section id="pools" className="scroll-mt-32">
+        <section id="pools" data-tour="pools-strip" className="scroll-mt-32">
           <SectionHeader
             icon={Users}
             title="Trend Pools"

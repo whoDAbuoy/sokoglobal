@@ -25,7 +25,7 @@ export const THEME_INIT_SCRIPT = `(function(){var p=null;try{p=localStorage.getI
   + `var r=document.documentElement;r.classList.toggle('dark',d);r.style.colorScheme=d?'dark':'light';}catch(e){}})();`;
 
 /** Route roots drawn in the always-dark Sellsy style (each also covers everything below it). */
-const SELLSY_ROOTS = ['/supplier', '/dashboard', '/rfqs', '/admin', '/products', '/suppliers', '/legal'];
+const SELLSY_ROOTS = ['/supplier', '/dashboard', '/rfqs', '/admin', '/products', '/suppliers', '/legal', '/help'];
 
 /**
  * Routes drawn in the always-dark Sellsy style (pure-black canvas, charcoal glass cards, mint accents):

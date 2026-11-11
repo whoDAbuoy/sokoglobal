@@ -99,7 +99,7 @@ export default async function DiscoverPage({ searchParams }: { searchParams: Pro
             <h1 className="flex items-center gap-2 text-3xl font-semibold text-neutral-900"><Compass className="h-7 w-7 text-neutral-500" aria-hidden /> {current?.name ?? 'Catalogue'}</h1>
             <p className="mt-1 max-w-2xl text-sm text-neutral-600">{current?.description ?? 'Every commodity from KYC-verified suppliers, with a Guaranteed Landed Cost and escrow on every order.'}</p>
           </div>
-          <form role="search" action="/dashboard/discover" className="flex w-full max-w-md gap-2">
+          <form role="search" data-tour="catalog-search" action="/dashboard/discover" className="flex w-full max-w-md gap-2">
             {current && <input type="hidden" name="category" value={current.slug} />}
             <div className="relative flex-1">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400" aria-hidden />
@@ -110,7 +110,7 @@ export default async function DiscoverPage({ searchParams }: { searchParams: Pro
         </div>
 
         {children.length > 0 && (
-          <ul className="mt-6 flex flex-wrap gap-2" aria-label="Categories">
+          <ul className="mt-6 flex flex-wrap gap-2" aria-label="Categories" data-tour="catalog-categories">
             {children.map((c) => (
               <li key={c.id}>
                 <Link href={href({ category: c.slug, filters: {}, ranges: {} })}
@@ -123,7 +123,7 @@ export default async function DiscoverPage({ searchParams }: { searchParams: Pro
         )}
 
         <div className="mt-8 grid gap-8 lg:grid-cols-[16rem_minmax(0,1fr)]">
-          <aside aria-label="Filters" className="space-y-6">
+          <aside aria-label="Filters" data-tour="catalog-filters" className="space-y-6">
             <h2 className="flex items-center gap-2 text-sm font-semibold text-neutral-900"><SlidersHorizontal className="h-4 w-4" aria-hidden /> Filters</h2>
             {facets.length === 0 && <p className="text-xs text-neutral-600">{current ? 'No filters for this category yet.' : 'Pick a category to filter by its specifications.'}</p>}
             {facets.map((f) => (
@@ -169,7 +169,7 @@ export default async function DiscoverPage({ searchParams }: { searchParams: Pro
                 {query.q && <> for &ldquo;{query.q}&rdquo;</>}
                 {rows.length === SCAN_LIMIT && <span className="text-neutral-500"> (newest {SCAN_LIMIT} searched; narrow the category for more)</span>}
               </h2>
-              <nav aria-label="Sort" className="flex flex-wrap gap-1.5">
+              <nav aria-label="Sort" data-tour="catalog-sort" className="flex flex-wrap gap-1.5">
                 {CATALOG_SORTS.map(([s, l]) => (
                   <Link key={s} href={href({ sort: s })} aria-current={query.sort === s ? 'true' : undefined}
                     className={clsx('rounded-full border px-2.5 py-1 text-xs font-medium', query.sort === s ? 'border-neutral-900 bg-neutral-900 text-white' : 'border-neutral-300 text-neutral-700 hover:border-neutral-900')}>

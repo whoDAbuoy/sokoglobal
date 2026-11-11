@@ -166,7 +166,7 @@ export default function TrialBatchCard({ product, layout = 'detailed', highlight
             </p>
           </div>
           {/* One primary action: the payment channel is chosen afterwards, under "Pay now" on the order page. */}
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-2 gap-2" data-tour="place-order">
             <button type="button" onClick={() => void placeOrder()} disabled={state === 'loading' || product.is_demo}
               className="btn-primary w-full px-2 active:scale-95" title={product.is_demo ? 'Sample listing — run supabase/seed.sql to enable' : undefined}>
               {state === 'loading' ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />}
@@ -391,7 +391,7 @@ export default function TrialBatchCard({ product, layout = 'detailed', highlight
         </p>
 
         {/* Guaranteed Landed Cost breakdown — the core trust element. Updates live with the quantity stepper. */}
-        <div className="mt-4 border-t border-neutral-200 pt-3">
+        <div className="mt-4 border-t border-neutral-200 pt-3" data-tour="landed-cost">
           <div className="mb-3 flex h-2 overflow-hidden rounded-full bg-neutral-100" role="img"
             aria-label={`Landed cost split: ${lines.map((l) => `${l.label} ${Math.round((l.value / lineTotal) * 100)}%`).join(', ')}`}>
             {lines.map((l) => (

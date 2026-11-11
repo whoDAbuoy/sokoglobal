@@ -15,8 +15,13 @@ begin
   raise exception 'ASSERT FAILED: % did not raise (expected /%/)', q, pattern;
 end $$;
 create or replace function pg_temp.as_user(u text) returns void language sql as $$ select set_config('request.jwt.claim.sub', u, false) $$;
+-- This file's events: its fixed ids (e33…/f3300000-…) or its " e33" titles. Not a bare 'e33': other files' random
+-- uuids contain it about 1 time in 100, which made the counts below flaky.
+create or replace function pg_temp.mine(p jsonb) returns boolean language sql immutable as $$
+  select p::text ~ '(e33[0-9]{5}-|f3300000-| e33")'
+$$;
 create or replace function pg_temp.outbox(p_target text, p_type text) returns setof public.integration_outbox language sql as $$
-  select * from public.integration_outbox where target = p_target and event_type = p_type and payload::text like '%e33%' order by id
+  select * from public.integration_outbox where target = p_target and event_type = p_type and pg_temp.mine(payload) order by id
 $$;
 grant execute on all functions in schema pg_temp to authenticated, anon;
 
@@ -130,18 +135,18 @@ reset role;
 
 -- ── Claim / finish ──
 set role service_role;
-select pg_temp.ok((select count(*) from public.claim_integration_events('twenty', 200) where payload::text like '%e33%') = 4,
+select pg_temp.ok((select count(*) from public.claim_integration_events('twenty', 200) where pg_temp.mine(payload)) = 4,
   'service role claims the due CRM rows');
-select pg_temp.ok((select count(*) from public.claim_integration_events('twenty', 200) where payload::text like '%e33%') = 0,
+select pg_temp.ok((select count(*) from public.claim_integration_events('twenty', 200) where pg_temp.mine(payload)) = 0,
   'claimed rows are leased: a second run gets none');
-select id as quote_row from public.integration_outbox where event_type = 'rfq.quote_submitted' and payload::text like '%e33%' \gset
+select id as quote_row from public.integration_outbox where event_type = 'rfq.quote_submitted' and pg_temp.mine(payload) \gset
 select public.finish_integration_event(:quote_row, 'retry', 'Twenty 503');
 select pg_temp.ok((select status = 'pending' and send_after > now() + interval '1 minute' and last_error = 'Twenty 503' and locked_until is null
                      from public.integration_outbox where id = :quote_row), 'a retry waits with backoff and keeps the error');
 update public.integration_outbox set attempts = 8 where id = :quote_row;
 select public.finish_integration_event(:quote_row, 'retry', 'still down');
 select pg_temp.ok((select status from public.integration_outbox where id = :quote_row) = 'failed', 'the 8th failure is final');
-select id as view_row from public.integration_outbox where event_type = 'supplier.profile_viewed' and payload::text like '%e33%' \gset
+select id as view_row from public.integration_outbox where event_type = 'supplier.profile_viewed' and pg_temp.mine(payload) \gset
 select public.finish_integration_event(:view_row, 'sent');
 select pg_temp.ok((select status = 'sent' and sent_at is not null and last_error is null from public.integration_outbox where id = :view_row), 'success is final');
 select pg_temp.fails($q$select public.finish_integration_event(1, 'bogus')$q$, 'Unknown outcome');

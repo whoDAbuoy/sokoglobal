@@ -28,7 +28,7 @@ export function useProductLayout(): [CardLayout, (l: CardLayout) => void] {
 
 export function LayoutSwitcher({ layout, onChange, className }: { layout: CardLayout; onChange: (l: CardLayout) => void; className?: string }) {
   return (
-    <div role="radiogroup" aria-label="Product view" className={clsx('inline-flex rounded-full border border-neutral-300 p-0.5', className)}>
+    <div role="radiogroup" aria-label="Product view" data-tour="product-view" className={clsx('inline-flex rounded-full border border-neutral-300 p-0.5', className)}>
       {OPTIONS.map(({ layout: l, label, Icon }) => (
         <button key={l} type="button" role="radio" aria-checked={layout === l} onClick={() => onChange(l)} title={`${label} view`}
           className={clsx('inline-flex h-8 items-center gap-1.5 rounded-full px-2.5 text-xs font-medium transition',

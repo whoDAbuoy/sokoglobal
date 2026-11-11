@@ -183,6 +183,7 @@ export default function Landing({ minTrialCents = 50_000 }: { minTrialCents?: nu
           <nav aria-label="Footer" className="flex flex-wrap items-center gap-x-4 gap-y-1">
             <Link href="/products" className="hover:text-neutral-900">Browse Trial Batches</Link>
             <Link href="/signup" className="hover:text-neutral-900">Open a trade account</Link>
+            <Link href="/help" className="hover:text-neutral-900">Help Center</Link>
             <Link href="/legal/terms" className="hover:text-neutral-900">Terms of Trade</Link>
             <Link href="/legal/escrow" className="hover:text-neutral-900">Escrow Agreement</Link>
             <Link href="/legal/privacy" className="hover:text-neutral-900">Privacy</Link>

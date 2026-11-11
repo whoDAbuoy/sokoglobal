@@ -56,7 +56,7 @@ export default async function SupplierOrdersPage() {
           you&apos;re paid the goods value when the buyer confirms delivery — or right after dispatch with an instant early payout.
         </PageHead>
 
-        <OrderCatalog groups={groups} shipments={saved} />
+        <div data-tour="supplier-orders-table"><OrderCatalog groups={groups} shipments={saved} /></div>
 
         {onTheWay.length > 0 && (
           <Panel id="on-the-way" className="mt-10 overflow-hidden !p-0"

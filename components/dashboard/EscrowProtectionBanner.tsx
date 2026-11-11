@@ -1,7 +1,7 @@
 import { Lock, PackageCheck, ShieldCheck, Truck } from 'lucide-react';
 
 const STEPS = [
-  { icon: Lock, tone: 'tone-escrow', title: 'You pay into escrow', body: 'Funds held by our licensed partner — never sent straight to the supplier.' },
+  { icon: Lock, tone: 'tone-escrow', title: 'You pay into escrow', body: 'SokoGlobal holds the funds for your order — never sent straight to the supplier.' },
   { icon: Truck, tone: 'tone-transit', title: 'We ship & clear customs', body: 'Consolidated air freight and clearance are included in your landed cost.' },
   { icon: PackageCheck, tone: 'tone-active', title: 'You verify at your door', body: 'Inspect the goods. Only then is the supplier paid. Issues? Open a dispute.' },
 ];

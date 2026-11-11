@@ -43,7 +43,7 @@ export default async function VerificationPage({ searchParams }: { searchParams:
             Finish business verification to create listings. You can keep editing existing drafts while we review it.
           </p>
         )}
-        <div className="mt-6">
+        <div className="mt-6" data-tour="kyc-workspace">
           <KycWorkspace userId={user.id} defaultCountry={profile.country_code} initial={initial} />
         </div>
       </main>

@@ -22,7 +22,7 @@ export default async function BuyerMessagesPage({ searchParams }: { searchParams
       <main className="page-wide py-8">
         <p className="eyebrow">Messages</p>
         <h1 className="mt-2 text-3xl font-semibold text-neutral-900">Inbox</h1>
-        <MessagingHub basePath="/dashboard/messages" role="importer" initialThreadId={threadId} />
+        <div data-tour="messages-hub"><MessagingHub basePath="/dashboard/messages" role="importer" initialThreadId={threadId} /></div>
       </main>
     </>
   );

@@ -112,13 +112,13 @@ export default async function SupplierHome() {
         <PageHead eyebrow="Supplier" title={<>Overview {gold.kind === 'active' && <GoldBadge />}</>}
           actions={<>
             <Link href="/supplier/subscription" className="btn-secondary"><Crown className="h-4 w-4 text-yellow-300" aria-hidden /> {gold.kind === 'active' ? 'Gold membership' : 'Go Gold'}</Link>
-            <Link href="/supplier/products/new" className="btn-primary"><Plus className="h-4 w-4" aria-hidden /> New product</Link>
+            <Link href="/supplier/products/new" data-tour="new-product" className="btn-primary"><Plus className="h-4 w-4" aria-hidden /> New product</Link>
           </>}>
           Products go live after logistics quoting and photo review.
         </PageHead>
 
         {/* Top row: stat stack · sales spline · order heatmap */}
-        <div className="mt-8 grid grid-cols-1 gap-4 lg:grid-cols-12">
+        <div className="mt-8 grid grid-cols-1 gap-4 lg:grid-cols-12" data-tour="supplier-kpis">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:col-span-3 lg:grid-cols-1">
             <Panel as="div" className="flex flex-col justify-between">
               <div className="sx-card-head">
@@ -208,7 +208,7 @@ export default async function SupplierHome() {
             )}
           </Panel>
 
-          <section aria-labelledby="gold-title" className="sx-pro flex flex-col justify-between p-6 lg:col-span-3">
+          <section aria-labelledby="gold-title" data-tour="gold" className="sx-pro flex flex-col justify-between p-6 lg:col-span-3">
             <div>
               <h2 id="gold-title" className="text-2xl font-medium tracking-tight">{gold.kind === 'active' ? 'You’re Gold' : 'SokoGlobal Gold'}</h2>
               <p className="mt-2 text-sm text-[#1f3b3a]">
@@ -265,7 +265,7 @@ export default async function SupplierHome() {
         </div>
 
         {/* Analytics: catalogue + order metrics, payout dial and escrow release (unchanged component). */}
-        <section id="analytics" aria-label="Analytics" className="mt-10 scroll-mt-32">
+        <section id="analytics" aria-label="Analytics" data-tour="supplier-analytics" className="mt-10 scroll-mt-32">
           <SupplierStats products={productCounts} orders={totals} payouts={payouts} release={release} readyToShip={readyToShip} />
         </section>
 

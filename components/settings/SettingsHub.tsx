@@ -75,7 +75,7 @@ export default function SettingsHub(props: {
         </p>
       )}
 
-      <div role="tablist" aria-label="Settings" className="no-scrollbar -mx-1 flex gap-2 overflow-x-auto px-1 py-1">
+      <div role="tablist" aria-label="Settings" data-tour="settings-tabs" className="no-scrollbar -mx-1 flex gap-2 overflow-x-auto px-1 py-1">
         {SETTINGS_TABS.map((t) => {
           const { label, icon: Icon } = TABS[t];
           return (
